@@ -63,7 +63,7 @@ import {
 //
 //   When `ALLOWED_INVITE_HOSTS` is set (comma-separated hostnames),
 //   we validate the derived host against the list. Anything not
-//   on the list falls through to the wacrm.tech fallback with a
+//   on the list falls through to the whatspertcrm.tech fallback with a
 //   loud console.warn. Operators who care about this attack
 //   surface should set this to their canonical hostnames; everyone
 //   else gets today's permissive behavior.
@@ -128,10 +128,10 @@ function getBaseUrl(request: Request): string {
     );
   } else {
     console.warn(
-      "[POST /api/account/invitations] could not derive base URL from request; falling back to marketing domain",
+      "[POST /api/account/invitations] could not derive base URL from request; falling back to whatspertcrm.tech",
     );
   }
-  return "https://wacrm.tech";
+  return "https://whatspertcrm.tech";
 }
 
 const MAX_LABEL_LEN = 80;
