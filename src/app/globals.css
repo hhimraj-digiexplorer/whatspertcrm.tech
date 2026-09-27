@@ -62,7 +62,7 @@
  *
  *   1. MODE   (light / dark)  → neutral surfaces. Selected with
  *      `document.documentElement.dataset.mode`. Defaults to dark.
- *   2. ACCENT (violet / …)    → the primary color only. Selected
+ *   2. ACCENT (whatsapp / …)   → the primary color only. Selected
  *      with `document.documentElement.dataset.theme`.
  *
  * The two compose: any accent works in either mode. Neutral
@@ -72,7 +72,7 @@
  * --sidebar-ring) live in the ACCENT blocks. They set disjoint
  * variables, so cascade order between them doesn't matter.
  *
- * `:root` carries the dark-mode + violet defaults so a visitor
+ * `:root` carries the dark-mode + whatsapp defaults so a visitor
  * renders correctly before JS runs; the boot script in
  * layout.tsx replays the saved mode + accent before first paint.
  *
@@ -147,7 +147,38 @@ html[data-mode="light"] {
 
 /* ---- ACCENT: primary color ---- */
 
+/* WhatsApp green (#25D366) with teal (#128C7E) as the second chart
+ * series. The default accent for Whatspert CRM, so it carries :root. */
 :root,
+html[data-theme="whatsapp"] {
+  --primary: oklch(0.761 0.201 149.7);
+  --primary-foreground: oklch(0.2 0.04 160);
+  --primary-hover: oklch(0.8 0.197 151.7);
+  --primary-soft: oklch(0.761 0.201 149.7 / 0.12);
+  --primary-soft-2: oklch(0.761 0.201 149.7 / 0.22);
+  --ring: oklch(0.761 0.201 149.7);
+  --chart-1: oklch(0.761 0.201 149.7);
+  --chart-2: oklch(0.576 0.1 182.4);
+  --sidebar-primary: oklch(0.761 0.201 149.7);
+  --sidebar-primary-foreground: oklch(0.2 0.04 160);
+  --sidebar-ring: oklch(0.761 0.201 149.7);
+}
+
+/* Bright #25D366 is too light to read as text or thin UI on a white
+ * surface, so light mode uses a deeper WhatsApp green. */
+html[data-mode="light"][data-theme="whatsapp"] {
+  --primary: oklch(0.6 0.16 150);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.54 0.15 150);
+  --primary-soft: oklch(0.6 0.16 150 / 0.12);
+  --primary-soft-2: oklch(0.6 0.16 150 / 0.2);
+  --ring: oklch(0.6 0.16 150);
+  --chart-1: oklch(0.6 0.16 150);
+  --sidebar-primary: oklch(0.6 0.16 150);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.6 0.16 150);
+}
+
 html[data-theme="violet"] {
   --primary: oklch(0.526 0.247 293);
   --primary-foreground: oklch(0.985 0 0);

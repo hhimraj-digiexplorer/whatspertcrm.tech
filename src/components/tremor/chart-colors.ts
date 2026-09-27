@@ -68,6 +68,13 @@ export const chartColors = {
     fill: "fill-fuchsia-500",
     text: "text-fuchsia-500",
   },
+  // Follows the active accent theme (WhatsApp green by default).
+  primary: {
+    bg: "bg-primary",
+    stroke: "stroke-primary",
+    fill: "fill-primary",
+    text: "text-primary",
+  },
 } as const satisfies {
   [color: string]: {
     [key in ColorUtility]: string
