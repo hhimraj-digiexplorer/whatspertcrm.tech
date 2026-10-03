@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { EMBED_COOKIE_OPTIONS, isEmbeddedRequest } from '@/lib/supabase/embed'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -8,6 +9,8 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Inside Real Expert's iframe, session cookies must be cross-site.
+      cookieOptions: isEmbeddedRequest((n) => cookieStore.get(n)) ? EMBED_COOKIE_OPTIONS : undefined,
       cookies: {
         getAll() {
           return cookieStore.getAll()

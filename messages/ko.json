@@ -2305,7 +2305,23 @@
       "messageActivityType": "WhatsApp 메시지 기록 유형",
       "messageActivityTypeHint": "Real Expert에 있는 활동 유형.",
       "stageMap": "단계 매핑",
-      "stageMapHint": "이름이 Real Expert와 다른 단계에만 필요합니다. 한 줄에 하나: Whatspert 단계 = real_expert_stage. 성사/실패 거래는 자동으로 closed_won / closed_lost가 됩니다."
-    }
+      "stageMapHint": "이름이 Real Expert와 다른 단계에만 필요합니다. 한 줄에 하나: Whatspert 단계 = real_expert_stage. 성사/실패 거래는 자동으로 closed_won / closed_lost가 됩니다.",
+      "crmPlan": "Real Expert 플랜",
+      "managedByRealExpert": "이 연결은 Real Expert CRM에서 관리합니다. 주소나 키를 바꾸거나 추가 기능을 끄려면 Real Expert → Settings → WhatsApp을 사용하세요."
+    },
+    "statusLocked": "잠김",
+    "statusAddon": "추가 기능",
+    "addonTitle": "Real Expert CRM + WhatsApp 패키지의 일부",
+    "addonDesc": "Real Expert CRM 플랜과 WhatsApp 플랜을 모두 가진 고객에게 제공됩니다. 둘 다 결제되면 Real Expert에서 모든 것이 자동으로 연결됩니다.",
+    "addonCta": "패키지 받기",
+    "haveRealExpert": "이미 Real Expert CRM을 사용 중인가요?",
+    "linkCodeDesc": "연결 코드를 만들어 Real Expert의 Settings → WhatsApp에 입력하면 이 계정이 연결됩니다.",
+    "linkCodeCreate": "연결 코드 만들기",
+    "linkCodeExpires": "30분 동안 1회 사용 가능.",
+    "linkCodeFailed": "연결 코드를 만들지 못했습니다.",
+    "lockedTitle": "WhatsApp 추가 기능 잠김",
+    "lockedCrm": "이 작업 공간의 Real Expert CRM 구독이 활성 상태가 아닙니다. Real Expert에서 갱신하면 동기화가 재개됩니다.",
+    "lockedWhatsapp": "동기화하려면 유료 WhatsApp 플랜(Growth 또는 Scale)이 필요합니다. 하나를 선택해 잠금을 해제하세요.",
+    "choosePlan": "WhatsApp 플랜 선택"
   }
 }

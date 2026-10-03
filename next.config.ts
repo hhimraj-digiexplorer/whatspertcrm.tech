@@ -19,13 +19,28 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
  *     deny them. A supply-chain compromise or a forgotten plugin
  *     can't silently opt back in.
  */
+/**
+ * Sites allowed to show Whatspert in an iframe: Real Expert CRM, whose
+ * WhatsApp add-on embeds the app. Space-separated origins, read at
+ * build time, e.g. "https://crm.digiexplorer.in". Unset → no framing.
+ */
+const FRAME_ANCESTORS = (process.env.PARTNER_FRAME_ANCESTORS ?? "")
+  .split(/[\s,]+/)
+  .filter((o) => /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o) || /^http:\/\/localhost(:\d+)?$/.test(o));
+
+const FRAME_HEADERS =
+  FRAME_ANCESTORS.length > 0
+    ? // Enforced on its own (the main CSP below is report-only).
+      [{ key: "Content-Security-Policy", value: `frame-ancestors 'self' ${FRAME_ANCESTORS.join(" ")}` }]
+    : [{ key: "X-Frame-Options", value: "DENY" }];
+
 const SECURITY_HEADERS = [
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
+  ...FRAME_HEADERS,
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     // Microphone is allowed for same-origin (`self`) so the inbox
@@ -66,7 +81,7 @@ const SECURITY_HEADERS = [
       // Razorpay Checkout renders its payment form in an iframe.
       // Razorpay Checkout and the Embedded Signup popup's helper frames.
       "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.facebook.com",
-      "frame-ancestors 'none'",
+      FRAME_ANCESTORS.length > 0 ? `frame-ancestors 'self' ${FRAME_ANCESTORS.join(" ")}` : "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),

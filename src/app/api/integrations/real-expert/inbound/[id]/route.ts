@@ -69,6 +69,13 @@ export async function POST(request: Request, { params }: Params) {
   if (!integration.is_active || !integration.inbound_enabled) {
     return NextResponse.json({ error: 'Receiving leads is switched off in Whatspert CRM.' }, { status: 403 })
   }
+  const { data: entitled } = await db.rpc('crm_integration_entitled', { p_integration_id: integration.id })
+  if (entitled !== true) {
+    return NextResponse.json(
+      { error: 'The WhatsApp add-on needs both a paid Real Expert plan and a paid WhatsApp plan.', code: 'locked' },
+      { status: 403 },
+    )
+  }
 
   let raw: Record<string, unknown> | null = null
   try {

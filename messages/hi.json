@@ -2305,7 +2305,23 @@
       "messageActivityType": "WhatsApp मैसेज को इस रूप में दर्ज करें",
       "messageActivityTypeHint": "Real Expert में मौजूद गतिविधि प्रकार।",
       "stageMap": "स्टेज मैपिंग",
-      "stageMapHint": "केवल उन Whatspert स्टेज के लिए जिनके नाम Real Expert से अलग हैं। हर पंक्ति में एक: Whatspert स्टेज = real_expert_stage. जीती और हारी डील अपने-आप closed_won / closed_lost में जाती हैं।"
-    }
+      "stageMapHint": "केवल उन Whatspert स्टेज के लिए जिनके नाम Real Expert से अलग हैं। हर पंक्ति में एक: Whatspert स्टेज = real_expert_stage. जीती और हारी डील अपने-आप closed_won / closed_lost में जाती हैं।",
+      "crmPlan": "Real Expert प्लान",
+      "managedByRealExpert": "यह कनेक्शन Real Expert CRM से मैनेज होता है। पता या कुंजी बदलने या ऐड-ऑन बंद करने के लिए Real Expert → Settings → WhatsApp पर जाएं।"
+    },
+    "statusLocked": "लॉक",
+    "statusAddon": "ऐड-ऑन",
+    "addonTitle": "Real Expert CRM + WhatsApp पैकेज का हिस्सा",
+    "addonDesc": "उन क्लाइंट्स के लिए जिनके पास Real Expert CRM प्लान और WhatsApp प्लान दोनों हैं। दोनों का भुगतान होते ही Real Expert से सब कुछ अपने-आप जुड़ जाता है।",
+    "addonCta": "पैकेज लें",
+    "haveRealExpert": "पहले से Real Expert CRM इस्तेमाल करते हैं?",
+    "linkCodeDesc": "लिंक कोड बनाएं और इस अकाउंट को जोड़ने के लिए इसे Real Expert में Settings → WhatsApp में डालें।",
+    "linkCodeCreate": "लिंक कोड बनाएं",
+    "linkCodeExpires": "30 मिनट के लिए मान्य, एक बार उपयोग।",
+    "linkCodeFailed": "लिंक कोड नहीं बन सका।",
+    "lockedTitle": "WhatsApp ऐड-ऑन लॉक है",
+    "lockedCrm": "इस वर्कस्पेस की Real Expert CRM सदस्यता सक्रिय नहीं है। सिंक फिर शुरू करने के लिए इसे Real Expert में रिन्यू करें।",
+    "lockedWhatsapp": "सिंक के लिए सशुल्क WhatsApp प्लान (Growth या Scale) चाहिए। अनलॉक करने के लिए एक चुनें।",
+    "choosePlan": "WhatsApp प्लान चुनें"
   }
 }

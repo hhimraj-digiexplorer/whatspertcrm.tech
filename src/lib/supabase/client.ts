@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { EMBED_COOKIE_OPTIONS, inCrossSiteFrame } from '@/lib/supabase/embed'
 
 // Singleton instance — one client shared across the whole browser session.
 // Creating multiple clients causes auth-lock contention ("Lock was released
@@ -11,7 +12,9 @@ export function createClient() {
 
   browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    // Inside Real Expert's iframe, session cookies must be cross-site.
+    inCrossSiteFrame() ? { cookieOptions: EMBED_COOKIE_OPTIONS } : undefined
   )
 
   return browserClient

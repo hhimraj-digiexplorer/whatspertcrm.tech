@@ -2305,7 +2305,23 @@
       "messageActivityType": "Registrar mensagens do WhatsApp como",
       "messageActivityTypeHint": "Um tipo de atividade que exista no Real Expert.",
       "stageMap": "Mapeamento de etapas",
-      "stageMapHint": "Só para etapas com nome diferente do Real Expert. Uma por linha: etapa do Whatspert = etapa_real_expert. Negócios ganhos e perdidos vão para closed_won / closed_lost automaticamente."
-    }
+      "stageMapHint": "Só para etapas com nome diferente do Real Expert. Uma por linha: etapa do Whatspert = etapa_real_expert. Negócios ganhos e perdidos vão para closed_won / closed_lost automaticamente.",
+      "crmPlan": "Plano do Real Expert",
+      "managedByRealExpert": "Esta conexão é gerenciada pelo Real Expert CRM. Para mudar o endereço ou a chave, ou desligar o complemento, use Real Expert → Settings → WhatsApp."
+    },
+    "statusLocked": "Bloqueado",
+    "statusAddon": "Complemento",
+    "addonTitle": "Parte do pacote Real Expert CRM + WhatsApp",
+    "addonDesc": "Disponível para clientes com um plano do Real Expert CRM e um plano do WhatsApp. Com os dois pagos, tudo se conecta automaticamente pelo Real Expert.",
+    "addonCta": "Obter o pacote",
+    "haveRealExpert": "Já usa o Real Expert CRM?",
+    "linkCodeDesc": "Crie um código de vínculo e digite-o no Real Expert em Settings → WhatsApp para conectar esta conta.",
+    "linkCodeCreate": "Criar código de vínculo",
+    "linkCodeExpires": "Válido por 30 minutos, uso único.",
+    "linkCodeFailed": "Não foi possível criar o código.",
+    "lockedTitle": "Complemento do WhatsApp bloqueado",
+    "lockedCrm": "A assinatura do Real Expert CRM deste espaço não está ativa. Renove no Real Expert para retomar a sincronização.",
+    "lockedWhatsapp": "A sincronização precisa de um plano pago do WhatsApp (Growth ou Scale). Escolha um para desbloquear.",
+    "choosePlan": "Escolher um plano do WhatsApp"
   }
 }

@@ -31,6 +31,10 @@ import { cn } from "@/lib/utils";
 
 export interface RealExpertIntegration {
   id: string;
+  /** Created and kept up to date by Real Expert CRM (the add-on). */
+  partner_managed: boolean;
+  partner_crm_plan: string | null;
+  entitlement: { entitled: boolean; reason: "crm_unpaid" | "whatsapp_unpaid" | null };
   is_active: boolean;
   base_url: string;
   api_key_hint: string | null;
@@ -267,6 +271,19 @@ export function RealExpertPanel({
             </label>
           )}
         </header>
+        {integration?.partner_managed ? (
+          <div className="grid gap-4 p-6 text-sm md:grid-cols-3">
+            <div>
+              <p className="text-muted-foreground">{t("baseUrl")}</p>
+              <p className="mt-0.5 font-medium break-all text-foreground">{integration.base_url}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{t("crmPlan")}</p>
+              <p className="mt-0.5 font-medium text-foreground">{integration.partner_crm_plan ?? "—"}</p>
+            </div>
+            <p className="text-muted-foreground md:col-span-3">{t("managedByRealExpert")}</p>
+          </div>
+        ) : (
         <div className="grid gap-4 p-6 md:grid-cols-2">
           <Field label={t("baseUrl")} hint={t("baseUrlHint")}>
             <input className={inputCls} value={draft.base_url} onChange={(e) => set("base_url", e.target.value)} placeholder="https://crm.digiexplorer.in" inputMode="url" autoComplete="off" />
@@ -275,6 +292,7 @@ export function RealExpertPanel({
             <input className={inputCls} type="password" value={draft.api_key} onChange={(e) => set("api_key", e.target.value)} placeholder={integration?.api_key_hint ?? ""} autoComplete="new-password" />
           </Field>
         </div>
+        )}
       </section>
 
       {/* Sync options */}
@@ -389,7 +407,7 @@ export function RealExpertPanel({
       </section>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {integration ? (
+        {integration && !integration.partner_managed ? (
           <button type="button" onClick={() => void disconnect()} className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-rose-500 hover:bg-rose-500/10">
             <Trash2 className="size-4" /> {t("disconnect")}
           </button>

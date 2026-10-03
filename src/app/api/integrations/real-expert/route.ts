@@ -8,6 +8,7 @@ import {
   normalizeBaseUrl,
   parseOptions,
 } from '@/lib/integrations/real-expert/config'
+import { loadEntitlement } from '@/lib/partner/real-expert'
 import {
   generateInboundToken,
   inboundPath,
@@ -23,10 +24,13 @@ import {
  */
 
 const SELECT =
-  'id, is_active, base_url, api_key, inbound_token, sync_new_leads, sync_deals, sync_messages, inbound_enabled, welcome_template_name, welcome_template_language, options, last_sync_at, last_error, last_error_at, created_at'
+  'id, partner_ref, partner_crm_active, partner_crm_plan, is_active, base_url, api_key, inbound_token, sync_new_leads, sync_deals, sync_messages, inbound_enabled, welcome_template_name, welcome_template_language, options, last_sync_at, last_error, last_error_at, created_at'
 
 type Row = {
   id: string
+  partner_ref: string | null
+  partner_crm_active: boolean
+  partner_crm_plan: string | null
   is_active: boolean
   base_url: string
   api_key: string
@@ -73,8 +77,12 @@ async function present(row: Row, accountId: string) {
       .then((r) => r.count ?? 0),
   ])
   const apiKey = safeDecrypt(row.api_key)
+  const entitlement = await loadEntitlement(admin, accountId, row.partner_crm_active)
   return {
     id: row.id,
+    partner_managed: !!row.partner_ref,
+    partner_crm_plan: row.partner_crm_plan,
+    entitlement: row.partner_ref ? entitlement : { ...entitlement, entitled: false, reason: 'crm_unpaid' as const },
     is_active: row.is_active,
     base_url: row.base_url,
     api_key_hint: apiKey ? maskSecret(apiKey) : null,
@@ -104,7 +112,10 @@ export async function GET() {
       .eq('provider', REAL_EXPERT_PROVIDER)
       .maybeSingle()
     if (error) throw error
-    return NextResponse.json({ integration: data ? await present(data as Row, ctx.accountId) : null })
+    if (data) return NextResponse.json({ integration: await present(data as Row, ctx.accountId) })
+    // Not linked: the page shows the add-on as locked, with what is missing.
+    const entitlement = await loadEntitlement(supabaseAdmin(), ctx.accountId, false)
+    return NextResponse.json({ integration: null, entitlement })
   } catch (err) {
     return toErrorResponse(err)
   }
@@ -130,6 +141,14 @@ export async function PUT(request: Request) {
       .maybeSingle()
     if (loadErr) throw loadErr
     const prev = existing as Row | null
+    // Real Expert is an add-on: the connection is created from Real
+    // Expert (partner link), never by hand here.
+    if (!prev) {
+      return NextResponse.json(
+        { error: 'Switch on the WhatsApp add-on in Real Expert CRM to connect it.', code: 'partner_only' },
+        { status: 403 },
+      )
+    }
 
     const baseUrl = normalizeBaseUrl(
       typeof body.base_url === 'string' ? body.base_url : prev?.base_url ?? '',
@@ -162,13 +181,6 @@ export async function PUT(request: Request) {
       body.welcome_template_language === undefined
         ? prev?.welcome_template_language ?? null
         : text(body.welcome_template_language, 20)
-    if (inboundEnabled && !templateName) {
-      return NextResponse.json(
-        { error: 'Pick the WhatsApp template to send to new Real Expert leads.', field: 'welcome_template_name' },
-        { status: 400 },
-      )
-    }
-
     const now = new Date().toISOString()
     const row: Record<string, unknown> = {
       account_id: ctx.accountId,
@@ -222,6 +234,18 @@ export async function PUT(request: Request) {
 export async function DELETE() {
   try {
     const ctx = await requireRole('admin')
+    const { data: row } = await ctx.supabase
+      .from('crm_integrations')
+      .select('partner_ref')
+      .eq('account_id', ctx.accountId)
+      .eq('provider', REAL_EXPERT_PROVIDER)
+      .maybeSingle()
+    if (row?.partner_ref) {
+      return NextResponse.json(
+        { error: 'This connection is managed by Real Expert CRM. Switch the add-on off there.', code: 'partner_managed' },
+        { status: 403 },
+      )
+    }
     const { error } = await ctx.supabase
       .from('crm_integrations')
       .delete()

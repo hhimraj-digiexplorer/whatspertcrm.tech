@@ -3,14 +3,22 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Blocks, Building, Check, Code2, Lock } from "lucide-react";
+import { ArrowRight, Blocks, Building, Check, Code2, KeyRound, Loader2, Lock } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/use-auth";
+import { COMPANY } from "@/lib/brand";
 import {
   RealExpertPanel,
   type RealExpertIntegration,
 } from "@/components/integrations/real-expert-panel";
 import { cn } from "@/lib/utils";
+
+type LockReason = "crm_unpaid" | "whatsapp_unpaid" | null;
+interface EntitlementInfo {
+  entitled: boolean;
+  reason: LockReason;
+}
 
 /**
  * Integrations: connect Whatspert CRM to other tools. The headline
@@ -21,7 +29,10 @@ export default function IntegrationsPage() {
   const t = useTranslations("Integrations");
   const { canEditSettings } = useAuth();
   const [integration, setIntegration] = useState<RealExpertIntegration | null | undefined>(undefined);
+  const [unlinked, setUnlinked] = useState<EntitlementInfo | null>(null);
   const [open, setOpen] = useState(false);
+  const [linkCode, setLinkCode] = useState<{ code: string; expires_at: string } | null>(null);
+  const [creatingCode, setCreatingCode] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,15 +40,33 @@ export default function IntegrationsPage() {
     let alive = true;
     fetch("/api/integrations/real-expert", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { integration: null }))
-      .then((b: { integration: RealExpertIntegration | null }) => alive && setIntegration(b.integration))
+      .then((b: { integration: RealExpertIntegration | null; entitlement?: EntitlementInfo }) => {
+        if (!alive) return;
+        setIntegration(b.integration);
+        setUnlinked(b.entitlement ?? null);
+      })
       .catch(() => alive && setIntegration(null));
     return () => {
       alive = false;
     };
   }, [canEditSettings]);
 
+  async function createLinkCode() {
+    setCreatingCode(true);
+    try {
+      const res = await fetch("/api/integrations/real-expert/link-code", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) setLinkCode(body);
+      else toast.error(body.error ?? t("linkCodeFailed"));
+    } finally {
+      setCreatingCode(false);
+    }
+  }
+
   const connected = !!integration;
-  const showPanel = canEditSettings && (open || connected);
+  const entitled = integration?.entitlement?.entitled === true;
+  const lockReason: LockReason = connected ? (integration.entitlement?.reason ?? null) : null;
+  const showPanel = canEditSettings && connected && entitled && (open || connected);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -67,7 +96,19 @@ export default function IntegrationsPage() {
                   <p className="text-xs font-medium text-indigo-500">{t("reBy")}</p>
                 </div>
               </div>
-              <StatusPill state={integration === undefined ? "loading" : connected ? (integration.is_active ? "on" : "paused") : "off"} />
+              <StatusPill
+                state={
+                  integration === undefined
+                    ? "loading"
+                    : !connected
+                      ? "addon"
+                      : !entitled
+                        ? "locked"
+                        : integration.is_active
+                          ? "on"
+                          : "paused"
+                }
+              />
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{t("reDesc")}</p>
           </div>
@@ -78,8 +119,65 @@ export default function IntegrationsPage() {
               </li>
             ))}
           </ul>
-          <div className="px-6 pb-6">
-            {canEditSettings ? (
+          <div className="space-y-3 px-6 pb-6">
+            {!canEditSettings ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Lock className="size-4" /> {t("adminOnly")}
+              </p>
+            ) : integration === undefined ? null : !connected ? (
+              <>
+                <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/6 p-4 text-sm">
+                  <p className="flex items-center gap-2 font-semibold text-foreground">
+                    <Lock className="size-4 text-indigo-500" /> {t("addonTitle")}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">{t("addonDesc")}</p>
+                </div>
+                <a
+                  href={`mailto:${COMPANY.supportEmail}?subject=${encodeURIComponent("Real Expert CRM + WhatsApp package")}`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+                >
+                  {t("addonCta")} <ArrowRight className="size-4" />
+                </a>
+                <div className="rounded-xl border border-border p-4 text-sm">
+                  <p className="font-medium text-foreground">{t("haveRealExpert")}</p>
+                  <p className="mt-1 text-muted-foreground">{t("linkCodeDesc")}</p>
+                  {linkCode ? (
+                    <p className="mt-3 flex flex-wrap items-center gap-3">
+                      <code className="rounded-lg bg-muted px-3 py-2 font-mono text-lg font-bold tracking-widest text-foreground">{linkCode.code}</code>
+                      <span className="text-xs text-muted-foreground">{t("linkCodeExpires")}</span>
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={creatingCode}
+                      onClick={() => void createLinkCode()}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+                    >
+                      {creatingCode ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />} {t("linkCodeCreate")}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : !entitled ? (
+              <>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/8 p-4 text-sm">
+                  <p className="flex items-center gap-2 font-semibold text-foreground">
+                    <Lock className="size-4 text-amber-500" /> {t("lockedTitle")}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {lockReason === "crm_unpaid" ? t("lockedCrm") : t("lockedWhatsapp")}
+                  </p>
+                </div>
+                {lockReason === "whatsapp_unpaid" && (
+                  <Link
+                    href="/settings?tab=billing"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+                  >
+                    {t("choosePlan")} <ArrowRight className="size-4" />
+                  </Link>
+                )}
+              </>
+            ) : (
               <button
                 type="button"
                 onClick={() => {
@@ -88,12 +186,8 @@ export default function IntegrationsPage() {
                 }}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
               >
-                {connected ? t("manage") : t("connect")} <ArrowRight className="size-4" />
+                {t("manage")} <ArrowRight className="size-4" />
               </button>
-            ) : (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Lock className="size-4" /> {t("adminOnly")}
-              </p>
             )}
           </div>
         </div>
@@ -130,22 +224,16 @@ export default function IntegrationsPage() {
         </div>
       </div>
 
-      {showPanel && integration !== undefined && (
+      {showPanel && integration && (
         <div ref={panelRef} className="scroll-mt-4">
-          <RealExpertPanel
-            integration={integration}
-            onChange={(next) => {
-              setIntegration(next);
-              if (!next) setOpen(false);
-            }}
-          />
+          <RealExpertPanel integration={integration} onChange={(next) => next && setIntegration(next)} />
         </div>
       )}
     </div>
   );
 }
 
-function StatusPill({ state }: { state: "loading" | "on" | "paused" | "off" }) {
+function StatusPill({ state }: { state: "loading" | "on" | "paused" | "locked" | "addon" }) {
   const t = useTranslations("Integrations");
   if (state === "loading") return null;
   return (
@@ -154,10 +242,17 @@ function StatusPill({ state }: { state: "loading" | "on" | "paused" | "off" }) {
         "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold",
         state === "on" && "bg-emerald-600 text-white",
         state === "paused" && "bg-amber-500 text-white",
-        state === "off" && "bg-muted text-muted-foreground",
+        state === "locked" && "bg-amber-500 text-white",
+        state === "addon" && "bg-indigo-600 text-white",
       )}
     >
-      {state === "on" ? t("statusOn") : state === "paused" ? t("statusPaused") : t("statusOff")}
+      {state === "on"
+        ? t("statusOn")
+        : state === "paused"
+          ? t("statusPaused")
+          : state === "locked"
+            ? t("statusLocked")
+            : t("statusAddon")}
     </span>
   );
 }

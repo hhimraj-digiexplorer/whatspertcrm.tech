@@ -2305,7 +2305,23 @@
       "messageActivityType": "Log WhatsApp messages as",
       "messageActivityTypeHint": "An activity type that exists in Real Expert.",
       "stageMap": "Stage mapping",
-      "stageMapHint": "Only for Whatspert stages whose names differ from Real Expert's. One per line: Whatspert stage = real_expert_stage. Won and lost deals map to closed_won / closed_lost automatically."
-    }
+      "stageMapHint": "Only for Whatspert stages whose names differ from Real Expert's. One per line: Whatspert stage = real_expert_stage. Won and lost deals map to closed_won / closed_lost automatically.",
+      "crmPlan": "Real Expert plan",
+      "managedByRealExpert": "This connection is managed by Real Expert CRM. To change the address or key, or to switch the add-on off, use Real Expert → Settings → WhatsApp."
+    },
+    "statusLocked": "Locked",
+    "statusAddon": "Add-on",
+    "addonTitle": "Part of the Real Expert CRM + WhatsApp package",
+    "addonDesc": "Available to clients who have both a Real Expert CRM plan and a WhatsApp plan. Once both are paid, everything connects automatically from Real Expert.",
+    "addonCta": "Get the package",
+    "haveRealExpert": "Already using Real Expert CRM?",
+    "linkCodeDesc": "Create a link code and enter it in Real Expert under Settings → WhatsApp to connect this account.",
+    "linkCodeCreate": "Create link code",
+    "linkCodeExpires": "Valid for 30 minutes, one use.",
+    "linkCodeFailed": "Could not create a link code.",
+    "lockedTitle": "WhatsApp add-on locked",
+    "lockedCrm": "The Real Expert CRM subscription for this workspace is not active. Renew it in Real Expert to resume syncing.",
+    "lockedWhatsapp": "Syncing needs a paid WhatsApp plan (Growth or Scale). Choose one to unlock it.",
+    "choosePlan": "Choose a WhatsApp plan"
   }
 }

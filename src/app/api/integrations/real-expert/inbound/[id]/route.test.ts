@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   deletedJobs: 0,
   templateBody: 'Hi {{1}}, thanks for your interest!' as string | null,
   ownLink: null as Record<string, unknown> | null,
+  entitled: true,
   resolve: vi.fn(),
   send: vi.fn(),
 }))
@@ -29,6 +30,7 @@ function chain(result: () => unknown) {
 
 vi.mock('@/lib/automations/admin-client', () => ({
   supabaseAdmin: () => ({
+    rpc: async () => ({ data: h.entitled, error: null }),
     from(table: string) {
       if (table === 'crm_integrations') return chain(() => ({ data: h.integration, error: null }))
       if (table === 'message_templates') return chain(() => ({ data: { body_text: h.templateBody }, error: null }))
@@ -75,6 +77,7 @@ beforeEach(() => {
   h.links = []
   h.deletedJobs = 0
   h.ownLink = null
+  h.entitled = true
   h.templateBody = 'Hi {{1}}, thanks for your interest!'
   h.resolve.mockReset().mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: true })
   h.send.mockReset().mockResolvedValue({ messageId: 'm1', whatsappMessageId: 'wamid.1' })
@@ -180,5 +183,13 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     const byLink = await call({ event: 'lead.created', data: { lead_id: 5, first_name: 'A', phone: '9876543210', source: 'website' } })
     expect(await byLink.json()).toMatchObject({ ignored: true, reason: 'own_lead' })
     expect(h.send).not.toHaveBeenCalled()
+  })
+
+  it('refuses leads while the add-on is locked (not paid for both)', async () => {
+    h.entitled = false
+    const res = await call({ phone: '9876543210' })
+    expect(res.status).toBe(403)
+    expect(await res.json()).toMatchObject({ code: 'locked' })
+    expect(h.resolve).not.toHaveBeenCalled()
   })
 })

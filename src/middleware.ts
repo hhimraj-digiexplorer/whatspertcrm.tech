@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { EMBED_COOKIE_OPTIONS, isEmbeddedRequest } from '@/lib/supabase/embed'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -8,6 +9,8 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Inside Real Expert's iframe, session cookies must be cross-site.
+      cookieOptions: isEmbeddedRequest((n) => request.cookies.get(n)) ? EMBED_COOKIE_OPTIONS : undefined,
       cookies: {
         getAll() {
           return request.cookies.getAll()

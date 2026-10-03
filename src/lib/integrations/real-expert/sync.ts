@@ -388,6 +388,12 @@ export async function drainCrmQueue(
       .select('id, account_id, is_active, base_url, api_key, options')
       .in('id', ids)
     const integrations = new Map((rows as IntegrationRow[] | null ?? []).map((r) => [r.id, r]))
+    // The add-on only runs while both Real Expert and WhatsApp are paid.
+    const entitled = new Map<string, boolean>()
+    for (const id of integrations.keys()) {
+      const { data: ok } = await db.rpc('crm_integration_entitled', { p_integration_id: id })
+      entitled.set(id, ok === true)
+    }
     const depsCache = new Map<string, SyncDeps | Error>()
     const touched = new Map<string, { ok: boolean; error: string | null }>()
 
@@ -396,6 +402,11 @@ export async function drainCrmQueue(
       if (!integration || !integration.is_active) {
         await finish(db, job.id, 'done', null)
         result.done++
+        continue
+      }
+      if (!entitled.get(integration.id)) {
+        await finish(db, job.id, 'failed', 'WhatsApp add-on is locked: Real Expert and WhatsApp plans must both be paid.')
+        result.failed++
         continue
       }
       let deps = depsCache.get(integration.id)
