@@ -40,7 +40,8 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "platformAdmin": "Admin. de plataforma"
   },
   "Header": {
     "dashboard": "Panel",
@@ -57,7 +58,10 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "flows": "Flujos",
+    "aiAgents": "Agentes de IA",
+    "platformAdmin": "Admin. de plataforma"
   },
   "ModeToggle": {
     "switchMode": "Cambiar al modo {mode}"

@@ -40,7 +40,8 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Profile",
     "menuSettings": "Settings",
-    "menuSignOut": "Sign out"
+    "menuSignOut": "Sign out",
+    "platformAdmin": "Platform admin"
   },
   "Header": {
     "dashboard": "Dashboard",
@@ -57,7 +58,10 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Profile",
     "menuSettings": "Settings",
-    "menuSignOut": "Sign out"
+    "menuSignOut": "Sign out",
+    "flows": "Flows",
+    "aiAgents": "AI Agents",
+    "platformAdmin": "Platform admin"
   },
   "ModeToggle": {
     "switchMode": "Switch to {mode} mode"

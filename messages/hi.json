@@ -40,7 +40,8 @@
     "defaultAvatar": "अवतार",
     "menuProfile": "प्रोफ़ाइल",
     "menuSettings": "सेटिंग्स",
-    "menuSignOut": "साइन आउट"
+    "menuSignOut": "साइन आउट",
+    "platformAdmin": "प्लेटफ़ॉर्म एडमिन"
   },
   "Header": {
     "dashboard": "डैशबोर्ड",
@@ -57,7 +58,10 @@
     "defaultAvatar": "अवतार",
     "menuProfile": "प्रोफ़ाइल",
     "menuSettings": "सेटिंग्स",
-    "menuSignOut": "साइन आउट"
+    "menuSignOut": "साइन आउट",
+    "flows": "फ़्लो",
+    "aiAgents": "AI एजेंट",
+    "platformAdmin": "प्लेटफ़ॉर्म एडमिन"
   },
   "ModeToggle": {
     "switchMode": "{mode} मोड पर जाएँ"

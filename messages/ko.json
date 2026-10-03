@@ -40,7 +40,8 @@
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "platformAdmin": "플랫폼 관리"
   },
   "Header": {
     "dashboard": "대시보드",
@@ -57,7 +58,10 @@
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "flows": "플로우",
+    "aiAgents": "AI 에이전트",
+    "platformAdmin": "플랫폼 관리"
   },
   "ModeToggle": {
     "switchMode": "{mode} 모드로 전환"

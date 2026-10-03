@@ -18,6 +18,7 @@ import {
   Radio,
   Settings,
   Shield,
+  ShieldCheck,
   User,
   UserCog,
   Users,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { LogoMark } from "@/components/brand/logo";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -106,6 +108,9 @@ const bottomNavItems = [
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
+/** Shown only to platform operators (SUPER_ADMIN_EMAILS). */
+const superAdminNavItem = { href: "/admin", labelKey: "platformAdmin", icon: ShieldCheck };
+
 interface SidebarProps {
   /** Controlled on mobile by the Header's hamburger button. Ignored on lg+. */
   open?: boolean;
@@ -116,6 +121,7 @@ import { useTranslations } from "next-intl";
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
+  const isSuperAdmin = useIsSuperAdmin();
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
@@ -270,7 +276,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="my-4 border-t border-border" />
 
           <ul className="flex flex-col gap-1">
-            {bottomNavItems.map((item) => {
+            {(isSuperAdmin ? [...bottomNavItems, superAdminNavItem] : bottomNavItems).map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
                 <li key={item.href}>

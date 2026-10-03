@@ -28,7 +28,9 @@
 --      account, used by the triggers and the server — and
 --      `account_broadcast_usage(account_id, since)`, the broadcast
 --      messages sent since a date (monthly quota).
---   7. New accounts default to INR as the deal currency.
+--   7. `admin_list_accounts(...)` — one-query account list with owner,
+--      billing and usage counts for the super-admin panel.
+--   8. New accounts default to INR as the deal currency.
 --
 -- NULL in any max_* column means "unlimited".
 -- Idempotent — safe to run more than once.
@@ -307,6 +309,81 @@ $$;
 DROP TRIGGER IF EXISTS enforce_member_limit ON profiles;
 CREATE TRIGGER enforce_member_limit BEFORE INSERT OR UPDATE OF account_id ON profiles
   FOR EACH ROW EXECUTE FUNCTION enforce_member_limit();
+
+-- ============================================================
+-- SUPER-ADMIN ACCOUNT LIST
+-- ============================================================
+-- Every account with its owner, billing state and usage, filtered and
+-- paged in SQL so the panel stays fast with thousands of tenants.
+-- Service role only: the API checks SUPER_ADMIN_EMAILS first.
+CREATE OR REPLACE FUNCTION admin_list_accounts(
+  search TEXT DEFAULT NULL,
+  status_filter TEXT DEFAULT NULL,
+  page_size INTEGER DEFAULT 50,
+  page_offset INTEGER DEFAULT 0
+) RETURNS TABLE (
+  account_id UUID,
+  account_name TEXT,
+  created_at TIMESTAMPTZ,
+  owner_email TEXT,
+  owner_name TEXT,
+  plan_id TEXT,
+  plan_name TEXT,
+  status TEXT,
+  billing_cycle TEXT,
+  trial_ends_at TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  suspended_at TIMESTAMPTZ,
+  suspended_reason TEXT,
+  admin_notes TEXT,
+  members INTEGER,
+  contacts INTEGER,
+  messages_30d INTEGER,
+  total_count BIGINT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH filtered AS (
+    SELECT a.id, a.name, a.created_at, a.owner_user_id,
+           b.plan_id, b.status, b.billing_cycle, b.trial_ends_at,
+           b.current_period_end, b.suspended_at, b.suspended_reason,
+           b.admin_notes,
+           op.email AS owner_email, op.full_name AS owner_name
+    FROM accounts a
+    LEFT JOIN account_billing b ON b.account_id = a.id
+    LEFT JOIN profiles op ON op.user_id = a.owner_user_id
+    WHERE (search IS NULL OR search = ''
+           OR a.name ILIKE '%' || search || '%'
+           OR op.email ILIKE '%' || search || '%')
+      AND (status_filter IS NULL OR status_filter = ''
+           OR (status_filter = 'suspended' AND b.suspended_at IS NOT NULL)
+           OR (status_filter <> 'suspended' AND b.status = status_filter
+               AND b.suspended_at IS NULL))
+  )
+  SELECT f.id, f.name, f.created_at, f.owner_email, f.owner_name,
+         f.plan_id, p.name, f.status, f.billing_cycle, f.trial_ends_at,
+         f.current_period_end, f.suspended_at, f.suspended_reason,
+         COALESCE(f.admin_notes, ''),
+         (SELECT COUNT(*)::INTEGER FROM profiles pr WHERE pr.account_id = f.id),
+         (SELECT COUNT(*)::INTEGER FROM contacts c WHERE c.account_id = f.id),
+         (SELECT COUNT(*)::INTEGER
+            FROM messages m
+            JOIN conversations cv ON cv.id = m.conversation_id
+           WHERE cv.account_id = f.id
+             AND m.created_at >= NOW() - INTERVAL '30 days'),
+         COUNT(*) OVER ()
+  FROM filtered f
+  LEFT JOIN plans p ON p.id = f.plan_id
+  ORDER BY f.created_at DESC
+  LIMIT GREATEST(1, LEAST(page_size, 200))
+  OFFSET GREATEST(0, page_offset);
+$$;
+
+REVOKE ALL ON FUNCTION admin_list_accounts(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION admin_list_accounts(TEXT, TEXT, INTEGER, INTEGER) TO service_role;
 
 -- ============================================================
 -- DEFAULT CURRENCY
