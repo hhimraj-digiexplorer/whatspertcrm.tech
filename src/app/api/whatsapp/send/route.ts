@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import {
@@ -12,6 +12,8 @@ import {
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
 import { assertAccountActive, billingErrorResponse } from '@/lib/billing/server'
+import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { drainCrmQueue } from '@/lib/integrations/real-expert/sync'
 
 // The dashboard's outbound-send endpoint. It owns auth, per-user rate
 // limiting, and the two ways the UI targets a thread — an existing
@@ -170,6 +172,10 @@ export async function POST(request: Request) {
         interactivePayload: interactive_payload,
         replyToMessageId: reply_to_message_id,
       })
+
+      // Push the message (and any new lead) to a linked CRM after the
+      // response; a no-op when the account has no CRM integration.
+      after(() => drainCrmQueue(supabaseAdmin(), { accountId }))
 
       return NextResponse.json({
         success: true,

@@ -19,6 +19,7 @@ import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver'
+import { drainCrmQueue } from '@/lib/integrations/real-expert/sync'
 import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
@@ -276,6 +277,9 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error('Error processing webhook:', error)
     }
+    // Push new leads / messages to linked CRMs (Real Expert). Cheap
+    // when nothing is queued; never throws.
+    await drainCrmQueue(supabaseAdmin(), { limit: 25 })
   })
 
   return NextResponse.json({ status: 'received' }, { status: 200 })

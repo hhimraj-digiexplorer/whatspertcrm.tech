@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { requestCrmSync } from "@/lib/integrations/real-expert/nudge";
 
 interface DealFormProps {
   open: boolean;
@@ -206,6 +207,7 @@ export function DealForm({
     }
 
     setSaving(false);
+    requestCrmSync();
     toast.success(deal ? t("toastUpdated") : t("toastCreated"));
     onOpenChange(false);
     onSaved();
@@ -223,6 +225,7 @@ export function DealForm({
       toast.error(t("toastFailedStatus"));
       return;
     }
+    requestCrmSync();
     toast.success(
       status === "won" ? t("toastMarkedWon") : status === "lost" ? t("toastMarkedLost") : t("toastReopened"),
     );

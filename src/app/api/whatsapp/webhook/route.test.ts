@@ -53,6 +53,10 @@ vi.mock('next/server', () => ({
   },
 }))
 
+vi.mock('@/lib/integrations/real-expert/sync', () => ({
+  drainCrmQueue: async () => ({ claimed: 0, done: 0, retrying: 0, failed: 0 }),
+}))
+
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     from(table: string) {
