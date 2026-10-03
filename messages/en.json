@@ -393,7 +393,8 @@
       "loadingTags": "Loading tags...",
       "noTagsAvailable": "No tags available. Create tags in Settings.",
       "phoneRequired": "Phone number is required",
-      "phoneNeedsCountryCode": "Include the country code — the number must start with + (e.g. +14155550123)"
+      "phoneNeedsCountryCode": "Include the country code — the number must start with + (e.g. +14155550123)",
+      "toastPlanLimit": "You've reached your plan's contact limit. Upgrade in Settings → Billing & plan to add more."
     },
     "detailView": {
       "tabs": {
@@ -506,7 +507,8 @@
       "toastInvalidPhone_plural": "{count} contacts had no usable phone number",
       "toastFailed": "{count} contact failed to import",
       "toastFailed_plural": "{count} contacts failed to import",
-      "toastError": "Import failed"
+      "toastError": "Import failed",
+      "toastPlanLimit": "Import stopped: your plan's contact limit is reached. Upgrade in Settings → Billing & plan to import the rest."
     },
     "customFields": {
       "title": "Custom fields",
@@ -1669,7 +1671,8 @@
       "fields": "Fields & tags",
       "deals": "Deals & currency",
       "members": "Team members",
-      "api": "API keys"
+      "api": "API keys",
+      "billing": "Billing & plan"
     },
     "groups": {
       "account": "Account",
@@ -1816,6 +1819,63 @@
       "saving": "Saving...",
       "saveFailed": "Failed to save default currency",
       "saveSuccess": "Default currency updated"
+    },
+    "billing": {
+      "title": "Billing & plan",
+      "description": "Your plan, what you've used this month, and upgrades. Prices are in Indian rupees.",
+      "loading": "Loading billing…",
+      "loadFailed": "Couldn't load billing details.",
+      "retry": "Retry",
+      "currentPlan": "Current plan",
+      "usage": "Usage",
+      "usageDesc": "Against your plan's limits. Broadcast messages reset on the 1st of each month.",
+      "usageContacts": "Contacts",
+      "usageMembers": "Team members",
+      "usageBroadcasts": "Broadcast messages this month",
+      "usedOf": "{used} of {limit}",
+      "usedUnlimited": "{used} · unlimited",
+      "statusTrial": "Trial · {days, plural, =1 {# day} other {# days}} left",
+      "statusActive": "Active",
+      "statusPastDue": "Payment failed",
+      "statusCancelled": "Cancelled",
+      "statusTrialEnded": "Trial ended",
+      "statusExpired": "Expired",
+      "statusSuspended": "Suspended",
+      "lineTrial": "Your free trial ends on {date}.",
+      "lineRenews": "Billed {cycle}. Renews on {date}.",
+      "linePastDue": "Your last renewal payment failed. Razorpay will retry — update your payment method from the link in your email to avoid interruption.",
+      "lineEnds": "Your plan won't renew. You keep access until {date}.",
+      "lineChoosePlan": "Choose a plan below to keep sending messages.",
+      "suspendedTitle": "This account is suspended",
+      "suspendedBody": "Sending is paused. Contact support to restore access.",
+      "cancelSubscription": "Cancel subscription",
+      "cancelConfirm": "Stop renewing at the end of this period?",
+      "cancelYes": "Yes, cancel",
+      "cancelNo": "Keep plan",
+      "cancelled": "Subscription cancelled. You keep access until {date}.",
+      "cancelFailed": "Couldn't cancel the subscription.",
+      "choosePlan": "Plans",
+      "choosePlanDesc": "Pick a plan and pay securely with UPI, card or netbanking through Razorpay.",
+      "ownerOnly": "Only the account owner can change the plan.",
+      "billingCycle": "Billing cycle",
+      "monthly": "monthly",
+      "yearly": "yearly",
+      "perMonth": "/ month",
+      "perYear": "/ year",
+      "gstNote": "Plus applicable GST.",
+      "currentBadge": "Current",
+      "currentPlanBtn": "Current plan",
+      "choose": "Choose {plan}",
+      "notAvailableOnline": "Contact us to buy",
+      "paymentsNotSetUp": "Online payments aren't set up on this server yet (Razorpay keys missing). Plans can still be assigned from the admin panel.",
+      "checkoutDescription": "{plan} plan",
+      "checkoutFailed": "Couldn't start the payment. Try again.",
+      "checkoutUnavailable": "Couldn't load Razorpay. Check your connection or ad blocker and try again.",
+      "paymentFailed": "The payment didn't go through. You can try again.",
+      "verifyFailed": "We couldn't confirm the payment yet. If you were charged, your plan will update within a few minutes.",
+      "paymentSuccess": "Payment received — you're on the {plan} plan.",
+      "toggleMonthly": "Monthly",
+      "toggleYearly": "Yearly · 2 months free"
     },
     "aiConfig": {
       "title": "Agent setup",
@@ -2029,5 +2089,13 @@
   },
   "DashboardShell": {
     "loading": "Loading..."
+  },
+  "BillingBanner": {
+    "trialEnding": "Your free trial ends in {days, plural, =0 {less than a day} =1 {# day} other {# days}}.",
+    "trialEnded": "Your free trial has ended. Messages can't be sent until you choose a plan.",
+    "expired": "Your subscription has ended. Messages can't be sent until you renew.",
+    "suspended": "This account is suspended and can't send messages. Contact support to restore access.",
+    "choosePlan": "Choose a plan",
+    "askOwner": "Ask the account owner to choose a plan."
   }
 }

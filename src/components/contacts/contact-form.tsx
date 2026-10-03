@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { parsePlanLimitError } from '@/lib/billing/plans';
 
 interface ContactFormProps {
   open: boolean;
@@ -224,6 +225,10 @@ export function ContactForm({
           );
           if (existing) setDupMatch({ contact: existing, exact: true });
         }
+        return;
+      }
+      if (parsePlanLimitError((err as { message?: string } | null)?.message)) {
+        toast.error(t('toastPlanLimit'));
         return;
       }
       const message = err instanceof Error ? err.message : t('toastError');

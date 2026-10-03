@@ -393,7 +393,8 @@
       "loadingTags": "Carregando tags...",
       "noTagsAvailable": "Nenhuma tag disponível. Crie tags em Configurações.",
       "phoneRequired": "O número de telefone é obrigatório",
-      "phoneNeedsCountryCode": "Inclua o código do país — o número deve começar com + (ex.: +5511999990000)"
+      "phoneNeedsCountryCode": "Inclua o código do país — o número deve começar com + (ex.: +5511999990000)",
+      "toastPlanLimit": "Você atingiu o limite de contatos do seu plano. Faça upgrade em Configurações → Cobrança e plano para adicionar mais."
     },
     "detailView": {
       "tabs": {
@@ -506,7 +507,8 @@
       "toastInvalidPhone_plural": "{count} contatos não tinham um número de telefone utilizável",
       "toastFailed": "{count} contato não pôde ser importado",
       "toastFailed_plural": "{count} contatos não puderam ser importados",
-      "toastError": "Falha na importação"
+      "toastError": "Falha na importação",
+      "toastPlanLimit": "Importação interrompida: o limite de contatos do seu plano foi atingido. Faça upgrade em Configurações → Cobrança e plano para importar o restante."
     },
     "customFields": {
       "title": "Campos personalizados",
@@ -1669,7 +1671,8 @@
       "fields": "Campos e tags",
       "deals": "Negócios e moeda",
       "members": "Membros da equipe",
-      "api": "Chaves de API"
+      "api": "Chaves de API",
+      "billing": "Cobrança e plano"
     },
     "groups": {
       "account": "Conta",
@@ -1816,6 +1819,63 @@
       "saving": "Salvando...",
       "saveFailed": "Falha ao salvar a moeda padrão",
       "saveSuccess": "Moeda padrão atualizada"
+    },
+    "billing": {
+      "title": "Cobrança e plano",
+      "description": "Seu plano, o que você usou este mês e upgrades. Os preços estão em rúpias indianas.",
+      "loading": "Carregando cobrança…",
+      "loadFailed": "Não foi possível carregar os dados de cobrança.",
+      "retry": "Tentar de novo",
+      "currentPlan": "Plano atual",
+      "usage": "Uso",
+      "usageDesc": "Em relação aos limites do seu plano. As mensagens de disparo reiniciam no dia 1 de cada mês.",
+      "usageContacts": "Contatos",
+      "usageMembers": "Membros da equipe",
+      "usageBroadcasts": "Mensagens de disparo neste mês",
+      "usedOf": "{used} de {limit}",
+      "usedUnlimited": "{used} · ilimitado",
+      "statusTrial": "Teste · {days, plural, =1 {falta # dia} other {faltam # dias}}",
+      "statusActive": "Ativo",
+      "statusPastDue": "Pagamento falhou",
+      "statusCancelled": "Cancelado",
+      "statusTrialEnded": "Teste encerrado",
+      "statusExpired": "Expirado",
+      "statusSuspended": "Suspenso",
+      "lineTrial": "Seu teste grátis termina em {date}.",
+      "lineRenews": "Cobrança {cycle}. Renova em {date}.",
+      "linePastDue": "O último pagamento de renovação falhou. O Razorpay tentará de novo — atualize a forma de pagamento pelo link no seu e-mail para evitar interrupções.",
+      "lineEnds": "Seu plano não será renovado. Você mantém o acesso até {date}.",
+      "lineChoosePlan": "Escolha um plano abaixo para continuar enviando mensagens.",
+      "suspendedTitle": "Esta conta está suspensa",
+      "suspendedBody": "O envio está pausado. Fale com o suporte para restaurar o acesso.",
+      "cancelSubscription": "Cancelar assinatura",
+      "cancelConfirm": "Parar de renovar no fim deste período?",
+      "cancelYes": "Sim, cancelar",
+      "cancelNo": "Manter plano",
+      "cancelled": "Assinatura cancelada. Você mantém o acesso até {date}.",
+      "cancelFailed": "Não foi possível cancelar a assinatura.",
+      "choosePlan": "Planos",
+      "choosePlanDesc": "Escolha um plano e pague com segurança via UPI, cartão ou netbanking pelo Razorpay.",
+      "ownerOnly": "Somente o proprietário da conta pode mudar o plano.",
+      "billingCycle": "Ciclo de cobrança",
+      "monthly": "mensal",
+      "yearly": "anual",
+      "perMonth": "/ mês",
+      "perYear": "/ ano",
+      "gstNote": "Mais o GST aplicável.",
+      "currentBadge": "Atual",
+      "currentPlanBtn": "Plano atual",
+      "choose": "Escolher {plan}",
+      "notAvailableOnline": "Fale conosco para comprar",
+      "paymentsNotSetUp": "Os pagamentos online ainda não estão configurados neste servidor (faltam as chaves do Razorpay). Os planos ainda podem ser atribuídos pelo painel de administração.",
+      "checkoutDescription": "Plano {plan}",
+      "checkoutFailed": "Não foi possível iniciar o pagamento. Tente de novo.",
+      "checkoutUnavailable": "Não foi possível carregar o Razorpay. Verifique sua conexão ou bloqueador de anúncios e tente de novo.",
+      "paymentFailed": "O pagamento não foi concluído. Você pode tentar de novo.",
+      "verifyFailed": "Ainda não conseguimos confirmar o pagamento. Se você foi cobrado, seu plano será atualizado em alguns minutos.",
+      "paymentSuccess": "Pagamento recebido — agora você está no plano {plan}.",
+      "toggleMonthly": "Mensal",
+      "toggleYearly": "Anual · 2 meses grátis"
     },
     "aiConfig": {
       "title": "Configuração do agente",
@@ -2029,5 +2089,13 @@
   },
   "DashboardShell": {
     "loading": "Carregando..."
+  },
+  "BillingBanner": {
+    "trialEnding": "Seu teste grátis termina em {days, plural, =0 {menos de um dia} =1 {# dia} other {# dias}}.",
+    "trialEnded": "Seu teste grátis terminou. Não é possível enviar mensagens até você escolher um plano.",
+    "expired": "Sua assinatura terminou. Não é possível enviar mensagens até você renovar.",
+    "suspended": "Esta conta está suspensa e não pode enviar mensagens. Fale com o suporte para restaurar o acesso.",
+    "choosePlan": "Escolher um plano",
+    "askOwner": "Peça ao proprietário da conta para escolher um plano."
   }
 }

@@ -38,6 +38,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { parsePlanLimitError } from '@/lib/billing/plans';
 
 const DEFAULT_TAG_COLOR = '#3b82f6';
 const PREVIEW_LIMIT = 5;
@@ -279,8 +280,12 @@ export function ImportModal({
       //    unique index is the backstop: a 23505 (race, or a format
       //    that normalizes equal) counts as skipped, not failed.
       const chunkSize = 50;
+      // Set when the plan's contact limit (migration 043) stops inserts —
+      // every later row would fail the same way, so stop there.
+      let planLimitHit = false;
 
       for (let i = 0; i < toInsert.length; i += chunkSize) {
+        if (planLimitHit) break;
         const chunk = toInsert.slice(i, i + chunkSize);
         const rows = chunk.map((row) => ({
           user_id: user.id,
@@ -318,6 +323,11 @@ export function ImportModal({
               }
             } else if (isUniqueViolation(singleErr)) {
               skipped++;
+            } else if (
+              parsePlanLimitError((singleErr as { message?: string } | null)?.message)
+            ) {
+              planLimitHit = true;
+              break;
             } else {
               failed++;
               // Keep the actual DB error instead of discarding it —
@@ -397,6 +407,9 @@ export function ImportModal({
       }
       if (failed > 0) {
         toast.error(t('toastFailed', { count: failed }));
+      }
+      if (planLimitHit) {
+        toast.error(t('toastPlanLimit'));
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('toastError');
