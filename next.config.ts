@@ -46,7 +46,9 @@ const SECURITY_HEADERS = [
       // and 'unsafe-eval' in dev + some production optimisations.
       // Nonce-based CSP is a later project.
       // Razorpay Checkout (Settings → Billing) loads checkout.js.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com",
+      // Razorpay Checkout (Settings → Billing) and the Facebook SDK
+      // for WhatsApp Embedded Signup (/whatsapp).
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://connect.facebook.net",
       // Tailwind + inline style attributes on lots of components.
       "style-src 'self' 'unsafe-inline'",
       // Supabase public-bucket avatars, contact avatars (arbitrary
@@ -57,11 +59,13 @@ const SECURITY_HEADERS = [
       // and Supabase public-bucket audio/video the inbox renders.
       "media-src 'self' blob: https://*.supabase.co",
       "font-src 'self' data:",
-      // Supabase REST + realtime (WSS). All Meta API calls happen
-      // server-side, so graph.facebook.com does not belong here.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com",
+      // Supabase REST + realtime (WSS), Razorpay Checkout, and the
+      // Facebook SDK used by Embedded Signup. WhatsApp Cloud API calls
+      // still happen server-side only.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com https://*.facebook.com https://connect.facebook.net",
       // Razorpay Checkout renders its payment form in an iframe.
-      "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+      // Razorpay Checkout and the Embedded Signup popup's helper frames.
+      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.facebook.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
