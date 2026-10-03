@@ -1905,7 +1905,7 @@
       "yearly": "anual",
       "perMonth": "/ mes",
       "perYear": "/ año",
-      "gstNote": "Más el GST aplicable.",
+      "gstNote": "+ 18% de GST adicional.",
       "currentBadge": "Actual",
       "currentPlanBtn": "Plan actual",
       "choose": "Elegir {plan}",
@@ -1918,7 +1918,8 @@
       "verifyFailed": "Aún no pudimos confirmar el pago. Si se te cobró, tu plan se actualizará en unos minutos.",
       "paymentSuccess": "Pago recibido: ahora tienes el plan {plan}.",
       "toggleMonthly": "Mensual",
-      "toggleYearly": "Anual · 2 meses gratis"
+      "toggleYearly": "Anual · ahorra 50%",
+      "perMonthEquivalent": "{price}/mes, facturado anualmente"
     },
     "aiConfig": {
       "title": "Configuración del agente",

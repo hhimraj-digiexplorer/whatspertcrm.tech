@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: `%s — ${BRAND_NAME}`,
   },
   description:
-    "Sell and support on WhatsApp from one shared team inbox. Broadcast campaigns, no-code automations, an AI reply assistant and sales pipelines on the official WhatsApp Business API. 14-day free trial.",
+    "Sell and support on WhatsApp from one shared team inbox. Broadcast campaigns, no-code automations, an AI reply assistant and sales pipelines on the official WhatsApp Business API. 7-day free trial.",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",

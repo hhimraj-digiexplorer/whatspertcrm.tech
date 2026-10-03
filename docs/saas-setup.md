@@ -9,8 +9,19 @@ Run `supabase/migrations/043_saas_billing.sql` (or `supabase db push`). It:
 
 - creates `plans` with starting prices (Starter ₹999, Growth ₹2,499, Pro ₹5,999 a
   month) — placeholders you edit in step 4;
-- gives every existing and new account a 14-day free trial;
+- gives every existing and new account a free trial (7 days from migration 047);
 - enforces each plan's contact and team-member limits in the database.
+
+Then run `047_pricing_v2.sql`, which sets the live price list (prices
+exclude 18% GST):
+
+| Plan | Yearly | Month-to-month | Contacts | Messages / month | Agent logins |
+|---|---|---|---|---|---|
+| Free trial (7 days) | ₹0 | — | 1,000 | 1,000 | 1 |
+| Growth | ₹6,840 (₹570/mo) | ₹1,140 | 20,000 | 1,00,000 | 5 |
+| Scale | ₹11,400 (₹950/mo) | ₹1,900 | 50,000 | 2,00,000 | 10 |
+
+The old Starter and Pro plans are hidden but kept for anyone already on them.
 
 ## 2. Environment variables
 
@@ -28,8 +39,15 @@ usage, and you assign plans by hand from `/admin`.
 ## 3. Razorpay
 
 1. **Plans** — Razorpay Dashboard → Subscriptions → Plans → Create plan, once per
-   price you sell (e.g. "Growth monthly ₹2,499", "Growth yearly ₹24,990"). Copy
-   each `plan_…` id.
+   price you sell. GST is charged on top, so create each plan **including 18%
+   GST** and copy each `plan_…` id into `/admin` → Plans:
+
+   | Razorpay plan | Period | Amount (incl. GST) |
+   |---|---|---|
+   | Growth yearly | yearly | ₹8,071.20 |
+   | Growth monthly | monthly | ₹1,345.20 |
+   | Scale yearly | yearly | ₹13,452.00 |
+   | Scale monthly | monthly | ₹2,242.00 |
 2. **Webhook** — Razorpay Dashboard → Account & Settings → Webhooks → Add:
    - URL: `https://whatspertcrm.tech/api/billing/webhook`
    - Secret: your `RAZORPAY_WEBHOOK_SECRET`

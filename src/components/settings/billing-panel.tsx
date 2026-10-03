@@ -34,7 +34,7 @@ export function BillingPanel() {
   const format = useFormatter();
   const { user, profile } = useAuth();
   const { data, loading, error, refresh } = useBilling();
-  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [cycle, setCycle] = useState<BillingCycle>("yearly");
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -260,7 +260,12 @@ export function BillingPanel() {
                     {cycle === "yearly" ? t("perYear") : t("perMonth")}
                   </span>
                 </p>
-                <p className="text-xs text-muted-foreground">{t("gstNote")}</p>
+                {cycle === "yearly" && p.price_yearly_inr > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("perMonthEquivalent", { price: formatCurrency(Math.round(p.price_yearly_inr / 12), "INR") })}
+                  </p>
+                )}
+                <p className="text-xs font-medium text-amber-600">{t("gstNote")}</p>
                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                   {p.features.map((f) => (
                     <li key={f} className="flex gap-2">

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple WhatsApp CRM plans in Indian rupees. Start with a 14-day free trial, pay by UPI, card or netbanking, cancel anytime.",
+    "Simple WhatsApp CRM plans in Indian rupees. Start with a 7-day free trial, pay by UPI, card or netbanking, cancel anytime.",
 };
 
 export default async function PricingPage() {
@@ -19,7 +19,7 @@ export default async function PricingPage() {
         <div className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Plans that grow with you</h1>
           <p className="mt-4 text-lg text-slate-600">
-            Every plan includes the shared inbox, broadcasts and automations. Start free for 14 days.
+            Every plan includes the shared inbox, broadcasts and automations. Start free for 7 days.
           </p>
         </div>
       </section>

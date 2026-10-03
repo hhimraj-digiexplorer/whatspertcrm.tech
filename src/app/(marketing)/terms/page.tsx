@@ -48,7 +48,7 @@ export default function TermsPage() {
 
       <h2>4. Free trial</h2>
       <p>
-        New accounts get a 14-day free trial. When it ends, sending messages pauses until you choose a
+        New accounts get a 7-day free trial. When it ends, sending messages pauses until you choose a
         paid plan. Your data is kept so you can continue where you left off.
       </p>
 

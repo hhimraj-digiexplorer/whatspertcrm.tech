@@ -104,7 +104,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: "Do I need a credit card for the free trial?",
-    a: "No. Every plan starts with a 14-day free trial with all features. Choose a plan only when you're ready.",
+    a: "No. Every plan starts with a 7-day free trial with all features. Choose a plan only when you're ready.",
   },
   {
     q: "Are Meta's WhatsApp charges included?",
@@ -153,7 +153,7 @@ export default async function LandingPage() {
                 href="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-6 py-3.5 text-base font-bold text-slate-950 shadow-lg shadow-[#25D366]/25 transition-colors hover:bg-[#1ebe5b]"
               >
-                Start 14-day free trial <ArrowRight className="size-4" />
+                Start 7-day free trial <ArrowRight className="size-4" />
               </Link>
               <Link
                 href="/pricing"
@@ -282,7 +282,7 @@ export default async function LandingPage() {
           <SectionHeading
             eyebrow="Pricing"
             title="Simple plans in rupees"
-            subtitle="Start free for 14 days. Upgrade, downgrade or cancel anytime."
+            subtitle="Start free for 7 days. Upgrade, downgrade or cancel anytime."
           />
           <div className="mt-12">
             <PricingCards plans={plans} />
@@ -311,7 +311,7 @@ export default async function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/signup" className="rounded-xl bg-[#25D366] px-6 py-3.5 font-bold text-slate-950 hover:bg-[#1ebe5b]">
-              Start 14-day free trial
+              Start 7-day free trial
             </Link>
             <Link href="/contact" className="rounded-xl border border-white/30 px-6 py-3.5 font-semibold text-white hover:bg-white/10">
               Talk to us

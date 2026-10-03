@@ -1905,7 +1905,7 @@
       "yearly": "yearly",
       "perMonth": "/ month",
       "perYear": "/ year",
-      "gstNote": "Plus applicable GST.",
+      "gstNote": "+ 18% GST extra.",
       "currentBadge": "Current",
       "currentPlanBtn": "Current plan",
       "choose": "Choose {plan}",
@@ -1918,7 +1918,8 @@
       "verifyFailed": "We couldn't confirm the payment yet. If you were charged, your plan will update within a few minutes.",
       "paymentSuccess": "Payment received — you're on the {plan} plan.",
       "toggleMonthly": "Monthly",
-      "toggleYearly": "Yearly · 2 months free"
+      "toggleYearly": "Yearly · save 50%",
+      "perMonthEquivalent": "{price}/month, billed yearly"
     },
     "aiConfig": {
       "title": "Agent setup",

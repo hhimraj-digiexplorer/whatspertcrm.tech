@@ -12,7 +12,7 @@ export default function RefundPolicyPage() {
     >
       <h2>Free trial</h2>
       <p>
-        Every account starts with a free 14-day trial. No payment is taken during the trial, so there
+        Every account starts with a free 7-day trial. No payment is taken during the trial, so there
         is nothing to refund.
       </p>
 

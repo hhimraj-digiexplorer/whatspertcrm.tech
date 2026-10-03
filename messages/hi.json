@@ -1905,7 +1905,7 @@
       "yearly": "वार्षिक",
       "perMonth": "/ महीना",
       "perYear": "/ साल",
-      "gstNote": "GST अलग से लागू।",
+      "gstNote": "+ 18% GST अतिरिक्त।",
       "currentBadge": "मौजूदा",
       "currentPlanBtn": "मौजूदा प्लान",
       "choose": "{plan} चुनें",
@@ -1918,7 +1918,8 @@
       "verifyFailed": "हम अभी भुगतान की पुष्टि नहीं कर सके। अगर पैसे कटे हैं, तो कुछ मिनटों में आपका प्लान अपडेट हो जाएगा।",
       "paymentSuccess": "भुगतान मिल गया — अब आप {plan} प्लान पर हैं।",
       "toggleMonthly": "मासिक",
-      "toggleYearly": "वार्षिक · 2 महीने मुफ़्त"
+      "toggleYearly": "सालाना · 50% बचत",
+      "perMonthEquivalent": "{price}/माह, सालाना बिलिंग"
     },
     "aiConfig": {
       "title": "एजेंट सेटअप",

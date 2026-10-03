@@ -1905,7 +1905,7 @@
       "yearly": "연간",
       "perMonth": "/ 월",
       "perYear": "/ 년",
-      "gstNote": "GST 별도.",
+      "gstNote": "+ 18% GST 별도.",
       "currentBadge": "현재",
       "currentPlanBtn": "현재 요금제",
       "choose": "{plan} 선택",
@@ -1918,7 +1918,8 @@
       "verifyFailed": "아직 결제를 확인하지 못했습니다. 청구되었다면 몇 분 안에 요금제가 업데이트됩니다.",
       "paymentSuccess": "결제가 완료되었습니다 — 이제 {plan} 요금제입니다.",
       "toggleMonthly": "월간",
-      "toggleYearly": "연간 · 2개월 무료"
+      "toggleYearly": "연간 · 50% 할인",
+      "perMonthEquivalent": "월 {price}, 연간 청구"
     },
     "aiConfig": {
       "title": "에이전트 설정",
