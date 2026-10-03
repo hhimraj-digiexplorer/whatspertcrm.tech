@@ -261,7 +261,7 @@ function StatusCell({ row }: { row: AccountRow }) {
       ? "bg-primary/15 text-primary"
       : row.status === "trialing"
         ? "bg-blue-500/15 text-blue-500"
-        : "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+        : "bg-amber-500/15 text-amber-500";
   const sub =
     row.status === "trialing"
       ? `ends ${dateFmt(row.trial_ends_at)}`

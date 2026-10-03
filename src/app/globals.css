@@ -45,6 +45,10 @@
    * --card-2) as Tailwind utilities: bg-card-2, bg-primary-soft,
    * bg-primary-soft-2, hover:bg-primary-hover. */
   --color-card-2: var(--card-2);
+  --color-topbar: var(--topbar);
+  --color-topbar-foreground: var(--topbar-foreground);
+  --color-bubble-out: var(--bubble-out);
+  --color-bubble-out-foreground: var(--bubble-out-foreground);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
   --color-primary-soft-2: var(--primary-soft-2);
@@ -62,7 +66,7 @@
  *
  *   1. MODE   (light / dark)  → neutral surfaces. Selected with
  *      `document.documentElement.dataset.mode`. Defaults to dark.
- *   2. ACCENT (whatsapp / …)   → the primary color only. Selected
+ *   2. ACCENT (indigo / …)   → the primary color only. Selected
  *      with `document.documentElement.dataset.theme`.
  *
  * The two compose: any accent works in either mode. Neutral
@@ -72,7 +76,7 @@
  * --sidebar-ring) live in the ACCENT blocks. They set disjoint
  * variables, so cascade order between them doesn't matter.
  *
- * `:root` carries the dark-mode + whatsapp defaults so a visitor
+ * `:root` carries the dark-mode + indigo defaults so a visitor
  * renders correctly before JS runs; the boot script in
  * layout.tsx replays the saved mode + accent before first paint.
  *
@@ -88,6 +92,20 @@
 :root {
   --font-sans: var(--font-inter), var(--font-devanagari), ui-sans-serif,
     system-ui, sans-serif;
+}
+
+/* Brand top bar (WhatsApp-family green) and sent-message bubbles
+ * (WhatsApp's own #d9fdd3 / #005c4b) — same in every accent. */
+:root {
+  --topbar: oklch(0.649 0.137 163.4);
+  --topbar-foreground: oklch(1 0 0);
+  --bubble-out: #d9fdd3;
+  --bubble-out-foreground: #111b21;
+}
+html[data-mode="dark"] {
+  --topbar: oklch(0.45 0.09 163.4);
+  --bubble-out: #005c4b;
+  --bubble-out-foreground: #e9edef;
 }
 
 /* ---- MODE: neutral surfaces ---- */
@@ -123,7 +141,7 @@ html[data-mode="dark"] {
 }
 
 html[data-mode="light"] {
-  --background: oklch(0.99 0.002 260);
+  --background: oklch(0.975 0.006 255.5);
   --foreground: oklch(0.21 0.01 260);
   --card: oklch(1 0 0);
   --card-2: oklch(0.985 0.002 260);
@@ -137,14 +155,14 @@ html[data-mode="light"] {
   --accent: oklch(0.96 0.004 260);
   --accent-foreground: oklch(0.25 0.01 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0.004 260);
-  --input: oklch(0.922 0.004 260);
+  --border: oklch(0.938 0.011 256.7);
+  --input: oklch(0.91 0.011 256.7);
   --chart-2: oklch(0.6 0.1 260);
   --chart-3: oklch(0.7 0.06 260);
   --chart-4: oklch(0.8 0.04 260);
   --chart-5: oklch(0.87 0.03 260);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.002 260);
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.21 0.01 260);
   --sidebar-accent: oklch(0.96 0.004 260);
   --sidebar-accent-foreground: oklch(0.25 0.01 260);
@@ -153,9 +171,37 @@ html[data-mode="light"] {
 
 /* ---- ACCENT: primary color ---- */
 
-/* WhatsApp green (#25D366) with teal (#128C7E) as the second chart
- * series. The default accent for Whatspert CRM, so it carries :root. */
+/* Indigo (#4F46E5) — the default: indigo actions and highlights, with
+ * the green top bar and logo carrying the WhatsApp identity. */
 :root,
+html[data-theme="indigo"] {
+  --primary: oklch(0.511 0.23 277);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.457 0.215 277);
+  --primary-soft: oklch(0.511 0.23 277 / 0.1);
+  --primary-soft-2: oklch(0.511 0.23 277 / 0.18);
+  --ring: oklch(0.511 0.23 277);
+  --chart-1: oklch(0.649 0.137 163.4);
+  --chart-2: oklch(0.585 0.204 277.1);
+  --sidebar-primary: oklch(0.511 0.23 277);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.511 0.23 277);
+}
+
+html[data-mode="dark"][data-theme="indigo"] {
+  --primary: oklch(0.68 0.158 276.9);
+  --primary-foreground: oklch(0.16 0.03 277);
+  --primary-hover: oklch(0.74 0.14 276.9);
+  --primary-soft: oklch(0.68 0.158 276.9 / 0.14);
+  --primary-soft-2: oklch(0.68 0.158 276.9 / 0.22);
+  --ring: oklch(0.68 0.158 276.9);
+  --sidebar-primary: oklch(0.68 0.158 276.9);
+  --sidebar-primary-foreground: oklch(0.16 0.03 277);
+  --sidebar-ring: oklch(0.68 0.158 276.9);
+}
+
+/* WhatsApp green (#25D366) with teal (#128C7E) as the second chart
+ * series. */
 html[data-theme="whatsapp"] {
   --primary: oklch(0.761 0.201 149.7);
   --primary-foreground: oklch(0.2 0.04 160);

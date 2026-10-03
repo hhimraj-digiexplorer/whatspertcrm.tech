@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 import { BRAND_NAME, LOGO_BUBBLE_PATH, LOGO_W_POINTS } from "@/lib/brand";
 
 /**
- * Brand mark: white chat bubble with a "W", on the accent colour.
- * Follows the active theme via `bg-primary` / `text-primary`.
+ * Brand mark: white chat bubble with a "W" on WhatsApp green. Fixed
+ * brand colours — it doesn't follow the accent theme.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary",
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#25D366] text-[#25D366]",
         className,
       )}
     >

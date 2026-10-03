@@ -41,7 +41,9 @@
     "menuProfile": "Perfil",
     "menuSettings": "Configurações",
     "menuSignOut": "Sair",
-    "platformAdmin": "Admin da plataforma"
+    "platformAdmin": "Admin da plataforma",
+    "whatsappSetup": "Configurar WhatsApp",
+    "integrations": "Integrações"
   },
   "Header": {
     "dashboard": "Painel",
@@ -61,7 +63,12 @@
     "menuSignOut": "Sair",
     "flows": "Fluxos",
     "aiAgents": "Agentes de IA",
-    "platformAdmin": "Admin da plataforma"
+    "platformAdmin": "Admin da plataforma",
+    "searchMenus": "Buscar menus…",
+    "noMenuMatch": "Nenhum menu encontrado",
+    "usageContacts": "Contatos",
+    "usageMessages": "Mensagens",
+    "usageTitle": "Uso do plano — abrir cobrança"
   },
   "ModeToggle": {
     "switchMode": "Mudar para o modo {mode}"
@@ -84,13 +91,23 @@
       "newTodayVsYesterday": "novos hoje vs. ontem",
       "vsYesterday": "vs. ontem",
       "openDeals": "{count} {count, plural, =1 {negócio aberto} other {negócios abertos}}",
-      "noChange": "Sem alteração {suffix}"
+      "noChange": "Sem alteração {suffix}",
+      "welcome": "Bem-vindo de volta",
+      "welcomeName": "Bem-vindo de volta, {name}",
+      "welcomeSub": "Veja o que está acontecendo no seu espaço de trabalho hoje.",
+      "refresh": "Atualizar"
     },
     "quickActions": {
-      "newContact": "Novo contato",
-      "newDeal": "Novo negócio",
-      "newBroadcast": "Novo disparo",
-      "newAutomation": "Nova automação"
+      "broadcastTitle": "Novo disparo",
+      "broadcastDesc": "Envie para seu público",
+      "inboxTitle": "Abrir caixa de entrada",
+      "inboxDesc": "Ver todas as conversas",
+      "flowTitle": "Criar fluxo",
+      "flowDesc": "Construa automações",
+      "aiTitle": "Treinar IA",
+      "aiDesc": "Melhore as respostas da IA",
+      "channelTitle": "Conectar canal",
+      "channelDesc": "Adicione um número de WhatsApp"
     },
     "activityFeed": {
       "title": "Atividade recente",
@@ -136,6 +153,28 @@
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"
+    },
+    "notices": {
+      "connectTitle": "Conecte seu número de WhatsApp",
+      "connectBody": "Mensagens, disparos e automações começam a funcionar assim que seu número do WhatsApp Business é conectado.",
+      "connectCta": "Conectar agora",
+      "startTitle": "Comece em 4 passos",
+      "stepWhatsapp": "Conectar o WhatsApp",
+      "stepContacts": "Adicionar ou importar contatos",
+      "stepTemplates": "Criar um modelo de mensagem",
+      "stepTeam": "Convidar sua equipe",
+      "dismiss": "Dispensar"
+    },
+    "aiStatus": {
+      "title": "Status do assistente de IA",
+      "view": "Ver",
+      "assistant": "Assistente de IA",
+      "active": "Ativo",
+      "activeAuto": "Ativo · resposta automática",
+      "inactive": "Inativo",
+      "sources": "Fontes de conhecimento",
+      "lastTraining": "Último treinamento",
+      "never": "Nunca"
     }
   },
   "Inbox": {

@@ -23,10 +23,10 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, icon: Icon, delta, subtitle }: MetricCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_3px_rgb(16_24_40/0.05)]">
       <div className="flex items-start justify-between">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Icon className="h-4 w-4" />
         </div>
       </div>
@@ -43,7 +43,7 @@ export function MetricCard({ title, value, icon: Icon, delta, subtitle }: Metric
 function DeltaRow({ sign, label }: { sign: number; label: string }) {
   const tone =
     sign > 0
-      ? 'text-primary'
+      ? 'text-emerald-500'
       : sign < 0
       ? 'text-red-400'
       : 'text-muted-foreground'

@@ -8,28 +8,25 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
-  Bell,
-  Bot,
   Crown,
-  GitBranch,
-  LayoutDashboard,
   LogOut,
-  MessageSquare,
-  Radio,
   Settings,
   Shield,
-  ShieldCheck,
   User,
   UserCog,
-  Users,
   UsersRound,
-  Workflow,
   X,
-  Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 import { LogoMark } from "@/components/brand/logo";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+import {
+  NAV_ITEMS,
+  SETTINGS_NAV_ITEM,
+  SUPER_ADMIN_NAV_ITEM,
+  isNavActive,
+  type NavItem,
+} from "@/components/layout/nav-items";
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -80,36 +77,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface NavItem {
-  href: string;
-  labelKey: string;
-  icon: typeof LayoutDashboard;
-  /**
-   * When true, the nav row renders a small "Beta" chip after the label.
-   * Purely informational — doesn't affect routing or access.
-   */
-  beta?: boolean;
-}
-
-const navItems: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/inbox", labelKey: "inbox", icon: MessageSquare },
-  { href: "/notifications", labelKey: "notifications", icon: Bell },
-  { href: "/contacts", labelKey: "contacts", icon: Users },
-  { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
-  { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
-  { href: "/automations", labelKey: "automations", icon: Zap },
-  { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
-  { href: "/agents", labelKey: "aiAgents", icon: Bot },
-];
-
-const bottomNavItems = [
-  { href: "/settings", labelKey: "settings", icon: Settings },
-];
-
-/** Shown only to platform operators (SUPER_ADMIN_EMAILS). */
-const superAdminNavItem = { href: "/admin", labelKey: "platformAdmin", icon: ShieldCheck };
 
 interface SidebarProps {
   /** Controlled on mobile by the Header's hamburger button. Ignored on lg+. */
@@ -183,20 +150,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-card",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-sidebar",
           "transition-transform duration-200 ease-out will-change-transform",
           open ? "translate-x-0" : "-translate-x-full",
           // Desktop: static, always visible — reset all the mobile framing.
-          "lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none",
+          "lg:static lg:z-0 lg:w-64 lg:translate-x-0 lg:transition-none",
         )}
         aria-label={t("primaryNav")}
       >
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <LogoMark />
-            <span className="text-sm font-semibold text-foreground">
+        <div className="flex h-[72px] shrink-0 items-center justify-between gap-2 border-b border-border px-5">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <LogoMark className="h-9 w-9 rounded-xl" />
+            <span className="text-lg font-bold tracking-tight text-foreground">
               {t("title")}
             </span>
           </Link>
@@ -213,10 +180,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            {NAV_ITEMS.map((item) => {
+              const isActive = isNavActive(pathname, item.href);
 
               const showUnreadDot =
                 item.href === "/inbox" && totalUnread > 0 && !isActive;
@@ -232,15 +197,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       // Taller on mobile so fingers can hit the row reliably (≥44px).
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      "flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition-colors",
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ? "bg-primary/10 font-semibold text-primary"
+                        : "text-foreground/80 hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <NavIcon item={item} />
                     <span className="flex-1">{t(item.labelKey as string)}</span>
                     {item.beta && (
                       <span
@@ -276,20 +242,21 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="my-4 border-t border-border" />
 
           <ul className="flex flex-col gap-1">
-            {(isSuperAdmin ? [...bottomNavItems, superAdminNavItem] : bottomNavItems).map((item) => {
-              const isActive = pathname.startsWith(item.href);
+            {(isSuperAdmin ? [SETTINGS_NAV_ITEM, SUPER_ADMIN_NAV_ITEM] : [SETTINGS_NAV_ITEM]).map((item) => {
+              const isActive = isNavActive(pathname, item.href);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      "flex items-center gap-3 rounded-xl px-2.5 py-2 text-[15px] transition-colors",
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ? "bg-primary/10 font-semibold text-primary"
+                        : "text-foreground/80 hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <NavIcon item={item} />
                     {t(item.labelKey as string)}
                   </Link>
                 </li>
@@ -402,5 +369,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+/** Coloured icon tile in front of each nav label. */
+function NavIcon({ item }: { item: NavItem }) {
+  return (
+    <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", item.tone)}>
+      <item.icon className="size-[18px]" />
+    </span>
   );
 }

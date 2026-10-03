@@ -14,6 +14,7 @@
  */
 
 export const THEME_IDS = [
+  "indigo",
   "whatsapp",
   "violet",
   "emerald",
@@ -24,7 +25,7 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "whatsapp";
+export const DEFAULT_THEME: ThemeId = "indigo";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -33,8 +34,8 @@ export const STORAGE_KEY = "wacrm.theme";
  *
  * The CSS variables live in `src/app/globals.css` under
  * `html[data-mode="..."]` blocks (neutral surfaces only). Applied
- * at runtime via `document.documentElement.dataset.mode`. Dark is
- * the historical default and stays the app's identity; light is the
+ * at runtime via `document.documentElement.dataset.mode`. Light is
+ * the default; dark is the
  * opt-in eye-strain-friendly alternative.
  *
  * Persisted under its own localStorage key so it composes freely
@@ -44,7 +45,7 @@ export const MODES = ["light", "dark"] as const;
 
 export type Mode = (typeof MODES)[number];
 
-export const DEFAULT_MODE: Mode = "dark";
+export const DEFAULT_MODE: Mode = "light";
 
 export const MODE_STORAGE_KEY = "wacrm.mode";
 
@@ -69,9 +70,15 @@ export interface ThemeMeta {
 
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
+    id: "indigo",
+    name: "Indigo",
+    tagline: "The default — indigo actions with the green WhatsApp bar.",
+    swatch: "oklch(0.511 0.23 277)",
+  },
+  {
     id: "whatsapp",
     name: "WhatsApp",
-    tagline: "The default — official WhatsApp green.",
+    tagline: "Official WhatsApp green everywhere.",
     swatch: "oklch(0.761 0.201 149.7)",
   },
   {

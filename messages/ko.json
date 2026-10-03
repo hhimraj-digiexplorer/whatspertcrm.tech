@@ -41,7 +41,9 @@
     "menuProfile": "프로필",
     "menuSettings": "설정",
     "menuSignOut": "로그아웃",
-    "platformAdmin": "플랫폼 관리"
+    "platformAdmin": "플랫폼 관리",
+    "whatsappSetup": "WhatsApp 설정",
+    "integrations": "연동"
   },
   "Header": {
     "dashboard": "대시보드",
@@ -61,7 +63,12 @@
     "menuSignOut": "로그아웃",
     "flows": "플로우",
     "aiAgents": "AI 에이전트",
-    "platformAdmin": "플랫폼 관리"
+    "platformAdmin": "플랫폼 관리",
+    "searchMenus": "메뉴 검색…",
+    "noMenuMatch": "일치하는 메뉴가 없습니다",
+    "usageContacts": "연락처",
+    "usageMessages": "메시지",
+    "usageTitle": "요금제 사용량 — 결제 열기"
   },
   "ModeToggle": {
     "switchMode": "{mode} 모드로 전환"
@@ -84,13 +91,23 @@
       "newTodayVsYesterday": "어제 대비 신규",
       "vsYesterday": "어제 대비",
       "openDeals": "진행 중인 딜 {count}건",
-      "noChange": "변동 없음 {suffix}"
+      "noChange": "변동 없음 {suffix}",
+      "welcome": "다시 오신 것을 환영합니다",
+      "welcomeName": "다시 오신 것을 환영합니다, {name}님",
+      "welcomeSub": "오늘 워크스페이스의 현황입니다.",
+      "refresh": "새로고침"
     },
     "quickActions": {
-      "newContact": "새 연락처",
-      "newDeal": "새 딜",
-      "newBroadcast": "새 브로드캐스트",
-      "newAutomation": "새 자동화"
+      "broadcastTitle": "새 브로드캐스트",
+      "broadcastDesc": "대상에게 보내기",
+      "inboxTitle": "받은편지함 열기",
+      "inboxDesc": "모든 대화 보기",
+      "flowTitle": "플로우 만들기",
+      "flowDesc": "자동화 구성",
+      "aiTitle": "AI 학습",
+      "aiDesc": "AI 응답 개선",
+      "channelTitle": "채널 연결",
+      "channelDesc": "WhatsApp 번호 추가"
     },
     "activityFeed": {
       "title": "최근 활동",
@@ -136,6 +153,28 @@
     },
     "emptyState": {
       "title": "아직 데이터가 충분하지 않습니다"
+    },
+    "notices": {
+      "connectTitle": "WhatsApp 번호를 연결하세요",
+      "connectBody": "WhatsApp Business 번호를 연결하면 메시지, 브로드캐스트, 자동화가 작동합니다.",
+      "connectCta": "지금 연결",
+      "startTitle": "4단계로 시작하기",
+      "stepWhatsapp": "WhatsApp 연결",
+      "stepContacts": "연락처 추가 또는 가져오기",
+      "stepTemplates": "메시지 템플릿 만들기",
+      "stepTeam": "팀원 초대",
+      "dismiss": "닫기"
+    },
+    "aiStatus": {
+      "title": "AI 어시스턴트 상태",
+      "view": "보기",
+      "assistant": "AI 어시스턴트",
+      "active": "활성",
+      "activeAuto": "활성 · 자동 응답 켜짐",
+      "inactive": "비활성",
+      "sources": "지식 소스",
+      "lastTraining": "마지막 학습",
+      "never": "없음"
     }
   },
   "Inbox": {

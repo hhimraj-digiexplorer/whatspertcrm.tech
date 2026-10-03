@@ -230,7 +230,7 @@ export function BillingPanel() {
       </div>
 
       {canManage && !checkoutReady && (
-        <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+        <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
           {t("paymentsNotSetUp")}
         </p>
       )}
@@ -349,7 +349,7 @@ function StatusBadge({
     : status === "active"
       ? "bg-primary/15 text-primary"
       : status === "past_due" || status === "cancelled"
-        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+        ? "bg-amber-500/15 text-amber-500"
         : "bg-muted text-muted-foreground";
   return <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", tone)}>{label}</span>;
 }

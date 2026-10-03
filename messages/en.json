@@ -41,7 +41,9 @@
     "menuProfile": "Profile",
     "menuSettings": "Settings",
     "menuSignOut": "Sign out",
-    "platformAdmin": "Platform admin"
+    "platformAdmin": "Platform admin",
+    "whatsappSetup": "WhatsApp setup",
+    "integrations": "Integrations"
   },
   "Header": {
     "dashboard": "Dashboard",
@@ -61,7 +63,12 @@
     "menuSignOut": "Sign out",
     "flows": "Flows",
     "aiAgents": "AI Agents",
-    "platformAdmin": "Platform admin"
+    "platformAdmin": "Platform admin",
+    "searchMenus": "Search menus…",
+    "noMenuMatch": "No matching menu",
+    "usageContacts": "Contacts",
+    "usageMessages": "Messages",
+    "usageTitle": "Plan usage — open billing"
   },
   "ModeToggle": {
     "switchMode": "Switch to {mode} mode"
@@ -84,13 +91,23 @@
       "newTodayVsYesterday": "new today vs yesterday",
       "vsYesterday": "vs yesterday",
       "openDeals": "{count} open {count, plural, =1 {deal} other {deals}}",
-      "noChange": "No change {suffix}"
+      "noChange": "No change {suffix}",
+      "welcome": "Welcome back",
+      "welcomeName": "Welcome back, {name}",
+      "welcomeSub": "Here's what's happening with your workspace today.",
+      "refresh": "Refresh"
     },
     "quickActions": {
-      "newContact": "New Contact",
-      "newDeal": "New Deal",
-      "newBroadcast": "New Broadcast",
-      "newAutomation": "New Automation"
+      "broadcastTitle": "New broadcast",
+      "broadcastDesc": "Send to your audience",
+      "inboxTitle": "Open inbox",
+      "inboxDesc": "View all conversations",
+      "flowTitle": "Create flow",
+      "flowDesc": "Build automation",
+      "aiTitle": "Train AI",
+      "aiDesc": "Improve AI responses",
+      "channelTitle": "Connect channel",
+      "channelDesc": "Add a WhatsApp number"
     },
     "activityFeed": {
       "title": "Recent Activity",
@@ -136,6 +153,28 @@
     },
     "emptyState": {
       "title": "Not enough data yet"
+    },
+    "notices": {
+      "connectTitle": "Connect your WhatsApp number",
+      "connectBody": "Messages, broadcasts and automations start working once your WhatsApp Business number is connected.",
+      "connectCta": "Connect now",
+      "startTitle": "Get started in 4 steps",
+      "stepWhatsapp": "Connect WhatsApp",
+      "stepContacts": "Add or import contacts",
+      "stepTemplates": "Create a message template",
+      "stepTeam": "Invite your team",
+      "dismiss": "Dismiss"
+    },
+    "aiStatus": {
+      "title": "AI assistant status",
+      "view": "View",
+      "assistant": "AI assistant",
+      "active": "Active",
+      "activeAuto": "Active · auto-reply on",
+      "inactive": "Inactive",
+      "sources": "Knowledge sources",
+      "lastTraining": "Last training",
+      "never": "Never"
     }
   },
   "Inbox": {

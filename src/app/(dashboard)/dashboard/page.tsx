@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { formatCurrency } from '@/lib/currency'
 import {
   MessageSquare,
+  RefreshCw,
   UserPlus,
   DollarSign,
   Send,
@@ -33,6 +34,8 @@ import { ConversationsChart } from '@/components/dashboard/conversations-chart'
 import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
 import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
+import { DashboardNotices } from '@/components/dashboard/dashboard-notices'
+import { AiStatusCard } from '@/components/dashboard/ai-status-card'
 
 import { useTranslations } from 'next-intl'
 
@@ -40,7 +43,11 @@ type RangeDays = 7 | 30 | 90
 
 export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
-  const { defaultCurrency } = useAuth()
+  const { defaultCurrency, profile } = useAuth()
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] ?? ''
+  // Bumped by the refresh button so child cards that load their own
+  // data (notices, AI status) remount and refetch too.
+  const [refreshKey, setRefreshKey] = useState(0)
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -121,15 +128,40 @@ export default function DashboardPage() {
     [series],
   )
 
+  // Refetch everything. loadAll reloads the 30-day series, so switch
+  // the chart to that range and drop the other cached ranges.
+  const handleRefresh = useCallback(() => {
+    setRange(30)
+    setSeries({ 7: null, 30: null, 90: null })
+    loadAll()
+    setRefreshKey((k) => k + 1)
+  }, [loadAll])
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('description')}
-        </p>
+    <div className="space-y-6">
+      <DashboardNotices key={`notices-${refreshKey}`} />
+
+      {/* Welcome */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground sm:text-[28px]">
+            {firstName ? t('welcomeName', { name: firstName }) : t('welcome')} <span aria-hidden>👋</span>
+          </h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">{t('welcomeSub')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          aria-label={t('refresh')}
+          title={t('refresh')}
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+        >
+          <RefreshCw className="size-4" />
+        </button>
       </div>
+
+      {/* Quick actions */}
+      <QuickActions />
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -188,9 +220,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Quick actions */}
-      <QuickActions />
-
       {/* Charts row */}
       {/* items-stretch (the grid default) stretches the two columns to
           match the tallest sibling; adding h-full on each wrapper and
@@ -215,6 +244,8 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      <AiStatusCard key={`ai-${refreshKey}`} />
 
       {/* Response time */}
       <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />

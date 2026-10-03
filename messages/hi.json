@@ -41,7 +41,9 @@
     "menuProfile": "प्रोफ़ाइल",
     "menuSettings": "सेटिंग्स",
     "menuSignOut": "साइन आउट",
-    "platformAdmin": "प्लेटफ़ॉर्म एडमिन"
+    "platformAdmin": "प्लेटफ़ॉर्म एडमिन",
+    "whatsappSetup": "WhatsApp सेटअप",
+    "integrations": "इंटीग्रेशन"
   },
   "Header": {
     "dashboard": "डैशबोर्ड",
@@ -61,7 +63,12 @@
     "menuSignOut": "साइन आउट",
     "flows": "फ़्लो",
     "aiAgents": "AI एजेंट",
-    "platformAdmin": "प्लेटफ़ॉर्म एडमिन"
+    "platformAdmin": "प्लेटफ़ॉर्म एडमिन",
+    "searchMenus": "मेनू खोजें…",
+    "noMenuMatch": "कोई मेनू नहीं मिला",
+    "usageContacts": "संपर्क",
+    "usageMessages": "संदेश",
+    "usageTitle": "प्लान उपयोग — बिलिंग खोलें"
   },
   "ModeToggle": {
     "switchMode": "{mode} मोड पर जाएँ"
@@ -84,13 +91,23 @@
       "newTodayVsYesterday": "आज नए, कल की तुलना में",
       "vsYesterday": "कल की तुलना में",
       "openDeals": "{count} खुली {count, plural, =1 {डील} other {डील}}",
-      "noChange": "कोई बदलाव नहीं {suffix}"
+      "noChange": "कोई बदलाव नहीं {suffix}",
+      "welcome": "फिर से स्वागत है",
+      "welcomeName": "फिर से स्वागत है, {name}",
+      "welcomeSub": "आज आपके वर्कस्पेस में क्या हो रहा है, यहाँ देखें।",
+      "refresh": "रीफ़्रेश"
     },
     "quickActions": {
-      "newContact": "नया संपर्क",
-      "newDeal": "नई डील",
-      "newBroadcast": "नया ब्रॉडकास्ट",
-      "newAutomation": "नया ऑटोमेशन"
+      "broadcastTitle": "नया ब्रॉडकास्ट",
+      "broadcastDesc": "अपनी ऑडियंस को भेजें",
+      "inboxTitle": "इनबॉक्स खोलें",
+      "inboxDesc": "सभी बातचीत देखें",
+      "flowTitle": "फ़्लो बनाएँ",
+      "flowDesc": "ऑटोमेशन बनाएँ",
+      "aiTitle": "AI को ट्रेन करें",
+      "aiDesc": "AI जवाब बेहतर करें",
+      "channelTitle": "चैनल जोड़ें",
+      "channelDesc": "WhatsApp नंबर जोड़ें"
     },
     "activityFeed": {
       "title": "हाल की गतिविधि",
@@ -136,6 +153,28 @@
     },
     "emptyState": {
       "title": "अभी पर्याप्त डेटा नहीं है"
+    },
+    "notices": {
+      "connectTitle": "अपना WhatsApp नंबर कनेक्ट करें",
+      "connectBody": "WhatsApp Business नंबर कनेक्ट होते ही संदेश, ब्रॉडकास्ट और ऑटोमेशन काम करने लगते हैं।",
+      "connectCta": "अभी कनेक्ट करें",
+      "startTitle": "4 स्टेप में शुरुआत करें",
+      "stepWhatsapp": "WhatsApp कनेक्ट करें",
+      "stepContacts": "संपर्क जोड़ें या इम्पोर्ट करें",
+      "stepTemplates": "संदेश टेम्पलेट बनाएँ",
+      "stepTeam": "अपनी टीम को आमंत्रित करें",
+      "dismiss": "बंद करें"
+    },
+    "aiStatus": {
+      "title": "AI असिस्टेंट की स्थिति",
+      "view": "देखें",
+      "assistant": "AI असिस्टेंट",
+      "active": "सक्रिय",
+      "activeAuto": "सक्रिय · ऑटो-रिप्लाई चालू",
+      "inactive": "निष्क्रिय",
+      "sources": "नॉलेज स्रोत",
+      "lastTraining": "आखिरी ट्रेनिंग",
+      "never": "कभी नहीं"
     }
   },
   "Inbox": {
