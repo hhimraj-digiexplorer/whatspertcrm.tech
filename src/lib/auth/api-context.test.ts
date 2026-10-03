@@ -7,6 +7,12 @@ import { __resetRateLimitForTests, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Mock the service-role client factory — requireApiKey only stashes
 // the returned client in the context; tests never call through it.
+// Billing gating is covered in src/lib/billing; here every account is in good standing.
+const assertFeature = vi.fn(async () => {});
+vi.mock("@/lib/billing/server", () => ({
+  assertFeature: (...args: unknown[]) => assertFeature(...(args as [])),
+}));
+
 vi.mock("@/lib/flows/admin-client", () => ({
   supabaseAdmin: () => ({ __isMockAdminClient: true }),
 }));

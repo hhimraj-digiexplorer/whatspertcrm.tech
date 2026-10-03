@@ -35,6 +35,7 @@ import { hashApiKey, looksLikeApiKey } from '@/lib/api-keys/keys';
 import { hasScope, type ApiScope } from '@/lib/api-keys/scopes';
 import { forbidden, rateLimited, unauthorized } from '@/lib/api/v1/respond';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { assertFeature } from '@/lib/billing/server';
 
 export interface ApiKeyContext {
   /** Discriminant — lets shared logic tell key auth from cookie auth. */
@@ -104,6 +105,10 @@ export async function requireApiKey(
   if (scope && !hasScope(row.scopes, scope)) {
     throw forbidden(`This API key is missing the '${scope}' scope`);
   }
+
+  // The public API is a plan feature, and a suspended or lapsed
+  // account can't use it (throws BillingBlockedError → 402).
+  await assertFeature(row.account_id, 'api');
 
   touchLastUsed(row.id);
 

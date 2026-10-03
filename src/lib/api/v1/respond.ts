@@ -16,6 +16,7 @@
 
 import { NextResponse } from 'next/server';
 import type { RateLimitResult } from '@/lib/rate-limit';
+import { BillingBlockedError } from '@/lib/billing/server';
 
 export type ApiErrorCode =
   | 'unauthorized' // missing / malformed / unknown / revoked / expired key
@@ -119,6 +120,12 @@ export function fail(
  * never leak internal error text onto the public wire.
  */
 export function toApiErrorResponse(err: unknown): NextResponse {
+  if (err instanceof BillingBlockedError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: err.status }
+    );
+  }
   if (err instanceof ApiError) {
     return NextResponse.json(
       { error: { code: err.code, message: err.message } },

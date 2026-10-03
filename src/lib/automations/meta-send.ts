@@ -15,6 +15,7 @@ import {
   templateContentText,
 } from '@/lib/whatsapp/template-body'
 import { supabaseAdmin } from './admin-client'
+import { assertAccountActive } from '@/lib/billing/server'
 
 // ------------------------------------------------------------
 // Automation-side Meta sender.
@@ -109,6 +110,11 @@ type SendInput =
   | (SendTemplateArgs & { kind: 'template' })
 
 async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: string }> {
+  // Automations, flows and the AI bot all send through here — a
+  // suspended or lapsed account must not message customers. Throws
+  // BillingBlockedError, which the engine records as a failed step.
+  await assertAccountActive(input.accountId)
+
   const db = supabaseAdmin()
 
   // Scope the contact + config lookups by account_id, not user_id.

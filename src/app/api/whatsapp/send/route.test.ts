@@ -128,6 +128,12 @@ function makeSupabaseMock() {
 
 let supabaseMock = makeSupabaseMock()
 
+// Billing gating is covered in src/lib/billing; here every account is in good standing.
+vi.mock('@/lib/billing/server', () => ({
+  assertAccountActive: vi.fn(async () => ({ billing: null, plan: null })),
+  billingErrorResponse: () => null,
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => supabaseMock),
 }))

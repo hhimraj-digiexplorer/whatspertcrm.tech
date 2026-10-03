@@ -11,6 +11,7 @@ import {
   validateSendMessageParams,
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
+import { assertAccountActive, billingErrorResponse } from '@/lib/billing/server'
 
 // The dashboard's outbound-send endpoint. It owns auth, per-user rate
 // limiting, and the two ways the UI targets a thread — an existing
@@ -40,6 +41,9 @@ export async function POST(request: Request) {
     if (!limit.success) {
       return rateLimitResponse(limit)
     }
+
+    // Suspended / lapsed accounts can't message customers.
+    await assertAccountActive(accountId)
 
     const body = await request.json()
     const {
@@ -182,6 +186,8 @@ export async function POST(request: Request) {
       throw err
     }
   } catch (error) {
+    const billingResponse = billingErrorResponse(error)
+    if (billingResponse) return billingResponse
     // requireRole throws Unauthorized/Forbidden; toErrorResponse maps
     // those to 401/403 and collapses anything else to a generic 500.
     console.error('Error in WhatsApp send POST:', error)

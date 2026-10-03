@@ -75,6 +75,22 @@ BEGIN
       'messages.error_code/error_title/error_details are missing — migration 042 did not apply';
   END IF;
 
+  -- SaaS billing (043): every account must get a billing row, and the
+  -- limit triggers are what stop a plan being exceeded.
+  IF to_regclass('public.account_billing') IS NULL THEN
+    RAISE EXCEPTION 'public.account_billing is missing — migration 043 did not apply';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.plans WHERE id = 'trial') THEN
+    RAISE EXCEPTION 'the trial plan row was not created (migration 043)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_contact_limit'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_member_limit'
+  ) THEN
+    RAISE EXCEPTION 'plan limit triggers are missing — migration 043 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

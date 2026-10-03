@@ -15,6 +15,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit'
+import { assertBroadcastQuota, billingErrorResponse } from '@/lib/billing/server'
 
 interface BroadcastResult {
   phone: string
@@ -119,6 +120,10 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Suspended / lapsed accounts can't send, and the batch must fit in
+    // what's left of this month's broadcast quota.
+    await assertBroadcastQuota(accountId, recipients.length)
 
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
@@ -239,6 +244,8 @@ export async function POST(request: Request) {
       results,
     })
   } catch (error) {
+    const billingResponse = billingErrorResponse(error)
+    if (billingResponse) return billingResponse
     // requireRole throws Unauthorized/Forbidden; toErrorResponse maps
     // those to 401/403 and collapses anything else to a generic 500.
     console.error('Error in WhatsApp broadcast POST:', error)

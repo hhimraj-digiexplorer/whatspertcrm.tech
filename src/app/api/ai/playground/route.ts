@@ -7,6 +7,7 @@ import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
 import { AiError, type ChatMessage } from '@/lib/ai/types'
+import { assertFeature, billingErrorResponse } from '@/lib/billing/server'
 
 // Keep the tested transcript bounded, mirroring the live context window.
 const MAX_TURNS = 20
@@ -24,6 +25,7 @@ const MAX_TURNS = 20
 export async function POST(request: Request) {
   try {
     const { supabase, accountId, userId } = await requireRole('agent')
+    await assertFeature(accountId, 'ai')
 
     const limit = checkRateLimit(`ai-playground:${userId}`, RATE_LIMITS.aiDraft)
     if (!limit.success) return rateLimitResponse(limit)
@@ -87,6 +89,8 @@ export async function POST(request: Request) {
     const { text, handoff } = await generateReply({ config, systemPrompt, messages })
     return NextResponse.json({ reply: text, handoff })
   } catch (err) {
+    const billingResponse = billingErrorResponse(err)
+    if (billingResponse) return billingResponse
     if (err instanceof AiError) {
       return NextResponse.json(
         { error: err.message, code: err.code },

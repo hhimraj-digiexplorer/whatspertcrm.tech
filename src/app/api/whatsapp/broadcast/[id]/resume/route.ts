@@ -37,6 +37,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
+import { assertAccountActive, assertBroadcastQuota, billingErrorResponse } from '@/lib/billing/server';
 
 // The fan-out below is sequential over up to 1 000 recipients.
 export const maxDuration = 300;
@@ -70,6 +71,8 @@ export async function POST(
     // from the same 'pending' rows and message everyone twice — and a
     // WhatsApp message cannot be recalled. The claim is one conditional
     // UPDATE, so exactly one caller wins.
+    await assertAccountActive(accountId);
+
     const claimed = await claimBroadcastDelivery(supabase, accountId, id);
     if (!claimed) {
       return NextResponse.json(
@@ -88,6 +91,9 @@ export async function POST(
       id,
       scope
     );
+
+    // Fits in this month's quota? Throwing here releases the claim below.
+    await assertBroadcastQuota(accountId, plan.planned.length);
 
     await markBroadcastSending(supabase, id);
     claimedId = null; // ownership passes to the after() block
@@ -131,6 +137,8 @@ export async function POST(
     if (claimedId) {
       await releaseBroadcastDelivery(supabaseAdmin(), claimedId).catch(() => {});
     }
+    const billingResponse = billingErrorResponse(error);
+    if (billingResponse) return billingResponse;
     if (error instanceof BroadcastError) {
       return NextResponse.json(
         { error: error.message, code: error.code },

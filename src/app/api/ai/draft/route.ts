@@ -10,6 +10,7 @@ import { latestUserMessage } from '@/lib/ai/query'
 import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
+import { assertFeature, billingErrorResponse } from '@/lib/billing/server'
 
 /**
  * POST /api/ai/draft  (agent+)
@@ -23,6 +24,7 @@ import { AiError } from '@/lib/ai/types'
 export async function POST(request: Request) {
   try {
     const { supabase, accountId, userId } = await requireRole('agent')
+    await assertFeature(accountId, 'ai')
 
     const userLimit = checkRateLimit(`ai-draft:${userId}`, RATE_LIMITS.aiDraft)
     if (!userLimit.success) return rateLimitResponse(userLimit)
@@ -128,6 +130,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ draft: text })
   } catch (err) {
+    const billingResponse = billingErrorResponse(err)
+    if (billingResponse) return billingResponse
     if (err instanceof AiError) {
       return NextResponse.json(
         { error: err.message, code: err.code },

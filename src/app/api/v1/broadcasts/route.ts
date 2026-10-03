@@ -42,6 +42,7 @@ import {
   deliverBroadcast,
   BroadcastError,
 } from '@/lib/whatsapp/broadcast-core';
+import { assertBroadcastQuota } from '@/lib/billing/server';
 
 export async function POST(request: Request) {
   try {
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
     const templateName =
       typeof body.template_name === 'string' ? body.template_name : '';
     const recipients = Array.isArray(body.recipients) ? body.recipients : [];
+
+    await assertBroadcastQuota(ctx.accountId, recipients.length);
 
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 

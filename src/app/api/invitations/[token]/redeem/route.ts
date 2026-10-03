@@ -27,6 +27,7 @@ import {
   RATE_LIMITS,
 } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { parsePlanLimitError } from "@/lib/billing/plans";
 
 function getClientIp(request: Request): string {
   const xff = request.headers.get("x-forwarded-for");
@@ -37,6 +38,17 @@ function getClientIp(request: Request): string {
 }
 
 function rpcErrorToResponse(err: PostgrestError): NextResponse {
+  // The team's plan has no free seat (migration 043 member-limit trigger).
+  if (parsePlanLimitError(err.message) === "members") {
+    return NextResponse.json(
+      {
+        error:
+          "This team has no free seats on its current plan. Ask the account owner to upgrade, then open the invite link again.",
+        code: "plan_limit",
+      },
+      { status: 402 },
+    );
+  }
   if (err.code === "42501") {
     return NextResponse.json({ error: err.message }, { status: 401 });
   }

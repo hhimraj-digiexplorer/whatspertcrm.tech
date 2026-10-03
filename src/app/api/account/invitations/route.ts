@@ -32,6 +32,8 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import { loadBilling } from "@/lib/billing/server";
+import { loadUsage } from "@/lib/billing/account-billing";
 
 // Resolve the base URL we publish invite links under.
 //
@@ -177,6 +179,23 @@ export async function POST(request: Request) {
       RATE_LIMITS.adminAction,
     );
     if (!limit.success) return rateLimitResponse(limit);
+
+    // Don't hand out a link nobody can use: the member-limit trigger
+    // (migration 043) would reject the redeem anyway.
+    const [{ plan }, usage] = await Promise.all([
+      loadBilling(ctx.accountId),
+      loadUsage(ctx.accountId),
+    ]);
+    const maxMembers = plan?.max_members;
+    if (typeof maxMembers === "number" && usage.members >= maxMembers) {
+      return NextResponse.json(
+        {
+          error: `Your plan allows ${maxMembers} team ${maxMembers === 1 ? "member" : "members"}. Upgrade in Settings → Billing to invite more.`,
+          code: "plan_limit",
+        },
+        { status: 402 },
+      );
+    }
 
     const body = (await request.json().catch(() => null)) as
       | { role?: unknown; expiresInDays?: unknown; label?: unknown }
