@@ -14,6 +14,30 @@ DigiExplorer's Laravel CRM (repository `hhimraj-digiexplorer/CRM1`).
 
 Each sync can be switched on or off per account.
 
+## Sold as an add-on
+
+Whatspert is sold on its own, and also inside Real Expert CRM as the
+"WhatsApp add-on". The Real Expert integration only works when the
+client has paid for **both** a Real Expert plan and a Whatspert plan
+(Growth/Scale; trials don't count). Otherwise it is shown locked, with
+the missing step, on both sides.
+
+- The connection is created from Real Expert (WhatsApp → Activate), not
+  in Whatspert. Real Expert calls the signed partner API
+  (`/api/partner/real-expert/link|status|unlink|chat|send`) with
+  `REAL_EXPERT_PARTNER_SECRET`, and Whatspert creates the account,
+  connects the sync and returns the webhook address for Real Expert.
+- An existing Whatspert customer links their account with a one-time
+  link code from Whatspert → Integrations.
+- Real Expert users open Whatspert through single sign-on
+  (`/api/partner/real-expert/sso`), embedded in Real Expert or in a new
+  tab. Allow the frame with `PARTNER_FRAME_ANCESTORS`.
+- The paid-for-both rule is enforced in the database (sync triggers) and
+  on every partner call, the inbound webhook and the sync worker.
+
+Real Expert's side is in the `hhimraj-digiexplorer/CRM1` repository,
+`docs/whatsapp-addon.md`.
+
 ## How it works
 
 - Database triggers (migration `045_crm_integrations.sql`) add a job to

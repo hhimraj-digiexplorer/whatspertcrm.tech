@@ -27,6 +27,9 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
  * An email that already belongs to another Whatspert account is never
  * moved or signed in here.
  */
+/** Pages an admin needs to unlock the add-on: billing and WhatsApp number setup. */
+const UNLOCK_PATH = /^\/(settings|whatsapp)(\?|\/|$)/
+
 function page(title: string, message: string, status: number) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
 <style>body{font-family:system-ui,sans-serif;background:#f6f8fb;color:#0f172a;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
@@ -57,7 +60,11 @@ export async function GET(request: Request) {
   if (!integration) return page('Not connected', 'This Real Expert workspace is not connected to WhatsApp yet.', 404)
 
   const entitlement = await loadEntitlement(db, integration.account_id, integration.partner_crm_active)
-  if (!entitlement.entitled) {
+  // With Real Expert paid but no WhatsApp plan yet, admins may still
+  // reach billing and number setup — that is how the add-on gets unlocked.
+  const unlocking =
+    entitlement.crm_paid && mapRole(payload.role) === 'admin' && UNLOCK_PATH.test(safeLandingPath(payload.path))
+  if (!entitlement.entitled && !unlocking) {
     return page(
       'WhatsApp add-on locked',
       entitlement.reason === 'crm_unpaid'
