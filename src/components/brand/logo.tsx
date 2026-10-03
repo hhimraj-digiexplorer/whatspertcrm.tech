@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { BRAND_NAME, LOGO_BUBBLE_PATH, LOGO_W_POINTS } from "@/lib/brand";
 
@@ -28,14 +29,19 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-/** Mark + product name, for auth screens and other standalone pages. */
+/** Mark + product name, for auth screens and other standalone pages.
+ *  Links back to the public website. */
 export function BrandLockup({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-center gap-2.5", className)}>
+    <Link
+      href="/"
+      aria-label={`${BRAND_NAME} home`}
+      className={cn("flex items-center justify-center gap-2.5", className)}
+    >
       <LogoMark className="h-10 w-10 rounded-xl" />
       <span className="text-xl font-semibold tracking-tight text-foreground">
         {BRAND_NAME}
       </span>
-    </div>
+    </Link>
   );
 }

@@ -69,6 +69,15 @@ export async function middleware(request: NextRequest) {
     return withRefreshedCookies(NextResponse.redirect(url))
   }
 
+  // The public landing page is for prospects; signed-in users go
+  // straight to their dashboard.
+  if (user && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    url.search = ''
+    return withRefreshedCookies(NextResponse.redirect(url))
+  }
+
   // Protected pages - redirect to login if not authenticated
   const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/admin']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
