@@ -4,9 +4,7 @@ import {
   extractExternalId,
   isSafePath,
   normalizeBaseUrl,
-  parseStageMap,
-  resolveStageSlug,
-  splitName,
+  fillPath,
   parseOptions,
   toInternationalDigits,
 } from './config'
@@ -30,69 +28,46 @@ describe('normalizeBaseUrl', () => {
 })
 
 describe('parseOptions', () => {
-  it('fills defaults matching the Real Expert API', () => {
+  it('defaults to Real Expert Public API v1', () => {
     const { options, invalid } = parseOptions(undefined)
     expect(invalid).toEqual([])
-    expect(options).toEqual(DEFAULT_OPTIONS)
-    expect(options.auth_style).toBe('x-api-key')
-    expect(options.leads_path).toBe('/api/v1/leads')
+    expect(options).toEqual({
+      auth_style: 'bearer',
+      leads_path: '/api/v1/leads',
+      stage_path: '/api/v1/leads/{lead_id}/stage',
+      activities_path: '/api/v1/leads/{lead_id}/activities',
+      test_path: '/api/v1/me',
+      default_country_code: '91',
+      lead_source: 'WhatsApp',
+    })
   })
   it('accepts valid overrides and reports bad ones', () => {
     const { options, invalid } = parseOptions({
-      auth_style: 'bearer',
+      auth_style: 'x-api-key',
       leads_path: '/leads/',
-      deals_path: 'https://evil.com/x',
+      stage_path: 'https://evil.com/x',
       activities_path: '/a/../b',
+      test_path: '/x/{other}',
       default_country_code: '+971',
-      message_activity_type: 'Note',
-      stage_map: 'Site visit = showing',
+      deals_path: '/ignored', // old setting, ignored
     })
-    expect(options.auth_style).toBe('bearer')
+    expect(options.auth_style).toBe('x-api-key')
     expect(options.leads_path).toBe('/leads')
-    expect(options.deals_path).toBe(DEFAULT_OPTIONS.deals_path)
+    expect(options.stage_path).toBe(DEFAULT_OPTIONS.stage_path)
     expect(options.default_country_code).toBe('971')
-    expect(options.message_activity_type).toBe('note')
-    expect(options.stage_map).toEqual({ 'site visit': 'showing' })
-    expect(invalid).toEqual(['deals_path', 'activities_path'])
-  })
-  it('rejects a malformed stage map', () => {
-    expect(parseOptions({ stage_map: 'no equals sign' }).invalid).toEqual(['stage_map'])
-    expect(parseStageMap({ Visit: 'Not A Slug!' })).toBeNull()
+    expect(invalid).toEqual(['stage_path', 'activities_path', 'test_path'])
   })
 })
 
-describe('isSafePath', () => {
-  it('only allows plain relative paths', () => {
-    expect(isSafePath('/api/v1/leads')).toBe(true)
+describe('isSafePath / fillPath', () => {
+  it('only allows plain relative paths with {lead_id}', () => {
+    expect(isSafePath('/api/v1/leads/{lead_id}/stage')).toBe(true)
     expect(isSafePath('//evil.com')).toBe(false)
     expect(isSafePath('/x?y=1')).toBe(false)
     expect(isSafePath('api/v1')).toBe(false)
   })
-})
-
-describe('splitName', () => {
-  it('splits into the first/last names Real Expert requires', () => {
-    expect(splitName('Asha Verma', '919876543210')).toEqual({ first_name: 'Asha', last_name: 'Verma' })
-    expect(splitName('Asha Devi Verma', '91')).toEqual({ first_name: 'Asha', last_name: 'Devi Verma' })
-    expect(splitName('Asha', '91')).toEqual({ first_name: 'Asha', last_name: '-' })
-    expect(splitName(null, '919876543210')).toEqual({ first_name: 'WhatsApp', last_name: '+919876543210' })
-    expect(splitName('919876543210', '919876543210').first_name).toBe('WhatsApp')
-  })
-})
-
-describe('resolveStageSlug', () => {
-  const stages = { lead: 'Lead', showing: 'Showing', offer_received: 'Offer Received', closed_won: 'Closed Won', closed_lost: 'Closed Lost' }
-  it('maps won/lost, explicit entries, and matching names', () => {
-    expect(resolveStageSlug('won', 'Anything', {}, stages)).toBe('closed_won')
-    expect(resolveStageSlug('lost', null, {}, stages)).toBe('closed_lost')
-    expect(resolveStageSlug('open', 'Site Visit', { 'site visit': 'showing' }, stages)).toBe('showing')
-    expect(resolveStageSlug('open', 'Offer received', {}, stages)).toBe('offer_received')
-    expect(resolveStageSlug('open', 'Showing', {}, stages)).toBe('showing')
-  })
-  it('returns null when nothing matches or the stage is unknown', () => {
-    expect(resolveStageSlug('open', 'Follow up', {}, stages)).toBeNull()
-    expect(resolveStageSlug('open', 'Visit', { visit: 'nope' }, stages)).toBeNull()
-    expect(resolveStageSlug('open', 'Showing', {}, null)).toBeNull()
+  it('url-encodes the lead id', () => {
+    expect(fillPath('/api/v1/leads/{lead_id}/stage', 'a/b c')).toBe('/api/v1/leads/a%2Fb%20c/stage')
   })
 })
 

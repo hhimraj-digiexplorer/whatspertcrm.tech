@@ -28,8 +28,12 @@ export async function POST() {
       return NextResponse.json({ ok: false, message: 'The saved API key could not be read. Please enter it again.' })
     }
     try {
-      await realExpertRequest(target, 'GET', parseOptions(data.options).options.test_path)
-      return NextResponse.json({ ok: true })
+      const me = (await realExpertRequest(target, 'GET', parseOptions(data.options).options.test_path)) as {
+        workspace?: { name?: unknown }
+      } | null
+      // GET /v1/me names the workspace, so a key from the wrong client is obvious.
+      const workspace = typeof me?.workspace?.name === 'string' ? me.workspace.name : null
+      return NextResponse.json({ ok: true, workspace })
     } catch (err) {
       const message = err instanceof RealExpertError ? err.message : 'Could not reach Real Expert.'
       return NextResponse.json({ ok: false, message })

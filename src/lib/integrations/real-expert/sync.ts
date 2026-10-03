@@ -15,14 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { decrypt } from '@/lib/whatsapp/encryption'
-import {
-  apiId,
-  extractExternalId,
-  parseOptions,
-  resolveStageSlug,
-  splitName,
-  type RealExpertOptions,
-} from './config'
+import { extractExternalId, fillPath, parseOptions, type RealExpertOptions } from './config'
 import { realExpertRequest, RealExpertError, type RealExpertTarget } from './client'
 
 /** Give up on a job after this many attempts. */
@@ -90,28 +83,25 @@ export interface SyncDeps {
   loadMessage(id: string): Promise<MessageRow | null>
   getLink(contactId: string): Promise<string | null>
   saveLink(contactId: string, externalId: string): Promise<void>
-  getDealLink(dealId: string): Promise<string | null>
-  saveDealLink(dealId: string, externalId: string): Promise<void>
-  /** Real Expert's stage slugs → labels; null if they could not be read. */
-  getStages(): Promise<Record<string, string> | null>
-  send(method: 'POST' | 'PUT', path: string, body: unknown, idempotencyKey: string): Promise<unknown>
+  send(path: string, body: unknown, idempotencyKey: string): Promise<unknown>
 }
 
 export type JobOutcome = 'done' | 'skipped'
 
 const looksLikeEmail = (v: string | null) => !!v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
+/** POST /v1/leads — creates the lead, or returns the existing one for that phone. */
 export function buildLeadPayload(contact: ContactRow, options: RealExpertOptions) {
   const phone = contact.phone.replace(/\D/g, '')
-  const notes = ['Added from Whatspert CRM (WhatsApp).']
-  if (contact.company) notes.push(`Company: ${contact.company}`)
+  const name = contact.name?.trim()
   return {
-    ...splitName(contact.name, phone),
+    name: name && name.replace(/\D/g, '') !== phone ? name : null,
     phone: `+${phone}`,
     email: looksLikeEmail(contact.email) ? contact.email : null,
+    company: contact.company,
     source: options.lead_source,
-    notes: notes.join('\n'),
-    external_id: contact.id,
+    whatspert_contact_id: contact.id,
+    created_at: contact.created_at,
   }
 }
 
@@ -120,38 +110,38 @@ const money = (v: DealRow['value']) => {
   return Number.isFinite(n) && n >= 0 ? n : null
 }
 
-export function buildDealPayload(deal: DealRow, stage: string | null) {
-  const body: Record<string, unknown> = {
-    title: deal.title.slice(0, 255),
-    contract_price: money(deal.value),
-    closing_date: deal.expected_close_date,
-  }
-  if (stage) body.stage = stage
-  return body
-}
-
-/** One-line description of a deal's Whatspert state, for the activity log. */
-export function dealSummary(deal: DealRow): string {
-  const parts = [`Stage: ${deal.stage?.name ?? '—'}`]
-  if (deal.pipeline) parts.push(`Pipeline: ${deal.pipeline.name}`)
-  if (deal.status) parts.push(`Status: ${deal.status}`)
-  const v = money(deal.value)
-  if (v !== null) parts.push(`Value: ${deal.currency ?? ''} ${v}`.trim())
-  return parts.join(' · ')
-}
-
-export function buildMessagePayload(message: MessageRow, leadId: string, options: RealExpertOptions) {
-  const inbound = message.sender_type === 'customer'
-  let body = message.content_text ?? ''
-  if (!body && message.template_name) body = `Template: ${message.template_name}`
-  if (message.media_url) body = [body, `[${message.content_type}] ${message.media_url}`].filter(Boolean).join('\n')
-  if (!body) body = `[${message.content_type}]`
+/**
+ * POST /v1/leads/{lead_id}/stage — Real Expert matches the stage name
+ * against its own stages; an unmatched name is recorded as a note.
+ */
+export function buildStagePayload(deal: DealRow) {
   return {
-    lead_id: apiId(leadId),
-    type: options.message_activity_type,
-    subject: inbound ? 'WhatsApp message received' : 'WhatsApp message sent',
-    body,
-    logged_at: message.created_at,
+    title: deal.title,
+    value: money(deal.value),
+    currency: deal.currency,
+    status: deal.status,
+    stage: deal.stage ? { name: deal.stage.name } : null,
+    pipeline: deal.pipeline ? { name: deal.pipeline.name } : null,
+    expected_close_date: deal.expected_close_date,
+    whatspert_deal_id: deal.id,
+    updated_at: deal.updated_at,
+  }
+}
+
+/** POST /v1/leads/{lead_id}/activities — one row per WhatsApp message. */
+export function buildMessagePayload(message: MessageRow) {
+  return {
+    type: 'whatsapp_message',
+    direction: message.sender_type === 'customer' ? 'inbound' : 'outbound',
+    sender: message.sender_type,
+    message_type: message.content_type,
+    text: message.content_text,
+    media_url: message.media_url,
+    template_name: message.template_name,
+    status: message.status,
+    whatsapp_message_id: message.message_id,
+    whatspert_message_id: message.id,
+    sent_at: message.created_at,
   }
 }
 
@@ -161,8 +151,8 @@ async function ensureLead(contactId: string, deps: SyncDeps): Promise<string | n
   if (linked) return linked
   const contact = await deps.loadContact(contactId)
   if (!contact) return null
-  const res = await deps.send('POST', deps.options.leads_path, buildLeadPayload(contact, deps.options), `lead-${contact.id}`)
-  const externalId = extractExternalId(res)
+  const res = await deps.send(deps.options.leads_path, buildLeadPayload(contact, deps.options), `lead-${contact.id}`)
+  const externalId = extractExternalId(res, ['id', 'lead_id', 'leadId', 'uuid'])
   if (!externalId) {
     throw new RealExpertError('Real Expert created the lead but did not return its id.', null, false)
   }
@@ -183,38 +173,11 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       if (!deal) return 'skipped'
       const leadId = await ensureLead(deal.contact_id, deps)
       if (!leadId) return 'skipped'
-      const stage = resolveStageSlug(
-        deal.status,
-        deal.stage?.name ?? null,
-        deps.options.stage_map,
-        await deps.getStages(),
+      await deps.send(
+        fillPath(deps.options.stage_path, leadId),
+        buildStagePayload(deal),
+        `deal-${deal.id}-${deal.updated_at ?? ''}`,
       )
-      const body = buildDealPayload(deal, stage)
-      const key = `deal-${deal.id}-${deal.updated_at ?? ''}`
-      const existing = await deps.getDealLink(deal.id)
-      if (existing) {
-        await deps.send('PUT', `${deps.options.deals_path}/${encodeURIComponent(existing)}`, body, key)
-      } else {
-        const res = await deps.send('POST', deps.options.deals_path, { ...body, lead_id: apiId(leadId) }, key)
-        const dealId = extractExternalId(res, ['deal_id', 'id'])
-        if (dealId) await deps.saveDealLink(deal.id, dealId)
-      }
-      // Real Expert has fixed stages; when ours has no match, the
-      // timeline still shows where the deal stands in Whatspert.
-      if (!stage) {
-        await deps.send(
-          'POST',
-          deps.options.activities_path,
-          {
-            lead_id: apiId(leadId),
-            type: 'note',
-            subject: 'Deal updated in Whatspert CRM',
-            body: `${deal.title}\n${dealSummary(deal)}`,
-            logged_at: deal.updated_at,
-          },
-          `${key}-note`,
-        )
-      }
       return 'done'
     }
     case 'message': {
@@ -222,12 +185,7 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       if (!message) return 'skipped'
       const leadId = await ensureLead(message.contact_id, deps)
       if (!leadId) return 'skipped'
-      await deps.send(
-        'POST',
-        deps.options.activities_path,
-        buildMessagePayload(message, leadId, deps.options),
-        `message-${message.id}`,
-      )
+      await deps.send(fillPath(deps.options.activities_path, leadId), buildMessagePayload(message), `message-${message.id}`)
       return 'done'
     }
     default:
@@ -256,8 +214,6 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: RealExpertTarget): SyncDeps {
   const accountId = integration.account_id
   const options = parseOptions(integration.options).options
-  // Fetched once per drain, on the first deal job.
-  let stages: Record<string, string> | null | undefined
   return {
     options,
     async loadContact(id) {
@@ -313,37 +269,8 @@ export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: 
       )
       if (error) throw error
     },
-    async getDealLink(dealId) {
-      const { data } = await db
-        .from('crm_deal_links')
-        .select('external_id')
-        .eq('integration_id', integration.id)
-        .eq('deal_id', dealId)
-        .maybeSingle()
-      return (data as { external_id: string } | null)?.external_id ?? null
-    },
-    async saveDealLink(dealId, externalId) {
-      const { error } = await db.from('crm_deal_links').upsert(
-        { integration_id: integration.id, deal_id: dealId, account_id: accountId, external_id: externalId },
-        { onConflict: 'integration_id,deal_id' },
-      )
-      if (error) throw error
-    },
-    async getStages() {
-      if (stages !== undefined) return stages
-      try {
-        const res = await realExpertRequest(target, 'GET', `${options.deals_path}/stages`)
-        stages =
-          res && typeof res === 'object' && !Array.isArray(res)
-            ? Object.fromEntries(Object.entries(res as Record<string, unknown>).map(([k, v]) => [k, String(v)]))
-            : null
-      } catch {
-        stages = null
-      }
-      return stages
-    },
-    send(method, path, body, idempotencyKey) {
-      return realExpertRequest(target, method, path, body, { 'Idempotency-Key': `whatspert-${idempotencyKey}` })
+    send(path, body, idempotencyKey) {
+      return realExpertRequest(target, 'POST', path, body, { 'Idempotency-Key': `whatspert-${idempotencyKey}` })
     },
   }
 }

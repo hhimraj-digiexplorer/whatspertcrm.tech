@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       sync_deals: true,
       sync_messages: true,
       inbound_enabled: true,
-      options: { auth_style: 'x-api-key' },
+      options: { auth_style: 'bearer' },
     })
   }
   const { data: saved, error: saveErr } = await db

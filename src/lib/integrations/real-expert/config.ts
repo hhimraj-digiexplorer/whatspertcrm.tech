@@ -1,9 +1,10 @@
 // ============================================================
 // DigiExplorer Real Expert CRM — settings shape and validation.
 //
-// Defaults match Real Expert's REST API (`/api/v1`, `X-API-Key`
-// header): leads, deals with fixed stage slugs, and activities. Paths
-// stay editable per account so a customised install keeps working.
+// Defaults follow Real Expert's Public API v1 (docs/real-expert-
+// integration.md): GET /v1/me, POST /v1/leads,
+// POST /v1/leads/{lead_id}/stage and POST /v1/leads/{lead_id}/activities,
+// with the key sent as a Bearer token. Paths stay editable per account.
 // Pure functions only; safe to import from client components.
 // ============================================================
 
@@ -13,40 +14,31 @@ export type AuthStyle = 'bearer' | 'x-api-key'
 
 export interface RealExpertOptions {
   auth_style: AuthStyle
-  /** POST — create a lead. */
+  /** POST — create a lead (or get the existing one for that phone). */
   leads_path: string
-  /** POST creates a deal; PUT {deals_path}/{id} updates it; GET {deals_path}/stages lists stages. */
-  deals_path: string
-  /** POST — log an activity on a lead. */
+  /** POST — a deal's stage / status / value on a lead. `{lead_id}` is filled in. */
+  stage_path: string
+  /** POST — one WhatsApp message on a lead's timeline. `{lead_id}` is filled in. */
   activities_path: string
-  /** GET — any authenticated endpoint; used by "Test connection". */
+  /** GET — connection test; returns the workspace the key belongs to. */
   test_path: string
-  /** Activity type used for WhatsApp messages (Real Expert: call, sms, email, note, …). */
-  message_activity_type: string
-  /**
-   * Whatspert stage name → Real Expert stage slug, for stages whose
-   * names differ. Matching names ("Showing" ↔ showing) need no entry.
-   */
-  stage_map: Record<string, string>
   /** Country code for national numbers sent by Real Expert ("98765 43210"). */
   default_country_code: string
-  /** Shown as the lead source in Real Expert. */
+  /** Sent as the lead's source; Real Expert never sends these leads back. */
   lead_source: string
 }
 
 export const DEFAULT_OPTIONS: RealExpertOptions = {
-  auth_style: 'x-api-key',
+  auth_style: 'bearer',
   leads_path: '/api/v1/leads',
-  deals_path: '/api/v1/deals',
-  activities_path: '/api/v1/activities',
-  test_path: '/api/v1/stats',
-  message_activity_type: 'sms',
-  stage_map: {},
+  stage_path: '/api/v1/leads/{lead_id}/stage',
+  activities_path: '/api/v1/leads/{lead_id}/activities',
+  test_path: '/api/v1/me',
   default_country_code: '91',
   lead_source: 'WhatsApp',
 }
 
-const PATH_KEYS = ['leads_path', 'deals_path', 'activities_path', 'test_path'] as const
+const PATH_KEYS = ['leads_path', 'stage_path', 'activities_path', 'test_path'] as const
 
 /** A relative API path: starts with "/", no "..", no scheme/host, no query. */
 export function isSafePath(path: string): boolean {
@@ -55,59 +47,15 @@ export function isSafePath(path: string): boolean {
     path.startsWith('/') &&
     !path.startsWith('//') &&
     !path.includes('..') &&
-    !/[\s?#\\{}]/.test(path)
+    !/[\s?#\\]/.test(path) &&
+    // The only placeholder allowed is {lead_id}.
+    path.replace(/\{lead_id\}/g, '').search(/[{}]/) === -1
   )
 }
 
-const SLUG_RE = /^[a-z0-9_]{1,50}$/
-
-/** "Site Visit" → "site_visit": Real Expert's slug style. */
-export function slugify(v: string): string {
-  return v
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-}
-
-/**
- * Parse the stage mapping, given either as an object or as text with
- * one "Whatspert stage = real_expert_slug" per line. Keys are matched
- * case-insensitively. Returns null when any line is malformed.
- */
-export function parseStageMap(raw: unknown): Record<string, string> | null {
-  const out: Record<string, string> = {}
-  const add = (k: unknown, v: unknown): boolean => {
-    if (typeof k !== 'string' || typeof v !== 'string') return false
-    const key = k.trim().toLowerCase()
-    const slug = v.trim().toLowerCase()
-    if (!key || key.length > 100 || !SLUG_RE.test(slug)) return false
-    out[key] = slug
-    return true
-  }
-  if (raw === undefined || raw === null || raw === '') return out
-  if (typeof raw === 'string') {
-    for (const line of raw.split('\n')) {
-      if (!line.trim()) continue
-      const i = line.indexOf('=')
-      if (i < 0 || !add(line.slice(0, i), line.slice(i + 1))) return null
-    }
-    return out
-  }
-  if (typeof raw === 'object' && !Array.isArray(raw)) {
-    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-      if (!add(k, v)) return null
-    }
-    return Object.keys(out).length > 50 ? null : out
-  }
-  return null
-}
-
-/** Text form of a stage map, for the settings textarea. */
-export function stageMapToText(map: Record<string, string>): string {
-  return Object.entries(map)
-    .map(([k, v]) => `${k} = ${v}`)
-    .join('\n')
+/** Fill `{lead_id}` in a path. The id is URL-encoded. */
+export function fillPath(path: string, leadId?: string | null): string {
+  return path.replace(/\{lead_id\}/g, encodeURIComponent(leadId ?? ''))
 }
 
 /**
@@ -117,7 +65,7 @@ export function stageMapToText(map: Record<string, string>): string {
  */
 export function parseOptions(raw: unknown): { options: RealExpertOptions; invalid: string[] } {
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const options: RealExpertOptions = { ...DEFAULT_OPTIONS, stage_map: {} }
+  const options: RealExpertOptions = { ...DEFAULT_OPTIONS }
   const invalid: string[] = []
 
   if (src.auth_style !== undefined) {
@@ -130,14 +78,6 @@ export function parseOptions(raw: unknown): { options: RealExpertOptions; invali
     if (typeof v === 'string' && isSafePath(v.trim())) options[key] = v.trim().replace(/\/+$/, '')
     else invalid.push(key)
   }
-  if (src.message_activity_type !== undefined && src.message_activity_type !== '') {
-    const t = String(src.message_activity_type).trim().toLowerCase()
-    if (SLUG_RE.test(t)) options.message_activity_type = t
-    else invalid.push('message_activity_type')
-  }
-  const map = parseStageMap(src.stage_map)
-  if (map) options.stage_map = map
-  else invalid.push('stage_map')
   if (src.default_country_code !== undefined && src.default_country_code !== '') {
     const cc = String(src.default_country_code).replace(/^\+/, '').trim()
     if (/^\d{1,3}$/.test(cc)) options.default_country_code = cc
@@ -209,46 +149,12 @@ export function extractExternalId(body: unknown, keys: string[] = ['lead_id', 'i
   return pick(r) ?? pick(r.data) ?? pick(r.lead) ?? pick((r.data as Record<string, unknown> | undefined)?.lead)
 }
 
-/** Real Expert ids are integers; send them as numbers when they are. */
-export function apiId(id: string): string | number {
-  return /^\d{1,15}$/.test(id) ? Number(id) : id
-}
 
-/** "Asha Verma" → first/last; Real Expert requires both. */
-export function splitName(name: string | null | undefined, phone: string): { first_name: string; last_name: string } {
-  const clean = (name ?? '').trim()
-  if (!clean || clean.replace(/\D/g, '') === phone.replace(/\D/g, '')) {
-    return { first_name: 'WhatsApp', last_name: `+${phone.replace(/\D/g, '')}` }
-  }
-  const parts = clean.split(/\s+/)
-  if (parts.length === 1) return { first_name: parts[0].slice(0, 255), last_name: '-' }
-  return { first_name: parts[0].slice(0, 255), last_name: parts.slice(1).join(' ').slice(0, 255) }
-}
-
-/**
- * Real Expert stage slug for a Whatspert deal: won/lost win, then the
- * explicit map, then a stage whose slug or label matches the name.
- * Null when nothing matches — the stage is then left unchanged.
- */
-export function resolveStageSlug(
-  dealStatus: string | null,
-  stageName: string | null,
-  stageMap: Record<string, string>,
-  available: Record<string, string> | null,
-): string | null {
-  const has = (slug: string) => !available || slug in available
-  if (dealStatus === 'won' && has('closed_won')) return 'closed_won'
-  if (dealStatus === 'lost' && has('closed_lost')) return 'closed_lost'
-  if (!stageName) return null
-  const mapped = stageMap[stageName.trim().toLowerCase()]
-  if (mapped && has(mapped)) return mapped
-  const slug = slugify(stageName)
-  if (available) {
-    if (slug in available) return slug
-    for (const [s, label] of Object.entries(available)) {
-      if (slugify(label) === slug) return s
-    }
-    return null
-  }
-  return null
+/** "Site Visit" → "site_visit"; used to compare lead sources loosely. */
+export function slugify(v: string): string {
+  return v
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 }

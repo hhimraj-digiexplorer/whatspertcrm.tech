@@ -2,8 +2,7 @@
 
 Whatspert CRM syncs with Real Expert CRM in both directions. Each client
 connects their own Real Expert workspace under **Integrations → Real
-Expert CRM** with the workspace address and an API key. Real Expert is
-DigiExplorer's Laravel CRM (repository `hhimraj-digiexplorer/CRM1`).
+Expert CRM** with the workspace address and an API key.
 
 | Sync | Direction | When it runs |
 | --- | --- | --- |
@@ -35,8 +34,8 @@ the missing step, on both sides.
 - The paid-for-both rule is enforced in the database (sync triggers) and
   on every partner call, the inbound webhook and the sync worker.
 
-Real Expert's side is in the `hhimraj-digiexplorer/CRM1` repository,
-`docs/whatsapp-addon.md`.
+What Real Expert needs to build for the add-on is in
+`docs/real-expert-addon-brief.md`.
 
 ## How it works
 
@@ -66,77 +65,46 @@ It uses the same secret as the automations cron.
 
 ## Real Expert API used
 
-Whatspert talks to Real Expert's built-in REST API (`/api/v1`). Nothing
-needs to change in Real Expert. Paths can be changed per account under
-**Advanced settings** if an install differs.
+Whatspert follows Real Expert's **Public API v1**
+(`docs/real-expert-public-api-v1.md`, base `https://crm.digiexplorer.in/api/v1`).
+Paths can be changed per account under **Advanced settings**.
 
-### Setting it up in Real Expert
-
-1. **Settings → API → Generate API key**, and switch the API on.
-2. In Whatspert, **Integrations → Real Expert CRM**: enter the Real
-   Expert address (e.g. `https://crm.digiexplorer.in`) and the API key,
-   then **Test connection**.
-3. For Real Expert leads → WhatsApp: switch it on in Whatspert, pick the
-   welcome template and save. Then in Real Expert **Settings → Webhooks**
-   add a webhook with the URL shown in Whatspert, paste the Whatspert
-   token as the **Secret**, and tick **lead.created**.
-
-### Calls Whatspert makes
-
-All requests send `X-API-Key: <key>` and
-`Idempotency-Key: whatspert-<kind>-<id>`.
-
-| Purpose | Call | Body |
+| Purpose | Call | Body Whatspert sends |
 | --- | --- | --- |
-| Test connection | `GET /api/v1/stats` | — |
-| New lead | `POST /api/v1/leads` | `first_name`, `last_name`, `phone` (+91…), `email`, `source` ("WhatsApp"), `notes`, `external_id` |
-| Stage list | `GET /api/v1/deals/stages` | — (fetched once per sync run) |
-| First deal sync | `POST /api/v1/deals` | `lead_id`, `title`, `stage`, `contract_price`, `closing_date` |
-| Later deal syncs | `PUT /api/v1/deals/{deal_id}` | `title`, `stage`, `contract_price`, `closing_date` |
-| WhatsApp message | `POST /api/v1/activities` | `lead_id`, `type` ("sms"), `subject`, `body`, `logged_at` |
+| Test connection | `GET /v1/me` | — (shows the workspace name) |
+| New lead | `POST /v1/leads` | `name`, `phone` (+91…), `email`, `company`, `source` ("WhatsApp"), `whatspert_contact_id`, `created_at` |
+| Deal / stage | `POST /v1/leads/{lead_id}/stage` | `title`, `value`, `currency`, `status`, `stage: { name }`, `pipeline: { name }` (+ `expected_close_date`, `whatspert_deal_id`, `updated_at`) |
+| WhatsApp message | `POST /v1/leads/{lead_id}/activities` | `type: "whatsapp_message"`, `direction`, `sender`, `message_type`, `text`, `media_url`, `template_name`, `status`, `whatsapp_message_id`, `sent_at` (+ `whatspert_message_id`) |
 
-Notes:
-
-- Real Expert requires a first and last name. "Asha Verma" is sent as
-  Asha / Verma; a single name gets last name "-"; a contact with no name
-  is sent as "WhatsApp" / "+91…".
-- Real Expert returns the existing lead for a duplicate phone or email,
-  so a contact is never created twice.
-- **Stages.** Real Expert has fixed stages (Lead, Showing, Offer
-  Received, Under Contract, Closing, Closed Won, Closed Lost, …).
-  A Whatspert stage with the same name is matched automatically, won and
-  lost deals become Closed Won / Closed Lost, and other names can be
-  mapped in **Advanced settings → Stage mapping**, one per line
-  (`Site visit = showing`). An unmatched stage leaves the Real Expert
-  stage unchanged and logs a note on the lead instead.
-- Messages are logged as `sms` activities by default; this can be set
-  to `note` or any activity type that exists in Real Expert.
+- The key goes in `Authorization: Bearer rex_live_…` (or `X-API-Key`).
+- Every POST carries `Idempotency-Key: whatspert-<kind>-<id>`, so
+  Whatspert's retries never repeat an action.
+- Real Expert matches the stage **name** against its own stages; an
+  unmatched name is kept as a note, so Whatspert does no mapping.
+- Leads are sent with `source: "WhatsApp"`; Real Expert never sends
+  those back (loop guard), and Whatspert also ignores them if it does.
 
 ## Real Expert → Whatspert: new leads
 
+In Real Expert, **Integrations → API access → Send new leads to**: paste
+the URL and token shown in Whatspert (Integrations → Real Expert), then
+**Send a test**. Every new lead is POSTed:
+
 ```
 POST https://whatspertcrm.tech/api/integrations/real-expert/inbound/<integration id>
-X-Webhook-Signature: <hex HMAC-SHA256 of the body, keyed with the token>
+Authorization: Bearer rex_…
 
-{ "event": "lead.created", "timestamp": "…",
-  "data": { "lead_id": 77, "first_name": "Ravi", "last_name": "Kumar",
-            "phone": "9876543210", "email": null, "source": "website", "status": "new" } }
+{ "lead_id": "…", "name": "Asha Verma", "phone": "+919876543210", "email": null,
+  "company": null, "source": "META", "project": "GSR Heights", "city": "Lucknow",
+  "created_at": "2026-10-02T09:30:00Z" }
 ```
 
-This is exactly what Real Expert's webhooks send when the token is set
-as the webhook Secret. Whatspert then:
-
-1. adds the lead as a WhatsApp contact (numbers without a country code
-   get +91, changeable in Advanced settings);
-2. links the contact to the Real Expert lead, so it is not pushed back;
-3. sends the chosen welcome template, with `{{1}}` set to the first name.
-
-Other events are acknowledged and ignored. Leads that Whatspert itself
-created in Real Expert (source "whatsapp") are not greeted again.
-
-Other systems can call the same URL with `Authorization: Bearer <token>`
-and a flat body: `{ "lead_id", "name" or "first_name"/"last_name",
-"phone", "email", "template": { "name", "language", "variables": [] } }`.
+Whatspert then adds the lead as a WhatsApp contact (a number without a
+country code gets +91), links it to the Real Expert lead, saves source /
+project / city as a note on the contact, and sends the chosen welcome
+template with `{{1}}` set to the first name. A signed
+`X-Webhook-Signature` body (HMAC of the body with the token) and the
+`{ event, data }` wrapper are accepted too.
 
 Responses:
 

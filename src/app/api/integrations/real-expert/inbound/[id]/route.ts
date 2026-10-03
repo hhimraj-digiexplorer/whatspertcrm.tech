@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation'
+import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
 import { parseOptions, slugify, toInternationalDigits } from '@/lib/integrations/real-expert/config'
 import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
@@ -21,10 +22,11 @@ import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrat
  *     webhook's Secret);
  *   - `Authorization: Bearer <token>` or `X-Whatspert-Token: <token>`.
  *
- * Body: a Real Expert webhook `{ event: "lead.created", data: {...} }`,
- * or a lead directly (flat or under `lead`):
- *   { lead_id, first_name, last_name | name, phone, email?,
- *     template?: { name, language?, variables?: string[] } }
+ * Body: the lead, flat (Real Expert's "Send new leads to"):
+ *   { lead_id, name, phone, email?, company?, source?, project?, city?,
+ *     created_at?, template?: { name, language?, variables?: string[] } }
+ * Also accepted: `{ lead: {...} }`, `{ event: "lead.created", data: {...} }`
+ * and first_name / last_name instead of name.
  */
 type Params = { params: Promise<{ id: string }> }
 
@@ -128,6 +130,26 @@ export async function POST(request: Request, { params }: Params) {
     if (company) extra.company = company
     if (Object.keys(extra).length > 0) {
       await db.from('contacts').update(extra).eq('id', resolved.contactId).eq('account_id', accountId)
+    }
+
+    // Where the enquiry came from, for the agent reading the chat.
+    const details = [
+      ['Source', str(lead.source, 60)],
+      ['Project', str(lead.project, 120)],
+      ['City', str(lead.city, 80)],
+    ].filter(([, v]) => v)
+    if (details.length > 0) {
+      try {
+        const userId = await resolveAuditUserId(db, accountId)
+        await db.from('contact_notes').insert({
+          contact_id: resolved.contactId,
+          account_id: accountId,
+          user_id: userId,
+          note_text: `Real Expert lead${leadId ? ` #${leadId}` : ''} · ${details.map(([k, v]) => `${k}: ${v}`).join(' · ')}`,
+        })
+      } catch (err) {
+        console.warn('[crm-inbound] could not save lead details:', err)
+      }
     }
 
     // Tie the contact to the Real Expert lead and drop the "create lead"

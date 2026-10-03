@@ -9,11 +9,13 @@ const h = vi.hoisted(() => ({
   templateBody: 'Hi {{1}}, thanks for your interest!' as string | null,
   ownLink: null as Record<string, unknown> | null,
   entitled: true,
+  notes: [] as Record<string, unknown>[],
   resolve: vi.fn(),
   send: vi.fn(),
 }))
 
 vi.mock('@/lib/whatsapp/encryption', () => ({ decrypt: (v: string) => v.replace(/^enc\(|\)$/g, '') }))
+vi.mock('@/lib/api/v1/contacts', () => ({ resolveAuditUserId: async () => 'owner-1' }))
 vi.mock('@/lib/whatsapp/resolve-conversation', () => ({ resolveConversationByPhone: h.resolve }))
 vi.mock('@/lib/whatsapp/send-message', async (orig) => ({
   ...(await orig<typeof import('@/lib/whatsapp/send-message')>()),
@@ -39,6 +41,14 @@ vi.mock('@/lib/automations/admin-client', () => ({
           ...chain(() => ({ data: h.ownLink, error: null })),
           upsert: async (row: Record<string, unknown>) => {
             h.links.push(row)
+            return { error: null }
+          },
+        }
+      }
+      if (table === 'contact_notes') {
+        return {
+          insert: async (row: Record<string, unknown>) => {
+            h.notes.push(row)
             return { error: null }
           },
         }
@@ -78,6 +88,7 @@ beforeEach(() => {
   h.deletedJobs = 0
   h.ownLink = null
   h.entitled = true
+  h.notes = []
   h.templateBody = 'Hi {{1}}, thanks for your interest!'
   h.resolve.mockReset().mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: true })
   h.send.mockReset().mockResolvedValue({ messageId: 'm1', whatsappMessageId: 'wamid.1' })
@@ -191,5 +202,29 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(res.status).toBe(403)
     expect(await res.json()).toMatchObject({ code: 'locked' })
     expect(h.resolve).not.toHaveBeenCalled()
+  })
+
+  it('accepts Real Expert\'s "Send new leads to" body and keeps project/city on the contact', async () => {
+    const res = await call({
+      lead_id: 'b1c2',
+      name: 'Asha Verma',
+      phone: '+919876543210',
+      email: null,
+      company: null,
+      source: 'META',
+      project: 'GSR Heights',
+      city: 'Lucknow',
+      created_at: '2026-10-02T09:30:00Z',
+    })
+    expect(res.status).toBe(200)
+    expect(h.resolve).toHaveBeenCalledWith(expect.anything(), 'acc1', '+919876543210', 'Asha Verma')
+    expect(h.links[0]).toMatchObject({ external_id: 'b1c2', origin: 'real_expert' })
+    expect(h.notes[0]).toMatchObject({
+      contact_id: 'c1',
+      account_id: 'acc1',
+      user_id: 'owner-1',
+      note_text: 'Real Expert lead #b1c2 · Source: META · Project: GSR Heights · City: Lucknow',
+    })
+    expect(h.send.mock.calls[0][2]).toMatchObject({ templateName: 'welcome_lead', templateParams: ['Asha'] })
   })
 })
