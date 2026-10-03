@@ -35,7 +35,7 @@ export function isRetryableStatus(status: number): boolean {
 
 export async function realExpertRequest(
   target: RealExpertTarget,
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT',
   path: string,
   body?: unknown,
   extraHeaders: Record<string, string> = {},

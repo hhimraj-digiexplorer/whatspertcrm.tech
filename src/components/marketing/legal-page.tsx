@@ -26,7 +26,7 @@ export function LegalPage({ title, intro, children }: { title: string; intro?: R
 export function CompanyContact() {
   return (
     <p>
-      {COMPANY.legalName}
+      {COMPANY.legalName} (proprietor: {COMPANY.proprietor})
       <br />
       {COMPANY.address}
       <br />

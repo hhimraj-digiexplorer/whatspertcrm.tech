@@ -26,7 +26,7 @@ import {
 
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_OPTIONS, type RealExpertOptions } from "@/lib/integrations/real-expert/config";
+import { DEFAULT_OPTIONS, stageMapToText, type RealExpertOptions } from "@/lib/integrations/real-expert/config";
 import { cn } from "@/lib/utils";
 
 export interface RealExpertIntegration {
@@ -64,6 +64,7 @@ interface Draft {
   inbound_enabled: boolean;
   welcome_template: string; // "name|language"
   options: RealExpertOptions;
+  stage_map_text: string;
 }
 
 function toDraft(i: RealExpertIntegration | null): Draft {
@@ -79,6 +80,7 @@ function toDraft(i: RealExpertIntegration | null): Draft {
       ? `${i.welcome_template_name}|${i.welcome_template_language ?? ""}`
       : "",
     options: i?.options ?? DEFAULT_OPTIONS,
+    stage_map_text: stageMapToText(i?.options?.stage_map ?? {}),
   };
 }
 
@@ -155,7 +157,7 @@ export function RealExpertPanel({
           inbound_enabled: draft.inbound_enabled,
           welcome_template_name: tplName || null,
           welcome_template_language: tplLang || null,
-          options: draft.options,
+          options: { ...draft.options, stage_map: draft.stage_map_text },
           ...extra,
         }),
       });
@@ -267,7 +269,7 @@ export function RealExpertPanel({
         </header>
         <div className="grid gap-4 p-6 md:grid-cols-2">
           <Field label={t("baseUrl")} hint={t("baseUrlHint")}>
-            <input className={inputCls} value={draft.base_url} onChange={(e) => set("base_url", e.target.value)} placeholder="https://crm.realexpert.in" inputMode="url" autoComplete="off" />
+            <input className={inputCls} value={draft.base_url} onChange={(e) => set("base_url", e.target.value)} placeholder="https://crm.digiexplorer.in" inputMode="url" autoComplete="off" />
           </Field>
           <Field label={t("apiKey")} hint={integration?.api_key_hint ? t("apiKeyKeep", { hint: integration.api_key_hint }) : t("apiKeyHint")}>
             <input className={inputCls} type="password" value={draft.api_key} onChange={(e) => set("api_key", e.target.value)} placeholder={integration?.api_key_hint ?? ""} autoComplete="new-password" />
@@ -351,11 +353,20 @@ export function RealExpertPanel({
             <Field label={t("leadsPath")}>
               <input className={cn(inputCls, "font-mono")} value={draft.options.leads_path} onChange={(e) => setOpt("leads_path", e.target.value)} />
             </Field>
-            <Field label={t("dealPath")}>
-              <input className={cn(inputCls, "font-mono")} value={draft.options.deal_path} onChange={(e) => setOpt("deal_path", e.target.value)} />
+            <Field label={t("dealsPath")}>
+              <input className={cn(inputCls, "font-mono")} value={draft.options.deals_path} onChange={(e) => setOpt("deals_path", e.target.value)} />
             </Field>
-            <Field label={t("messagePath")}>
-              <input className={cn(inputCls, "font-mono")} value={draft.options.message_path} onChange={(e) => setOpt("message_path", e.target.value)} />
+            <Field label={t("activitiesPath")}>
+              <input className={cn(inputCls, "font-mono")} value={draft.options.activities_path} onChange={(e) => setOpt("activities_path", e.target.value)} />
+            </Field>
+            <Field label={t("messageActivityType")} hint={t("messageActivityTypeHint")}>
+              <select className={inputCls} value={draft.options.message_activity_type} onChange={(e) => setOpt("message_activity_type", e.target.value)}>
+                {Array.from(new Set(["sms", "note", "call", "email", "meeting", draft.options.message_activity_type])).map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label={t("testPath")}>
               <input className={cn(inputCls, "font-mono")} value={draft.options.test_path} onChange={(e) => setOpt("test_path", e.target.value)} />
@@ -363,6 +374,16 @@ export function RealExpertPanel({
             <Field label={t("leadSource")}>
               <input className={inputCls} value={draft.options.lead_source} onChange={(e) => setOpt("lead_source", e.target.value)} />
             </Field>
+            <div className="md:col-span-2">
+              <Field label={t("stageMap")} hint={t("stageMapHint")}>
+                <textarea
+                  className={cn(inputCls, "h-28 py-2 font-mono")}
+                  value={draft.stage_map_text}
+                  onChange={(e) => set("stage_map_text", e.target.value)}
+                  placeholder={"Site visit = showing\nNegotiation = offer_received"}
+                />
+              </Field>
+            </div>
           </div>
         )}
       </section>

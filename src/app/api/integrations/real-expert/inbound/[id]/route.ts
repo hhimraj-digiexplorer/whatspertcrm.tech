@@ -4,8 +4,8 @@ import { decrypt } from '@/lib/whatsapp/encryption'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
-import { parseOptions, toInternationalDigits } from '@/lib/integrations/real-expert/config'
-import { countPlaceholders, tokensMatch } from '@/lib/integrations/real-expert/settings'
+import { parseOptions, slugify, toInternationalDigits } from '@/lib/integrations/real-expert/config'
+import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
 
 /**
  * POST /api/integrations/real-expert/inbound/{integrationId}
@@ -15,9 +15,15 @@ import { countPlaceholders, tokensMatch } from '@/lib/integrations/real-expert/s
  * pushed back as a new lead), and greet it with the account's chosen
  * approved template.
  *
- * Auth: `Authorization: Bearer <inbound token>` or `X-Whatspert-Token`.
- * Body (flat or under `lead`):
- *   { lead_id, name, phone, email?, company?,
+ * Auth, any one of:
+ *   - `X-Webhook-Signature`: hex HMAC-SHA256 of the raw body, keyed with
+ *     the inbound token (Real Expert webhooks: paste the token as the
+ *     webhook's Secret);
+ *   - `Authorization: Bearer <token>` or `X-Whatspert-Token: <token>`.
+ *
+ * Body: a Real Expert webhook `{ event: "lead.created", data: {...} }`,
+ * or a lead directly (flat or under `lead`):
+ *   { lead_id, first_name, last_name | name, phone, email?,
  *     template?: { name, language?, variables?: string[] } }
  */
 type Params = { params: Promise<{ id: string }> }
@@ -42,26 +48,41 @@ export async function POST(request: Request, { params }: Params) {
     .maybeSingle()
   if (!integration) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const auth = request.headers.get('authorization') ?? ''
-  const supplied = auth.toLowerCase().startsWith('bearer ')
-    ? auth.slice(7).trim()
-    : (request.headers.get('x-whatspert-token') ?? '').trim()
+  const rawBody = await request.text().catch(() => '')
   let expected = ''
   try {
     expected = decrypt(integration.inbound_token)
   } catch {
     // unreadable token — nothing can match
   }
-  if (!supplied || !expected || !tokensMatch(supplied, expected)) {
+  const auth = request.headers.get('authorization') ?? ''
+  const supplied = auth.toLowerCase().startsWith('bearer ')
+    ? auth.slice(7).trim()
+    : (request.headers.get('x-whatspert-token') ?? '').trim()
+  const signature = (request.headers.get('x-webhook-signature') ?? '').trim()
+  const authorized =
+    !!expected &&
+    ((supplied && tokensMatch(supplied, expected)) || (signature && signatureMatches(rawBody, expected, signature)))
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!integration.is_active || !integration.inbound_enabled) {
     return NextResponse.json({ error: 'Receiving leads is switched off in Whatspert CRM.' }, { status: 403 })
   }
 
-  const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null
-  const lead = (raw && typeof raw.lead === 'object' && raw.lead ? raw.lead : raw) as Record<string, unknown> | null
-  if (!lead) return NextResponse.json({ error: 'Send the lead as JSON.' }, { status: 400 })
+  let raw: Record<string, unknown> | null = null
+  try {
+    raw = JSON.parse(rawBody) as Record<string, unknown>
+  } catch {
+    raw = null
+  }
+  if (!raw || typeof raw !== 'object') return NextResponse.json({ error: 'Send the lead as JSON.' }, { status: 400 })
+  // Real Expert webhooks carry every subscribed event; only new leads matter.
+  if (typeof raw.event === 'string' && raw.event !== 'lead.created') {
+    return NextResponse.json({ ignored: true, reason: 'event' })
+  }
+  const nested = [raw.data, raw.lead].find((v) => v && typeof v === 'object')
+  const lead = (nested ?? raw) as Record<string, unknown>
 
   const options = parseOptions(integration.options).options
   const digits = toInternationalDigits(lead.phone ?? lead.mobile ?? lead.whatsapp, options.default_country_code)
@@ -69,6 +90,24 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: 'The lead has no valid phone number.' }, { status: 400 })
   }
   const leadId = str(lead.lead_id ?? lead.id, 100)
+
+  // Leads Whatspert itself created in Real Expert come back here as
+  // lead.created; they already have a WhatsApp chat — don't greet again.
+  const source = str(lead.source, 100)
+  if (source && slugify(source) === slugify(options.lead_source)) {
+    return NextResponse.json({ ignored: true, reason: 'own_lead' })
+  }
+  if (leadId) {
+    const { data: ownLink } = await db
+      .from('crm_contact_links')
+      .select('contact_id')
+      .eq('integration_id', integration.id)
+      .eq('external_id', leadId)
+      .eq('origin', 'whatspert')
+      .limit(1)
+      .maybeSingle()
+    if (ownLink) return NextResponse.json({ ignored: true, reason: 'own_lead' })
+  }
   const name = str(lead.name, 120) ?? [str(lead.first_name, 60), str(lead.last_name, 60)].filter(Boolean).join(' ') ?? null
   const accountId = integration.account_id as string
 

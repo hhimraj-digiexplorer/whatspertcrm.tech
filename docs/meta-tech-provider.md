@@ -1,6 +1,6 @@
 # Becoming a Meta Tech Provider (WhatsApp)
 
-This is the checklist for registering DigiExplorer Branding Solution as a
+This is the checklist for registering Digi Explorer Branding Solution as a
 Meta **Tech Provider**. Once approved, clients connect their own WhatsApp
 number to Whatspert CRM in one click ("Connect with Facebook" on the
 WhatsApp setup page). They do not need to copy ids and tokens.
@@ -26,9 +26,8 @@ The app side is already built:
 
 ## 1. Before you start
 
-- [ ] Fill in the real company details in `src/lib/brand.ts` (`COMPANY`):
-  registered address with PIN, phone, GSTIN. Meta compares them with your
-  verification documents and website.
+- [x] Company details in `src/lib/brand.ts` (`COMPANY`) now match the GST
+  certificate. Still to add: a business phone number.
 - [ ] Deploy to `https://whatspertcrm.tech` so the policy pages are live.
 - [ ] Use a business email on the domain (e.g. `support@whatspertcrm.tech`).
 - [ ] Have a 1024 × 1024 app icon (the Whatspert logo) ready.
@@ -38,11 +37,14 @@ The app side is already built:
 In [Meta Business Suite](https://business.facebook.com) → **Settings →
 Business info → Business verification**:
 
-- [ ] Legal name exactly as on your documents: **DigiExplorer Branding Solution**.
-- [ ] Address and phone matching your documents and the website footer.
-- [ ] Documents: GST registration certificate, or Udyam / Shop & Establishment
-      certificate, plus a document showing the address (utility bill or bank
-      statement in the business name).
+- [ ] Business name: **Digi Explorer Branding Solution** (trade name on the
+      GST certificate; sole proprietorship of Himanshu Himraj).
+- [ ] Address: **1/163, Vibhav Khand, Gomti Nagar, Lucknow, Uttar Pradesh
+      226010** — the same as the GST certificate and the website footer.
+- [ ] Phone: a number you can receive a call or SMS on for the check.
+- [ ] Document: the **GST registration certificate (Form GST REG-06,
+      GSTIN 09ALRPH8178A1ZR)**. If Meta asks for a second document, use a
+      bank statement or utility bill in the business name at the same address.
 - [ ] Verify the domain `whatspertcrm.tech` (**Brand safety → Domains**, DNS TXT record).
 
 Verification usually takes 2–10 working days.

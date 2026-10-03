@@ -1,6 +1,6 @@
 // Shared helpers for the Real Expert settings and inbound routes.
 
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 /** Secret Real Expert sends with each inbound lead. */
 export function generateInboundToken(): string {
@@ -11,6 +11,12 @@ export function tokensMatch(supplied: string, expected: string): boolean {
   const a = Buffer.from(supplied)
   const b = Buffer.from(expected)
   return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/** Real Expert webhook signature: hex HMAC-SHA256 of the raw body. */
+export function signatureMatches(rawBody: string, secret: string, signature: string): boolean {
+  const expected = createHmac('sha256', secret).update(rawBody).digest('hex')
+  return tokensMatch(signature.toLowerCase().replace(/^sha256=/, ''), expected)
 }
 
 /** "sk_live_abcd1234" → "••••1234". */

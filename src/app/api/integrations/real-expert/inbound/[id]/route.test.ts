@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
   links: [] as Record<string, unknown>[],
   deletedJobs: 0,
   templateBody: 'Hi {{1}}, thanks for your interest!' as string | null,
+  ownLink: null as Record<string, unknown> | null,
   resolve: vi.fn(),
   send: vi.fn(),
 }))
@@ -33,6 +34,7 @@ vi.mock('@/lib/automations/admin-client', () => ({
       if (table === 'message_templates') return chain(() => ({ data: { body_text: h.templateBody }, error: null }))
       if (table === 'crm_contact_links') {
         return {
+          ...chain(() => ({ data: h.ownLink, error: null })),
           upsert: async (row: Record<string, unknown>) => {
             h.links.push(row)
             return { error: null }
@@ -48,6 +50,7 @@ vi.mock('@/lib/automations/admin-client', () => ({
   }),
 }))
 
+import { createHmac } from 'node:crypto'
 import { POST } from './route'
 import { SendMessageError } from '@/lib/whatsapp/send-message'
 import { __resetRateLimitForTests } from '@/lib/rate-limit'
@@ -71,6 +74,7 @@ beforeEach(() => {
   }
   h.links = []
   h.deletedJobs = 0
+  h.ownLink = null
   h.templateBody = 'Hi {{1}}, thanks for your interest!'
   h.resolve.mockReset().mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: true })
   h.send.mockReset().mockResolvedValue({ messageId: 'm1', whatsappMessageId: 'wamid.1' })
@@ -134,5 +138,47 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     h.templateBody = 'Welcome to our project!'
     await call({ phone: '9876543210', name: 'Ravi' })
     expect(h.send.mock.calls[0][2].templateParams).toEqual([])
+  })
+
+  it('accepts a signed Real Expert lead.created webhook', async () => {
+    const body = JSON.stringify({
+      event: 'lead.created',
+      timestamp: '2026-10-03T10:00:00+05:30',
+      data: { lead_id: 77, first_name: 'Ravi', last_name: 'Kumar', email: null, phone: '9876543210', source: 'website', status: 'new' },
+    })
+    const sig = createHmac('sha256', 'rex_secret').update(body).digest('hex')
+    const res = await POST(
+      new Request('http://x', { method: 'POST', headers: { 'x-webhook-signature': sig }, body }),
+      { params: Promise.resolve({ id: ID }) },
+    )
+    expect(res.status).toBe(200)
+    expect(h.resolve).toHaveBeenCalledWith(expect.anything(), 'acc1', '+919876543210', 'Ravi Kumar')
+    expect(h.links[0]).toMatchObject({ external_id: '77', origin: 'real_expert' })
+    expect(h.send.mock.calls[0][2].templateParams).toEqual(['Ravi'])
+  })
+
+  it('rejects a bad signature', async () => {
+    const body = JSON.stringify({ event: 'lead.created', data: { phone: '9876543210' } })
+    const res = await POST(
+      new Request('http://x', { method: 'POST', headers: { 'x-webhook-signature': 'deadbeef' }, body }),
+      { params: Promise.resolve({ id: ID }) },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('ignores other Real Expert events', async () => {
+    const res = await call({ event: 'deal.stage_changed', data: { lead_id: 1 } })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ignored: true })
+    expect(h.resolve).not.toHaveBeenCalled()
+  })
+
+  it('does not greet leads Whatspert itself created', async () => {
+    const bySource = await call({ event: 'lead.created', data: { lead_id: 5, first_name: 'A', phone: '9876543210', source: 'whatsapp' } })
+    expect(await bySource.json()).toMatchObject({ ignored: true, reason: 'own_lead' })
+    h.ownLink = { contact_id: 'c1' }
+    const byLink = await call({ event: 'lead.created', data: { lead_id: 5, first_name: 'A', phone: '9876543210', source: 'website' } })
+    expect(await byLink.json()).toMatchObject({ ignored: true, reason: 'own_lead' })
+    expect(h.send).not.toHaveBeenCalled()
   })
 })

@@ -2255,9 +2255,9 @@
       "active": "Sincronizando",
       "paused": "Pausado",
       "baseUrl": "Endereço do Real Expert",
-      "baseUrlHint": "O endereço web do seu espaço no Real Expert.",
+      "baseUrlHint": "O endereço onde você abre o Real Expert, ex.: https://crm.digiexplorer.in",
       "apiKey": "Chave de API",
-      "apiKeyHint": "Crie no Real Expert em Configurações → API.",
+      "apiKeyHint": "No Real Expert: Settings → API → Generate API key, e ative a API.",
       "apiKeyKeep": "Chave salva {hint}. Deixe em branco para mantê-la.",
       "syncTitle": "O que sincronizar",
       "syncDesc": "Ative ou desative cada sincronização. As mudanças chegam ao Real Expert em um minuto.",
@@ -2273,9 +2273,9 @@
       "welcomeTemplateHint": "{{1}} é preenchido com o primeiro nome do lead.",
       "noTemplates": "Nenhum modelo aprovado ainda — crie um em Configurações → Modelos.",
       "chooseTemplate": "Escolha um modelo…",
-      "inboundSetup": "No Real Expert, adicione um webhook de novos leads com este endereço e token:",
+      "inboundSetup": "No Real Expert, vá em Settings → Webhooks e adicione um webhook: cole esta URL, cole o token como Secret e marque o evento lead.created.",
       "inboundUrl": "URL do webhook",
-      "inboundToken": "Token (envie como Authorization: Bearer …)",
+      "inboundToken": "Token (o Secret do webhook)",
       "inboundAfterSave": "Salve a conexão para obter o endereço do webhook.",
       "show": "Mostrar token",
       "hide": "Ocultar token",
@@ -2288,8 +2288,6 @@
       "countryCode": "Código do país padrão",
       "countryCodeHint": "Adicionado a números sem código, ex.: 91 para a Índia.",
       "leadsPath": "Criar lead (POST)",
-      "dealPath": "Atualizar negócio (POST)",
-      "messagePath": "Registro de mensagens (POST)",
       "testPath": "Testar conexão (GET)",
       "leadSource": "Nome da origem do lead",
       "save": "Salvar alterações",
@@ -2300,7 +2298,13 @@
       "disconnect": "Desconectar",
       "disconnectConfirm": "Desconectar o Real Expert? A sincronização para e os vínculos são removidos. Nada é apagado no Real Expert.",
       "disconnected": "Real Expert desconectado.",
-      "copied": "Copiado"
+      "copied": "Copiado",
+      "dealsPath": "Negócios (POST criar, PUT atualizar)",
+      "activitiesPath": "Atividades (POST)",
+      "messageActivityType": "Registrar mensagens do WhatsApp como",
+      "messageActivityTypeHint": "Um tipo de atividade que exista no Real Expert.",
+      "stageMap": "Mapeamento de etapas",
+      "stageMapHint": "Só para etapas com nome diferente do Real Expert. Uma por linha: etapa do Whatspert = etapa_real_expert. Negócios ganhos e perdidos vão para closed_won / closed_lost automaticamente."
     }
   }
 }

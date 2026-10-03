@@ -2255,9 +2255,9 @@
       "active": "Syncing",
       "paused": "Paused",
       "baseUrl": "Real Expert address",
-      "baseUrlHint": "The web address of your Real Expert workspace.",
+      "baseUrlHint": "The web address you open Real Expert at, e.g. https://crm.digiexplorer.in",
       "apiKey": "API key",
-      "apiKeyHint": "Create it in Real Expert under Settings → API.",
+      "apiKeyHint": "In Real Expert: Settings → API → Generate API key, and switch the API on.",
       "apiKeyKeep": "Saved key {hint}. Leave blank to keep it.",
       "syncTitle": "What to sync",
       "syncDesc": "Switch each sync on or off. Changes reach Real Expert within a minute.",
@@ -2273,9 +2273,9 @@
       "welcomeTemplateHint": "{{1}} in the template is filled with the lead's first name.",
       "noTemplates": "No approved templates yet — create one in Settings → Templates.",
       "chooseTemplate": "Choose a template…",
-      "inboundSetup": "In Real Expert, add a webhook for new leads with this address and token:",
+      "inboundSetup": "In Real Expert, go to Settings → Webhooks and add a webhook: paste this URL, paste the token as the Secret, and tick the lead.created event.",
       "inboundUrl": "Webhook URL",
-      "inboundToken": "Token (send as Authorization: Bearer …)",
+      "inboundToken": "Token (the webhook Secret)",
       "inboundAfterSave": "Save the connection to get the webhook address for Real Expert.",
       "show": "Show token",
       "hide": "Hide token",
@@ -2288,8 +2288,6 @@
       "countryCode": "Default country code",
       "countryCodeHint": "Added to numbers that come without one, e.g. 91 for India.",
       "leadsPath": "Create lead (POST)",
-      "dealPath": "Deal update (POST)",
-      "messagePath": "Message log (POST)",
       "testPath": "Test connection (GET)",
       "leadSource": "Lead source name",
       "save": "Save changes",
@@ -2300,7 +2298,13 @@
       "disconnect": "Disconnect",
       "disconnectConfirm": "Disconnect Real Expert? Syncing stops and lead links are removed. Nothing is deleted in Real Expert.",
       "disconnected": "Real Expert disconnected.",
-      "copied": "Copied"
+      "copied": "Copied",
+      "dealsPath": "Deals (POST create, PUT update)",
+      "activitiesPath": "Activities (POST)",
+      "messageActivityType": "Log WhatsApp messages as",
+      "messageActivityTypeHint": "An activity type that exists in Real Expert.",
+      "stageMap": "Stage mapping",
+      "stageMapHint": "Only for Whatspert stages whose names differ from Real Expert's. One per line: Whatspert stage = real_expert_stage. Won and lost deals map to closed_won / closed_lost automatically."
     }
   }
 }

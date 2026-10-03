@@ -17,20 +17,24 @@ export const LOGO_W_POINTS = "7.8,8.9 9.6,14.4 12,10.3 14.4,14.4 16.2,8.9";
 
 /**
  * The business behind the product — shown on the public site, the
- * legal pages and the footer. Razorpay checks these pages (legal name,
- * address, contact) before activating live payments.
+ * legal pages and the footer. Razorpay and Meta business verification
+ * compare these with the GST registration certificate, so keep them
+ * exactly as registered (GSTIN 09ALRPH8178A1ZR).
  *
- * TODO(owner): replace every "[…]" placeholder with the real details.
+ * TODO(owner): add the business phone number.
  */
 export const COMPANY = {
-  legalName: "DigiExplorer Branding Solution",
-  address: "[Street address], Lucknow, Uttar Pradesh [PIN], India",
+  /** Trade name on the GST certificate. */
+  legalName: "Digi Explorer Branding Solution",
+  /** Sole proprietorship; the proprietor is the legal entity. */
+  proprietor: "Himanshu Himraj",
+  address: "1/163, Vibhav Khand, Gomti Nagar, Lucknow, Uttar Pradesh 226010, India",
   city: "Lucknow, Uttar Pradesh, India",
   supportEmail: "support@whatspertcrm.tech",
   /** E.164 without "+", used for the wa.me chat link; "" hides it. */
   whatsappNumber: "",
   phoneDisplay: "",
-  gstin: "",
+  gstin: "09ALRPH8178A1ZR",
   siteUrl: "https://whatspertcrm.tech",
   /** Courts named in the Terms. */
   jurisdiction: "Lucknow, Uttar Pradesh",

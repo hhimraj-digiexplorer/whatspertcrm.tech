@@ -2255,9 +2255,9 @@
       "active": "동기화 중",
       "paused": "일시 중지",
       "baseUrl": "Real Expert 주소",
-      "baseUrlHint": "Real Expert 작업 공간의 웹 주소.",
+      "baseUrlHint": "Real Expert를 여는 주소, 예: https://crm.digiexplorer.in",
       "apiKey": "API 키",
-      "apiKeyHint": "Real Expert의 설정 → API에서 만드세요.",
+      "apiKeyHint": "Real Expert에서: Settings → API → Generate API key, 그리고 API를 켜세요.",
       "apiKeyKeep": "저장된 키 {hint}. 유지하려면 비워 두세요.",
       "syncTitle": "동기화 항목",
       "syncDesc": "각 동기화를 켜거나 끄세요. 변경 사항은 1분 안에 Real Expert에 반영됩니다.",
@@ -2273,9 +2273,9 @@
       "welcomeTemplateHint": "템플릿의 {{1}}은 리드의 이름으로 채워집니다.",
       "noTemplates": "승인된 템플릿이 없습니다. 설정 → 템플릿에서 만드세요.",
       "chooseTemplate": "템플릿 선택…",
-      "inboundSetup": "Real Expert에서 이 주소와 토큰으로 새 리드 웹훅을 추가하세요:",
+      "inboundSetup": "Real Expert의 Settings → Webhooks에서 웹훅을 추가하세요: 이 URL을 넣고, 토큰을 Secret에 넣고, lead.created 이벤트를 선택하세요.",
       "inboundUrl": "웹훅 URL",
-      "inboundToken": "토큰 (Authorization: Bearer …로 전송)",
+      "inboundToken": "토큰 (웹훅 Secret)",
       "inboundAfterSave": "연결을 저장하면 Real Expert용 웹훅 주소가 표시됩니다.",
       "show": "토큰 보기",
       "hide": "토큰 숨기기",
@@ -2288,8 +2288,6 @@
       "countryCode": "기본 국가 코드",
       "countryCodeHint": "코드가 없는 번호에 추가됩니다. 예: 인도는 91.",
       "leadsPath": "리드 생성 (POST)",
-      "dealPath": "거래 업데이트 (POST)",
-      "messagePath": "메시지 기록 (POST)",
       "testPath": "연결 테스트 (GET)",
       "leadSource": "리드 출처 이름",
       "save": "변경 사항 저장",
@@ -2300,7 +2298,13 @@
       "disconnect": "연결 해제",
       "disconnectConfirm": "Real Expert 연결을 해제할까요? 동기화가 중지되고 리드 연결이 제거됩니다. Real Expert의 데이터는 삭제되지 않습니다.",
       "disconnected": "Real Expert 연결이 해제되었습니다.",
-      "copied": "복사됨"
+      "copied": "복사됨",
+      "dealsPath": "거래 (POST 생성, PUT 수정)",
+      "activitiesPath": "활동 (POST)",
+      "messageActivityType": "WhatsApp 메시지 기록 유형",
+      "messageActivityTypeHint": "Real Expert에 있는 활동 유형.",
+      "stageMap": "단계 매핑",
+      "stageMapHint": "이름이 Real Expert와 다른 단계에만 필요합니다. 한 줄에 하나: Whatspert 단계 = real_expert_stage. 성사/실패 거래는 자동으로 closed_won / closed_lost가 됩니다."
     }
   }
 }

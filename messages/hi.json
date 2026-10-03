@@ -2255,9 +2255,9 @@
       "active": "सिंक चालू",
       "paused": "रुका हुआ",
       "baseUrl": "Real Expert पता",
-      "baseUrlHint": "आपके Real Expert वर्कस्पेस का वेब पता।",
+      "baseUrlHint": "जिस पते पर आप Real Expert खोलते हैं, जैसे https://crm.digiexplorer.in",
       "apiKey": "API कुंजी",
-      "apiKeyHint": "इसे Real Expert में Settings → API में बनाएं।",
+      "apiKeyHint": "Real Expert में: Settings → API → Generate API key, और API चालू करें।",
       "apiKeyKeep": "सेव की गई कुंजी {hint}। रखने के लिए खाली छोड़ें।",
       "syncTitle": "क्या सिंक करना है",
       "syncDesc": "हर सिंक को चालू या बंद करें। बदलाव एक मिनट में Real Expert तक पहुँचते हैं।",
@@ -2273,9 +2273,9 @@
       "welcomeTemplateHint": "टेम्पलेट में {{1}} लीड के पहले नाम से भरा जाता है।",
       "noTemplates": "अभी कोई स्वीकृत टेम्पलेट नहीं — Settings → Templates में बनाएं।",
       "chooseTemplate": "टेम्पलेट चुनें…",
-      "inboundSetup": "Real Expert में नई लीड के लिए इस पते और टोकन के साथ वेबहुक जोड़ें:",
+      "inboundSetup": "Real Expert में Settings → Webhooks पर जाकर वेबहुक जोड़ें: यह URL डालें, टोकन को Secret में डालें और lead.created इवेंट चुनें।",
       "inboundUrl": "वेबहुक URL",
-      "inboundToken": "टोकन (Authorization: Bearer … के रूप में भेजें)",
+      "inboundToken": "टोकन (वेबहुक Secret)",
       "inboundAfterSave": "Real Expert के लिए वेबहुक पता पाने हेतु कनेक्शन सेव करें।",
       "show": "टोकन दिखाएं",
       "hide": "टोकन छिपाएं",
@@ -2288,8 +2288,6 @@
       "countryCode": "डिफ़ॉल्ट देश कोड",
       "countryCodeHint": "बिना कोड वाले नंबरों में जोड़ा जाता है, जैसे भारत के लिए 91।",
       "leadsPath": "लीड बनाएं (POST)",
-      "dealPath": "डील अपडेट (POST)",
-      "messagePath": "मैसेज लॉग (POST)",
       "testPath": "कनेक्शन जाँच (GET)",
       "leadSource": "लीड स्रोत का नाम",
       "save": "बदलाव सेव करें",
@@ -2300,7 +2298,13 @@
       "disconnect": "डिस्कनेक्ट करें",
       "disconnectConfirm": "Real Expert डिस्कनेक्ट करें? सिंक रुक जाएगा और लीड लिंक हट जाएंगे। Real Expert में कुछ भी डिलीट नहीं होगा।",
       "disconnected": "Real Expert डिस्कनेक्ट हो गया।",
-      "copied": "कॉपी हो गया"
+      "copied": "कॉपी हो गया",
+      "dealsPath": "डील (POST बनाएं, PUT अपडेट)",
+      "activitiesPath": "गतिविधियाँ (POST)",
+      "messageActivityType": "WhatsApp मैसेज को इस रूप में दर्ज करें",
+      "messageActivityTypeHint": "Real Expert में मौजूद गतिविधि प्रकार।",
+      "stageMap": "स्टेज मैपिंग",
+      "stageMapHint": "केवल उन Whatspert स्टेज के लिए जिनके नाम Real Expert से अलग हैं। हर पंक्ति में एक: Whatspert स्टेज = real_expert_stage. जीती और हारी डील अपने-आप closed_won / closed_lost में जाती हैं।"
     }
   }
 }
