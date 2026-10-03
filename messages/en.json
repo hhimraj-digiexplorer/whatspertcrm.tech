@@ -2204,7 +2204,11 @@
     "connected": "WhatsApp connected — messages will start arriving within a minute.",
     "connectedRegisterFailed": "Connected, but Meta couldn't register the number yet: {error}",
     "notConfigured": "One-click signup isn't set up on this server yet.",
-    "signupFailed": "Signup didn't finish. Please try again."
+    "signupFailed": "Signup didn't finish. Please try again.",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect this WhatsApp number? Messages stop arriving here and the saved access token is deleted. Your number and chats stay in WhatsApp.",
+    "disconnected": "WhatsApp disconnected.",
+    "disconnectFailed": "Could not disconnect. Please try again."
   },
   "Integrations": {
     "breadcrumb": "Breadcrumb",

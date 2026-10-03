@@ -20,6 +20,7 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Unplug,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -92,6 +93,17 @@ export default function WhatsAppSetupPage() {
       reload();
     } else if (result.kind === "failed") {
       toast.error(result.message === "not_configured" ? t("notConfigured") : result.message || t("signupFailed"));
+    }
+  }
+
+  async function disconnect() {
+    if (!window.confirm(t("disconnectConfirm"))) return;
+    const res = await fetch("/api/whatsapp/config", { method: "DELETE" });
+    if (res.ok) {
+      toast.success(t("disconnected"));
+      reload();
+    } else {
+      toast.error(t("disconnectFailed"));
     }
   }
 
@@ -265,6 +277,15 @@ export default function WhatsAppSetupPage() {
               >
                 <ExternalLink className="size-4" /> {t("manageAccount")}
               </a>
+              {canEditSettings && (
+                <button
+                  type="button"
+                  onClick={() => void disconnect()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-rose-500 hover:bg-rose-500/10"
+                >
+                  <Unplug className="size-4" /> {t("disconnect")}
+                </button>
+              )}
             </div>
           </div>
 

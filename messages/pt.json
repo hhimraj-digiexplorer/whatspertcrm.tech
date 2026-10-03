@@ -2204,7 +2204,11 @@
     "connected": "WhatsApp conectado — as mensagens começam a chegar em um minuto.",
     "connectedRegisterFailed": "Conectado, mas a Meta ainda não conseguiu registrar o número: {error}",
     "notConfigured": "O cadastro em um clique ainda não está configurado neste servidor.",
-    "signupFailed": "O cadastro não terminou. Tente de novo."
+    "signupFailed": "O cadastro não terminou. Tente de novo.",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "Desconectar este número do WhatsApp? As mensagens deixam de chegar aqui e o token salvo é apagado. Seu número e conversas continuam no WhatsApp.",
+    "disconnected": "WhatsApp desconectado.",
+    "disconnectFailed": "Não foi possível desconectar. Tente novamente."
   },
   "Integrations": {
     "breadcrumb": "Trilha",

@@ -54,9 +54,18 @@ export default function PrivacyPage() {
         <li>Our hosting provider — running the application.</li>
         <li>Meta — sending and receiving WhatsApp messages you choose to send.</li>
         <li>Razorpay — payments and subscriptions.</li>
+        <li>DigiExplorer Real Expert CRM — only if you connect it; the leads, deal updates and messages you choose to sync.</li>
         <li>OpenAI or Anthropic — only if you switch on the AI assistant with your own API key; relevant conversation text is sent to the provider you choose.</li>
       </ul>
       <p>We may also disclose data when required by law or to protect rights and safety.</p>
+
+      <p>
+        <strong>Data from Facebook and WhatsApp.</strong> When you connect WhatsApp with the
+        &ldquo;Connect with Facebook&rdquo; button, Meta shares your WhatsApp Business Account id,
+        phone number details and an access token with us. We use them only to send and receive
+        messages, manage message templates and show number health for your account, and never for
+        advertising. You can remove this access anytime; see <a href="/data-deletion">Data deletion</a>.
+      </p>
 
       <h2>5. Where and how long</h2>
       <p>
@@ -78,7 +87,8 @@ export default function PrivacyPage() {
       <p>
         You can access, correct or delete your account data from the app or by writing to us, withdraw
         consent where processing is based on consent, and nominate another person to exercise your
-        rights. If you are a contact of one of our customers, please contact that business first; we
+        rights. Step-by-step deletion instructions are on our <a href="/data-deletion">Data deletion</a>
+        page. If you are a contact of one of our customers, please contact that business first; we
         will help them respond.
       </p>
 

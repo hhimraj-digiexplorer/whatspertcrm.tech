@@ -2204,7 +2204,11 @@
     "connected": "WhatsApp이 연결되었습니다 — 1분 안에 메시지가 도착하기 시작합니다.",
     "connectedRegisterFailed": "연결되었지만 Meta가 아직 번호를 등록하지 못했습니다: {error}",
     "notConfigured": "이 서버에는 아직 원클릭 가입이 설정되지 않았습니다.",
-    "signupFailed": "가입이 완료되지 않았습니다. 다시 시도하세요."
+    "signupFailed": "가입이 완료되지 않았습니다. 다시 시도하세요.",
+    "disconnect": "연결 해제",
+    "disconnectConfirm": "이 WhatsApp 번호의 연결을 해제할까요? 더 이상 메시지가 여기로 오지 않으며 저장된 액세스 토큰이 삭제됩니다. 번호와 대화는 WhatsApp에 그대로 남습니다.",
+    "disconnected": "WhatsApp 연결이 해제되었습니다.",
+    "disconnectFailed": "연결을 해제하지 못했습니다. 다시 시도하세요."
   },
   "Integrations": {
     "breadcrumb": "탐색 경로",
