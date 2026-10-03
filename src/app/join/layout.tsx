@@ -27,6 +27,7 @@
 
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { BrandLockup } from '@/components/brand/logo';
 
 export const metadata: Metadata = {
   referrer: 'no-referrer',
@@ -37,7 +38,8 @@ export const metadata: Metadata = {
 
 export default function JoinLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4 py-10">
+      <BrandLockup />
       {children}
     </div>
   );

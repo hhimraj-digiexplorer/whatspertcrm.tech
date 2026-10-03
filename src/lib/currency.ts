@@ -11,7 +11,16 @@
  */
 
 /** App-wide fallback when no account/deal currency is available. */
-export const DEFAULT_CURRENCY = "USD";
+export const DEFAULT_CURRENCY = "INR";
+
+/**
+ * Number-grouping locale for a currency. INR uses the Indian system
+ * (₹68,00,000, not ₹6,800,000) whatever the UI language; everything
+ * else follows the browser/runtime locale.
+ */
+function groupingLocale(code: string): string | undefined {
+  return code === "INR" ? "en-IN" : undefined;
+}
 
 export interface CurrencyOption {
   /** ISO-4217 code, e.g. "USD". Stored verbatim in the DB. */
@@ -65,7 +74,7 @@ export function formatCurrency(
   const code = (currency || DEFAULT_CURRENCY).trim();
   const amount = Number(value) || 0;
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(groupingLocale(code), {
       style: "currency",
       currency: code,
       minimumFractionDigits: 0,
@@ -74,7 +83,7 @@ export function formatCurrency(
   } catch {
     // Invalid ISO code — show the raw code + grouped number so the
     // value is still legible instead of throwing.
-    return `${code} ${new Intl.NumberFormat(undefined, {
+    return `${code} ${new Intl.NumberFormat(groupingLocale(code), {
       maximumFractionDigits: 0,
     }).format(amount)}`;
   }
@@ -82,8 +91,9 @@ export function formatCurrency(
 
 /**
  * Compact currency for tight spaces (donut center, legend rows):
- * "$1.2M" / "€34.5k" / "₹900". Uses the currency's symbol from
- * CURRENCIES, falling back to the code when we don't carry a symbol.
+ * "$1.2M" / "€34.5k" / "₹900". INR uses lakh / crore ("₹6.8L",
+ * "₹1.2Cr"). Uses the currency's symbol from CURRENCIES, falling back
+ * to the code when we don't carry a symbol.
  */
 export function formatCurrencyShort(
   value: number,
@@ -91,7 +101,20 @@ export function formatCurrencyShort(
 ): string {
   const code = currency || DEFAULT_CURRENCY;
   const symbol = CURRENCIES.find((c) => c.code === code)?.symbol ?? `${code} `;
+  if (code === "INR") return `${symbol}${formatCompactIndian(value)}`;
   return `${symbol}${formatCompactNumber(value)}`;
+}
+
+/**
+ * Compact number in the Indian system: 1_20_00_000 → "1.2Cr",
+ * 6_80_000 → "6.8L", 42_000 → "42.0k", 900 → "900".
+ */
+export function formatCompactIndian(value: number): string {
+  const v = Number(value || 0);
+  if (v >= 1_00_00_000) return `${(v / 1_00_00_000).toFixed(1)}Cr`;
+  if (v >= 1_00_000) return `${(v / 1_00_000).toFixed(1)}L`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
+  return v.toFixed(0);
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   STORAGE_KEY,
   THEME_IDS,
 } from "@/lib/themes";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -22,10 +23,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Whatspert CRM",
-    template: "%s — Whatspert CRM",
+    default: BRAND_NAME,
+    template: `%s — ${BRAND_NAME}`,
   },
-  description: "WhatsApp CRM — shared inbox, contacts, pipelines, broadcasts and automations.",
+  description: BRAND_TAGLINE,
   robots: {
     index: false,
     follow: false,

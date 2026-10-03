@@ -14,7 +14,12 @@ describe("formatCurrency", () => {
     expect(out).not.toContain(".00");
   });
 
-  it("defaults to USD when no currency is given", () => {
+  it("uses Indian digit grouping for INR", () => {
+    expect(formatCurrency(6_800_000, "INR")).toBe("₹68,00,000");
+    expect(formatCurrency(12_232_000, "INR")).toBe("₹1,22,32,000");
+  });
+
+  it("defaults to INR when no currency is given", () => {
     expect(formatCurrency(10)).toBe(formatCurrency(10, DEFAULT_CURRENCY));
   });
 
@@ -57,6 +62,11 @@ describe("formatCurrencyShort", () => {
   it("uses the matching symbol for non-USD currencies", () => {
     expect(formatCurrencyShort(1_000, "EUR")).toBe("€1.0k");
     expect(formatCurrencyShort(1_000, "INR")).toBe("₹1.0k");
+  });
+
+  it("uses lakh and crore for INR", () => {
+    expect(formatCurrencyShort(680_000, "INR")).toBe("₹6.8L");
+    expect(formatCurrencyShort(12_232_000, "INR")).toBe("₹1.2Cr");
   });
 
   it("falls back to the code prefix for unknown currencies (no throw)", () => {
