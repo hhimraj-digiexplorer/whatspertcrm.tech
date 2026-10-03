@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDateLocale } from "@/hooks/use-date-locale";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -436,6 +437,7 @@ function ConversationItem({
   onSelect,
   t,
 }: ConversationItemProps) {
+  const dateLocale = useDateLocale();
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t("unknown");
   const initials = displayName.charAt(0).toUpperCase();
@@ -447,6 +449,7 @@ function ConversationItem({
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
         addSuffix: false,
+        locale: dateLocale,
       })
     : "";
 

@@ -55,6 +55,8 @@ import { buildReplyPreview } from "./reply-quote";
 import { renderTemplateBody } from "@/lib/whatsapp/template-body";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
 import { toast } from "sonner";
+import { useDateLocale } from "@/hooks/use-date-locale";
+import type { Locale as DateFnsLocale } from "date-fns";
 
 interface ReplyDraft {
   id: string;
@@ -108,11 +110,15 @@ interface MessageThreadProps {
   onToggleContactPanel?: () => void;
 }
 
-function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
+function formatDateSeparator(
+  dateStr: string,
+  t: ReturnType<typeof useTranslations>,
+  locale: DateFnsLocale,
+): string {
   const date = new Date(dateStr);
   if (isToday(date)) return t("today");
   if (isYesterday(date)) return t("yesterday");
-  return format(date, "MMMM d, yyyy");
+  return format(date, "MMMM d, yyyy", { locale });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -166,6 +172,7 @@ export function MessageThread({
   onToggleContactPanel,
 }: MessageThreadProps) {
   const t = useTranslations("Inbox.messageThread");
+  const dateLocale = useDateLocale();
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
 
@@ -1103,7 +1110,7 @@ export function MessageThread({
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
                   <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-                    {formatDateSeparator(group.date, t)}
+                    {formatDateSeparator(group.date, t, dateLocale)}
                   </span>
                 </div>
                 {/* Messages */}

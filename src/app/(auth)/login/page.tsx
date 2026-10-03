@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { UsersRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand/logo";
+import { LanguagePicker } from "@/components/i18n/language-picker";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless it sits under a Suspense boundary. We split the form into
@@ -164,6 +165,7 @@ function LoginPageInner() {
           </p>
         </CardContent>
       </Card>
+      <LanguagePicker label={t("language")} />
     </div>
   );
 }

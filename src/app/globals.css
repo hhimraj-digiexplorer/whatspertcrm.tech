@@ -84,6 +84,12 @@
  * project/Color Themes.html — change one, change the other.
  * ============================================================ */
 
+/* Latin text in Inter, Hindi in Noto Sans Devanagari (per-glyph fallback). */
+:root {
+  --font-sans: var(--font-inter), var(--font-devanagari), ui-sans-serif,
+    system-ui, sans-serif;
+}
+
 /* ---- MODE: neutral surfaces ---- */
 
 :root,

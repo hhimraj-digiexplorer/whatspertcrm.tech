@@ -90,9 +90,11 @@ npm run dev
 Open <http://localhost:3000>. You'll be redirected to `/login` (or
 `/dashboard` if already signed in).
 
-The UI ships in English, Korean, Brazilian Portuguese and Spanish — set
-`NEXT_PUBLIC_APP_LOCALE` to `en`, `ko`, `pt` or `es` in `.env.local`
-(catalogues live in `messages/`).
+The UI ships in English, Hindi, Korean, Brazilian Portuguese and Spanish.
+Each user picks their language in Settings → Appearance (or on the login
+page); `NEXT_PUBLIC_APP_LOCALE` (`en`, `hi`, `ko`, `pt` or `es`) sets the
+default for people who haven't chosen. Catalogues live in `messages/`;
+add a language by adding its file there and an entry in `src/i18n/locales.ts`.
 
 Prefer containers? See [docs/docker.md](./docs/docker.md) for the
 Dockerfile + Docker Compose setup.

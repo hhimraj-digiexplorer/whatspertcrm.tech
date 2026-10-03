@@ -1,15 +1,16 @@
 "use client";
 
-import { Check, Moon, Palette, SunMoon, Sun } from "lucide-react";
+import { Check, Languages, Moon, Palette, SunMoon, Sun } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
 import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { LanguagePicker } from "@/components/i18n/language-picker";
 
 /**
- * Appearance panel — light/dark mode + accent-color picker.
+ * Appearance panel — language, light/dark mode + accent-color picker.
  *
  * Two independent controls: a mode toggle (light / dark) and the
  * accent grid. Either applies + persists immediately. No save button:
@@ -30,6 +31,15 @@ export function AppearancePanel() {
         title={t("title")}
         description={t("description")}
       />
+
+      <div className="mb-8 space-y-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Languages className="size-4 text-muted-foreground" />
+          {t("language")}
+        </h3>
+        <p className="text-xs text-muted-foreground">{t("languageHint")}</p>
+        <LanguagePicker label={t("language")} />
+      </div>
 
       <div className="space-y-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">

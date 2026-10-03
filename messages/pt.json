@@ -12,7 +12,8 @@
     "signingIn": "Entrando...",
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
-    "createAccount": "Criar conta"
+    "createAccount": "Criar conta",
+    "language": "Idioma"
   },
   "Sidebar": {
     "title": "Whatspert CRM",
@@ -1734,7 +1735,9 @@
       "useMode": "Usar o modo {mode}",
       "active": "Ativo",
       "accentColor": "Cor de destaque",
-      "useTheme": "Usar o tema {name}"
+      "useTheme": "Usar o tema {name}",
+      "language": "Idioma",
+      "languageHint": "Vale para este navegador. Cada pessoa da equipe pode escolher o seu."
     },
     "security": {
       "title": "Login e segurança",
