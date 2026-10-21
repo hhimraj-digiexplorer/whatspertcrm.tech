@@ -6,7 +6,9 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# npm can crash mid-install on a flaky network yet exit 0 ("Exit
+# handler never called"); fail here instead of in a confusing build.
+RUN npm ci --no-audit --no-fund && test -x node_modules/.bin/next
 
 # ---------------------------------------------------------------
 # Stage 2 — build
@@ -26,10 +28,17 @@ ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_APP_LOCALE=en
+ARG NEXT_PUBLIC_META_APP_ID
+ARG NEXT_PUBLIC_META_ES_CONFIG_ID
+# Read by next.config.ts when it builds the security headers.
+ARG PARTNER_FRAME_ANCESTORS
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_APP_LOCALE=$NEXT_PUBLIC_APP_LOCALE \
+    NEXT_PUBLIC_META_APP_ID=$NEXT_PUBLIC_META_APP_ID \
+    NEXT_PUBLIC_META_ES_CONFIG_ID=$NEXT_PUBLIC_META_ES_CONFIG_ID \
+    PARTNER_FRAME_ANCESTORS=$PARTNER_FRAME_ANCESTORS \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build

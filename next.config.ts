@@ -28,6 +28,22 @@ const FRAME_ANCESTORS = (process.env.PARTNER_FRAME_ANCESTORS ?? "")
   .split(/[\s,]+/)
   .filter((o) => /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o) || /^http:\/\/localhost(:\d+)?$/.test(o));
 
+/**
+ * The Supabase API origin, for the CSP. Hosted projects live on
+ * *.supabase.co; a self-hosted Supabase (e.g. on the VPS) has its own
+ * address, read from NEXT_PUBLIC_SUPABASE_URL at build time.
+ */
+const SUPABASE_ORIGIN = (() => {
+  try {
+    const u = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    return u.hostname.endsWith(".supabase.co") ? null : u.origin;
+  } catch {
+    return null;
+  }
+})();
+const SUPABASE_HTTP = ["https://*.supabase.co", SUPABASE_ORIGIN].filter(Boolean).join(" ");
+const SUPABASE_WS = ["wss://*.supabase.co", SUPABASE_ORIGIN?.replace(/^http/, "ws")].filter(Boolean).join(" ");
+
 const FRAME_HEADERS =
   FRAME_ANCESTORS.length > 0
     ? // Enforced on its own (the main CSP below is report-only).
@@ -72,12 +88,12 @@ const SECURITY_HEADERS = [
       "img-src 'self' data: blob: https:",
       // Outbound media previews (blob: from MediaRecorder + file picker)
       // and Supabase public-bucket audio/video the inbox renders.
-      "media-src 'self' blob: https://*.supabase.co",
+      `media-src 'self' blob: ${SUPABASE_HTTP}`,
       "font-src 'self' data:",
       // Supabase REST + realtime (WSS), Razorpay Checkout, and the
       // Facebook SDK used by Embedded Signup. WhatsApp Cloud API calls
       // still happen server-side only.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com https://*.facebook.com https://connect.facebook.net",
+      `connect-src 'self' ${SUPABASE_HTTP} ${SUPABASE_WS} https://api.razorpay.com https://lumberjack.razorpay.com https://*.facebook.com https://connect.facebook.net`,
       // Razorpay Checkout renders its payment form in an iframe.
       // Razorpay Checkout and the Embedded Signup popup's helper frames.
       "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.facebook.com",

@@ -12,6 +12,9 @@ services:
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
         NEXT_PUBLIC_APP_LOCALE: ${NEXT_PUBLIC_APP_LOCALE:-en}
+        NEXT_PUBLIC_META_APP_ID: ${NEXT_PUBLIC_META_APP_ID:-}
+        NEXT_PUBLIC_META_ES_CONFIG_ID: ${NEXT_PUBLIC_META_ES_CONFIG_ID:-}
+        PARTNER_FRAME_ANCESTORS: ${PARTNER_FRAME_ANCESTORS:-}
     # Runtime (server-only) secrets come from .env.local; they are
     # never baked into the image.
     env_file:
@@ -24,7 +27,9 @@ services:
       PORT: 3000
     # Host side only — HOST_PORT=8080 publishes the app on :8080.
     ports:
-      - '${HOST_PORT:-3000}:3000'
+      # HOST_IP=127.0.0.1 keeps the app private behind a reverse proxy
+      # (Docker-published ports bypass ufw).
+      - '${HOST_IP:-0.0.0.0}:${HOST_PORT:-3000}:3000'
     restart: unless-stopped
     healthcheck:
       test:
