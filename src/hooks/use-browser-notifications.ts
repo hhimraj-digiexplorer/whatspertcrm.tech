@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
+import { LOGO_MARK_SRC } from "@/lib/brand";
 import {
   DEFAULT_NOTIFICATION_LABELS,
   buildNotificationContent,
@@ -105,7 +106,7 @@ export function useBrowserNotifications(): void {
           // One alert per conversation: a second message from the same
           // customer replaces the first instead of stacking.
           tag: msg.conversation_id,
-          icon: "/icon",
+          icon: LOGO_MARK_SRC,
         });
         notification.onclick = () => {
           window.focus();

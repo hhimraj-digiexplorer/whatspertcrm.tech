@@ -9,11 +9,10 @@ export const BRAND_TAGLINE =
 /** Mark background — WhatsApp green. Mirrors the default accent theme. */
 export const BRAND_COLOR = "#25D366";
 
-/** Chat bubble + "W" glyph, drawn on a 24×24 grid. Shared by the
- *  in-app logo and the generated favicon so they never drift. */
-export const LOGO_BUBBLE_PATH =
-  "M12 3.5a8 8 0 1 1-3.9 15l-3.6 1 1-3.4A8 8 0 0 1 12 3.5z";
-export const LOGO_W_POINTS = "7.8,8.9 9.6,14.4 12,10.3 14.4,14.4 16.2,8.9";
+/** Logo artwork in /public/brand. The favicon and Apple touch icon are
+ *  src/app/icon.png and src/app/apple-icon.png (same mark). */
+export const LOGO_MARK_SRC = "/brand/logo-mark.png";
+export const LOGO_LOCKUP_SRC = "/brand/logo-lockup.png";
 
 /**
  * The business behind the product — shown on the public site, the
