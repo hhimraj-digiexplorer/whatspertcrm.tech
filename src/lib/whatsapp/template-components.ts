@@ -10,7 +10,7 @@
  *   https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components
  */
 
-import type { TemplatePayload } from './template-validators';
+import { extractVariableIndices, type TemplatePayload } from './template-validators';
 import type { TemplateButton } from '@/types';
 
 export interface MetaComponent {
@@ -71,7 +71,10 @@ function buildBodyComponent(payload: TemplatePayload): MetaComponent {
     type: 'BODY',
     text: payload.body_text,
   };
-  const bodySample = payload.sample_values?.body;
+  // One example value per {{n}} in the body — Meta rejects a count
+  // mismatch, and a stale form can carry extra trailing entries.
+  const bodyVarCount = extractVariableIndices(payload.body_text).length;
+  const bodySample = payload.sample_values?.body?.slice(0, bodyVarCount);
   if (bodySample && bodySample.length > 0) {
     // Meta expects body_text as a 2D array — outer is "examples",
     // inner is the values for each variable. We submit a single

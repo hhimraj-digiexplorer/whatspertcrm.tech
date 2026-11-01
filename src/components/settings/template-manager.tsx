@@ -213,8 +213,11 @@ export function TemplateManager() {
 
   function buildSubmitPayload() {
     const sample_values: TemplateSampleValues = {};
-    if (form.body_samples.some((v) => v.trim())) {
-      sample_values.body = form.body_samples.map((v) => v.trim());
+    const bodySamples = Array.from({ length: bodyVarCount }, (_, i) =>
+      (form.body_samples[i] ?? '').trim(),
+    );
+    if (bodySamples.some((v) => v)) {
+      sample_values.body = bodySamples;
     }
     if (form.header_format === 'text' && form.header_sample.trim()) {
       sample_values.header = [form.header_sample.trim()];
@@ -699,7 +702,7 @@ export function TemplateManager() {
               <Input
                 placeholder={t('namePlaceholder')}
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 disabled={editingId !== null}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
               />
@@ -716,10 +719,10 @@ export function TemplateManager() {
                 <Select
                   value={form.category}
                   onValueChange={(val) =>
-                    setForm({
-                      ...form,
+                    setForm((prev) => ({
+                      ...prev,
                       category: val as MessageTemplate['category'],
-                    })
+                    }))
                   }
                 >
                   <SelectTrigger className="w-full bg-muted border-border text-foreground">
@@ -746,7 +749,7 @@ export function TemplateManager() {
                   placeholder="en_US"
                   value={form.language}
                   onChange={(e) =>
-                    setForm({ ...form, language: e.target.value })
+                    setForm((prev) => ({ ...prev, language: e.target.value }))
                   }
                   disabled={editingId !== null}
                   className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
@@ -777,10 +780,10 @@ export function TemplateManager() {
                   // the active format, so an orphan value on a hidden
                   // field is harmless — and keeping it lets the user
                   // switch formats to compare without losing typing.
-                  setForm({
-                    ...form,
+                  setForm((prev) => ({
+                    ...prev,
                     header_format: (val || 'none') as HeaderFormat,
-                  })
+                  }))
                 }
               >
                 <SelectTrigger className="w-full bg-muted border-border text-foreground">
@@ -815,7 +818,7 @@ export function TemplateManager() {
                     placeholder={t.raw('headerTextPlaceholder')}
                     value={form.header_content}
                     onChange={(e) =>
-                      setForm({ ...form, header_content: e.target.value })
+                      setForm((prev) => ({ ...prev, header_content: e.target.value }))
                     }
                     maxLength={TEMPLATE_LIMITS.headerTextMaxLength}
                     className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -827,7 +830,7 @@ export function TemplateManager() {
                       placeholder={t.raw('headerSamplePlaceholder')}
                       value={form.header_sample}
                       onChange={(e) =>
-                        setForm({ ...form, header_sample: e.target.value })
+                        setForm((prev) => ({ ...prev, header_sample: e.target.value }))
                       }
                       className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                     />
@@ -873,7 +876,7 @@ export function TemplateManager() {
                     placeholder={t('mediaUrlPlaceholder', { format: form.header_format })}
                     value={form.header_media_url}
                     onChange={(e) =>
-                      setForm({ ...form, header_media_url: e.target.value })
+                      setForm((prev) => ({ ...prev, header_media_url: e.target.value }))
                     }
                     className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                   />
@@ -904,7 +907,7 @@ export function TemplateManager() {
                 placeholder={t.raw('bodyPlaceholder')}
                 value={form.body_text}
                 onChange={(e) =>
-                  setForm({ ...form, body_text: e.target.value })
+                  setForm((prev) => ({ ...prev, body_text: e.target.value }))
                 }
                 rows={4}
                 maxLength={TEMPLATE_LIMITS.bodyMaxLength}
@@ -919,7 +922,7 @@ export function TemplateManager() {
                   <Label className="text-[11px] text-muted-foreground">
                     {t('sampleValues')}
                   </Label>
-                  {form.body_samples.map((val, i) => {
+                  {Array.from({ length: bodyVarCount }, (_, i) => form.body_samples[i] ?? '').map((val, i) => {
                     const inputId = `template-body-sample-${i}`;
                     return (
                       <Input
@@ -929,9 +932,12 @@ export function TemplateManager() {
                         placeholder={t('samplePlaceholder', { var: `{{${i + 1}}}` })}
                         value={val}
                         onChange={(e) => {
-                          const next = [...form.body_samples];
-                          next[i] = e.target.value;
-                          setForm({ ...form, body_samples: next });
+                          const value = e.target.value;
+                          setForm((prev) => {
+                            const next = [...prev.body_samples];
+                            next[i] = value;
+                            return { ...prev, body_samples: next };
+                          });
                         }}
                         className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                       />
@@ -947,7 +953,7 @@ export function TemplateManager() {
                 placeholder={t('footerPlaceholder')}
                 value={form.footer_text}
                 onChange={(e) =>
-                  setForm({ ...form, footer_text: e.target.value })
+                  setForm((prev) => ({ ...prev, footer_text: e.target.value }))
                 }
                 maxLength={TEMPLATE_LIMITS.footerMaxLength}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
