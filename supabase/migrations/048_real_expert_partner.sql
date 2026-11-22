@@ -152,7 +152,7 @@ BEGIN
     RAISE EXCEPTION 'User already has their own Whatspert data' USING ERRCODE = '23505';
   END IF;
 
-  UPDATE profiles SET account_id = p_account_id, account_role = p_role WHERE user_id = p_user_id;
+  UPDATE profiles SET account_id = p_account_id, account_role = p_role::account_role_enum WHERE user_id = p_user_id;
   DELETE FROM accounts WHERE id = v_old_account;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
