@@ -494,6 +494,33 @@ describe("send_template — opens the conversation", () => {
   });
 });
 
+describe("triggerMatches — replies a Flow handled", () => {
+  const auto = (trigger_type: string, trigger_config: Record<string, unknown>) =>
+    ({ id: "a", account_id: ACCOUNT, user_id: "u1", name: "x", trigger_type, trigger_config, is_active: true }) as unknown as Automation;
+
+  it("skips message triggers by default when a Flow consumed the reply", () => {
+    expect(triggerMatches(auto("new_message_received", {}), { flow_consumed: true })).toBe(false);
+    expect(
+      triggerMatches(auto("keyword_match", { keywords: ["stop"], match_type: "word" }), { flow_consumed: true, message_text: "stop" }),
+    ).toBe(false);
+  });
+
+  it("runs automations that opted in with include_flow_replies", () => {
+    expect(triggerMatches(auto("new_message_received", { include_flow_replies: true }), { flow_consumed: true })).toBe(true);
+    expect(
+      triggerMatches(
+        auto("keyword_match", { keywords: ["stop"], match_type: "word", include_flow_replies: true }),
+        { flow_consumed: true, message_text: "please stop" },
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves other triggers and unconsumed replies alone", () => {
+    expect(triggerMatches(auto("new_message_received", {}), { message_text: "hi" })).toBe(true);
+    expect(triggerMatches(auto("first_inbound_message", {}), { flow_consumed: true })).toBe(true);
+  });
+});
+
 describe("triggerMatches — keyword_match", () => {
   function automation(
     cfg: Partial<KeywordMatchTriggerConfig> & { keywords: string[] },

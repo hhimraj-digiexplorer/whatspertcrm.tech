@@ -45,6 +45,12 @@ export interface AutomationContext {
   agent_id?: string
   /** Button / list-row id the customer tapped, for interactive_reply. */
   interactive_reply_id?: string
+  /**
+   * An active Flow handled this inbound message. Message triggers
+   * (new_message_received, keyword_match) then run only for automations
+   * that opted in with `include_flow_replies`.
+   */
+  flow_consumed?: boolean
 }
 
 export interface DispatchInput {
@@ -731,6 +737,14 @@ export function matchesWholeWord(
 }
 
 export function triggerMatches(automation: Automation, ctx: AutomationContext | undefined): boolean {
+  if (
+    ctx?.flow_consumed &&
+    (automation.trigger_type === 'new_message_received' || automation.trigger_type === 'keyword_match') &&
+    (automation.trigger_config as { include_flow_replies?: boolean } | null)?.include_flow_replies !== true
+  ) {
+    return false
+  }
+
   if (automation.trigger_type === 'keyword_match') {
     const cfg = automation.trigger_config as KeywordMatchTriggerConfig
     if (!cfg?.keywords || cfg.keywords.length === 0) return false

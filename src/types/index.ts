@@ -515,6 +515,18 @@ export interface KeywordMatchTriggerConfig {
    */
   match_type: 'exact' | 'contains' | 'word';
   case_sensitive?: boolean;
+  /** Also run when an active Flow handled the message (see FlowReplyOption). */
+  include_flow_replies?: boolean;
+}
+
+/**
+ * Opt-in for message triggers (new_message_received, keyword_match):
+ * while a contact is inside a Flow, the Flow takes every reply and these
+ * automations are skipped. Set true to run anyway — for side effects
+ * that must see every reply (a "replied" tag, STOP / opt-out).
+ */
+export interface NewMessageTriggerConfig {
+  include_flow_replies?: boolean;
 }
 
 export interface TagTriggerConfig {
@@ -535,6 +547,7 @@ export interface InteractiveReplyTriggerConfig {
 export type AutomationTriggerConfig =
   | Record<string, never>
   | KeywordMatchTriggerConfig
+  | NewMessageTriggerConfig
   | TagTriggerConfig
   | TimeBasedTriggerConfig
   | InteractiveReplyTriggerConfig

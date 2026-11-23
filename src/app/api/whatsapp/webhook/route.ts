@@ -933,10 +933,13 @@ async function processMessage(
     | 'keyword_match'
     | 'interactive_reply'
   )[] = []
-  // Content-level triggers are suppressed when a flow consumed the
-  // message — see the comment block above.
+  // Content-level triggers: when a flow consumed the message they still
+  // dispatch, but only automations that opted in with
+  // `include_flow_replies` run (see triggerMatches) — e.g. a "replied"
+  // tag or STOP / opt-out, which must see every reply. Everything else
+  // stays suppressed, as described above.
+  automationTriggers.push('new_message_received', 'keyword_match')
   if (!flowConsumed) {
-    automationTriggers.push('new_message_received', 'keyword_match')
     // Interactive tap → fire the interactive_reply trigger too (only
     // meaningful when a button/list reply actually arrived). Enables
     // automation-only chained menus; when a Flow owns the menu it will
@@ -972,6 +975,7 @@ async function processMessage(
         // Only set on interactive taps; drives the interactive_reply
         // trigger's exact-id match.
         interactive_reply_id: interactiveReplyId ?? undefined,
+        flow_consumed: flowConsumed || undefined,
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err))
   }

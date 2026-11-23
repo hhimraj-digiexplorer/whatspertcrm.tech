@@ -1112,7 +1112,9 @@
         "matchWord": "Whole word",
         "matchWordHint": "Matches the keyword only as a standalone word, so \"k\" no longer fires on \"thanks\". Best for short keywords in space-separated languages; use Contains for languages written without spaces.",
         "matchExact": "Exact",
-        "closeConversationHint": "Sets the conversation status to \"closed\". No configuration needed."
+        "closeConversationHint": "Sets the conversation status to \"closed\". No configuration needed.",
+        "includeFlowReplies": "Also run when a Flow handles the reply",
+        "includeFlowRepliesHint": "While a contact is inside a Flow, the Flow takes their replies and message automations are skipped. Turn this on for actions that must see every reply, such as a \"replied\" tag or STOP / opt-out. Leave it off for automations that send replies, or they will talk over the Flow."
       }
     }
   },

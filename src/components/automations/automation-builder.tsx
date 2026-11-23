@@ -855,6 +855,24 @@ function TriggerCard({
                 t={t}
               />
             )}
+            {(type === "new_message_received" || type === "keyword_match") && (
+              <label className="flex items-start gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={config?.include_flow_replies === true}
+                  onChange={(e) =>
+                    onConfigChange({ ...config, include_flow_replies: e.target.checked || undefined })
+                  }
+                />
+                <span>
+                  {t("config.includeFlowReplies")}
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {t("config.includeFlowRepliesHint")}
+                  </span>
+                </span>
+              </label>
+            )}
             {type === "interactive_reply" && (
               <InteractiveReplyConfig config={config} onChange={onConfigChange} t={t} />
             )}
