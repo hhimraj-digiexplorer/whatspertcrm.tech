@@ -987,7 +987,7 @@
         },
         "new_contact_created": {
           "label": "Nuevo contacto creado",
-          "hint": "Cuando un contacto se crea automáticamente a partir de un mensaje entrante"
+          "hint": "Cuando llega un contacto nuevo: por un mensaje entrante, Real Expert CRM o la API"
         },
         "conversation_assigned": {
           "label": "Conversación asignada",
@@ -2304,7 +2304,14 @@
       "crmPlan": "Plan de Real Expert",
       "managedByRealExpert": "Esta conexión la gestiona Real Expert CRM. Para cambiar la dirección o la clave, o desactivar el complemento, usa Real Expert → Settings → WhatsApp.",
       "stagePath": "Etapa del negocio (POST)",
-      "testOkWorkspace": "Conectado al espacio de Real Expert “{name}”."
+      "testOkWorkspace": "Conectado al espacio de Real Expert “{name}”.",
+      "greetingNote": "Usa este saludo o el saludo de Real Expert, no ambos. Déjalo vacío si Real Expert saluda a los nuevos leads.",
+      "sourceTagsTitle": "Etiquetar leads por origen",
+      "sourceTagsHint": "Cada lead de Real Expert recibe la etiqueta de su origen (y las que envíe Real Expert). Añadir una etiqueta inicia tus automatizaciones de Etiqueta añadida. Las etiquetas que falten se crean.",
+      "sourceTagsSource": "Origen, p. ej. META",
+      "sourceTagsTag": "Etiqueta, p. ej. meta-form",
+      "sourceTagsAdd": "Añadir origen",
+      "sourceTagsRemove": "Quitar"
     },
     "statusLocked": "Bloqueado",
     "statusAddon": "Complemento",

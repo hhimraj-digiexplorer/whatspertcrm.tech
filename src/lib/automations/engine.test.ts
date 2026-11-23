@@ -104,7 +104,13 @@ vi.mock("./meta-send", () => ({
   engineSendInteractive: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
+const conv = vi.hoisted(() => ({ create: vi.fn(async () => "conv-new") }));
+vi.mock("@/lib/whatsapp/resolve-conversation", () => ({
+  findOrCreateConversationForContact: conv.create,
+}));
+
 import { runAutomationsForTrigger, triggerMatches } from "./engine";
+import { engineSendTemplate } from "./meta-send";
 import type { Automation, KeywordMatchTriggerConfig } from "@/types";
 
 const ACCOUNT = "acct-1";
@@ -448,6 +454,43 @@ describe("tag_added — conversation policy", () => {
       status: "failed",
       error_message: "tag_added automation cannot send: contact has no existing conversation",
     }));
+  });
+});
+
+describe("send_template — opens the conversation", () => {
+  it("sends a template to a contact that has never chatted", async () => {
+    conv.create.mockClear();
+    h.state.owned = { id: "c1" };
+    h.state.automations = [{
+      id: "a1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "tag outreach",
+      trigger_type: "tag_added",
+      trigger_config: { tag_id: "tag-a" },
+      is_active: true,
+    }];
+    h.state.steps = [{
+      id: "s1",
+      automation_id: "a1",
+      step_type: "send_template",
+      position: 0,
+      parent_step_id: null,
+      step_config: { template_name: "galleria_welcome_video", language: "en" },
+    }];
+
+    await runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "tag_added",
+      contactId: "c1",
+      context: { tag_id: "tag-a" },
+    });
+
+    expect(conv.create).toHaveBeenCalledWith(expect.anything(), ACCOUNT, "c1");
+    expect(engineSendTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: "conv-new", templateName: "galleria_welcome_video" }),
+    );
+    expect(h.state.logUpdates).toContainEqual(expect.objectContaining({ status: "success" }));
   });
 });
 

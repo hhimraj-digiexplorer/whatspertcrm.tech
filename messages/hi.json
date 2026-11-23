@@ -987,7 +987,7 @@
         },
         "new_contact_created": {
           "label": "नया संपर्क बना",
-          "hint": "जब आने वाले संदेश से संपर्क अपने-आप बने"
+          "hint": "जब नया संपर्क आए — आने वाले संदेश, Real Expert CRM या API से"
         },
         "conversation_assigned": {
           "label": "बातचीत सौंपी गई",
@@ -2304,7 +2304,14 @@
       "crmPlan": "Real Expert प्लान",
       "managedByRealExpert": "यह कनेक्शन Real Expert CRM से मैनेज होता है। पता या कुंजी बदलने या ऐड-ऑन बंद करने के लिए Real Expert → Settings → WhatsApp पर जाएं।",
       "stagePath": "डील स्टेज (POST)",
-      "testOkWorkspace": "Real Expert वर्कस्पेस “{name}” से जुड़ गया।"
+      "testOkWorkspace": "Real Expert वर्कस्पेस “{name}” से जुड़ गया।",
+      "greetingNote": "यह स्वागत संदेश या Real Expert का अपना स्वागत संदेश — दोनों में से एक ही रखें। अगर Real Expert नए लीड का स्वागत करता है तो इसे खाली छोड़ें।",
+      "sourceTagsTitle": "स्रोत के अनुसार लीड पर टैग",
+      "sourceTagsHint": "Real Expert से आए हर लीड को उसके स्रोत का टैग मिलता है (और Real Expert के भेजे टैग भी)। टैग जुड़ते ही आपके Tag Added ऑटोमेशन चलते हैं। जो टैग नहीं हैं, वे बन जाते हैं।",
+      "sourceTagsSource": "स्रोत, जैसे META",
+      "sourceTagsTag": "टैग, जैसे meta-form",
+      "sourceTagsAdd": "स्रोत जोड़ें",
+      "sourceTagsRemove": "हटाएँ"
     },
     "statusLocked": "लॉक",
     "statusAddon": "ऐड-ऑन",

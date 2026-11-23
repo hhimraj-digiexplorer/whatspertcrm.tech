@@ -9,6 +9,7 @@
 // ============================================================
 
 import { requireApiKey } from '@/lib/auth/api-context';
+import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
 import {
   parseListParams,
@@ -132,6 +133,16 @@ export async function POST(request: Request) {
         id,
         body.tags.filter((t): t is string => typeof t === 'string')
       );
+    }
+
+    // A contact created through the API starts New Contact Created
+    // automations, like one created by an incoming message.
+    if (created) {
+      await runAutomationsForTrigger({
+        accountId: ctx.accountId,
+        triggerType: 'new_contact_created',
+        contactId: id,
+      });
     }
 
     const contact = await getContactById(ctx.supabase, ctx.accountId, id);

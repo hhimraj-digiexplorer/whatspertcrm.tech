@@ -156,21 +156,16 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
 
   const accessToken = decrypt(config.access_token)
 
-  // Local template row — read for the body we persist below, not for
-  // the Meta payload (the wire shape is deliberately unchanged here).
-  // A missing row is fine: the send still goes out, we just can't
-  // reconstruct the text the customer saw.
-  const templateRow =
+  // Local template row — used for the body we persist below AND, like
+  // the manual send path, to build the header/button components. Without
+  // it an IMAGE/VIDEO/DOCUMENT header template went out with no header
+  // media and Meta refused it (#132012). A missing row is fine: the send
+  // falls back to the body-only payload.
+  const resolvedTemplate =
     input.kind === 'template'
-      ? (
-          await resolveTemplateRow(
-            db,
-            input.accountId,
-            input.templateName,
-            input.language,
-          )
-        ).row
+      ? await resolveTemplateRow(db, input.accountId, input.templateName, input.language)
       : null
+  const templateRow = resolvedTemplate?.row ?? null
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'template') {
@@ -179,7 +174,8 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
         accessToken,
         to: phone,
         templateName: input.templateName,
-        language: input.language,
+        language: resolvedTemplate?.language ?? input.language,
+        template: templateRow ?? undefined,
         params: input.params,
       })
       return r.messageId

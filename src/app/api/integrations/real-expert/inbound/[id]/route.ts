@@ -5,7 +5,10 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation'
 import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
-import { parseOptions, slugify, toInternationalDigits } from '@/lib/integrations/real-expert/config'
+import { leadTagNames, parseOptions, slugify, toInternationalDigits } from '@/lib/integrations/real-expert/config'
+import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
+import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
+import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
 
 /**
@@ -24,7 +27,12 @@ import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrat
  *
  * Body: the lead, flat (Real Expert's "Send new leads to"):
  *   { lead_id, name, phone, email?, company?, source?, project?, city?,
- *     created_at?, template?: { name, language?, variables?: string[] } }
+ *     created_at?, tags?: string[],
+ *     template?: { name, language?, variables?: string[] } }
+ *
+ * The contact gets the tag mapped to its `source` (integration settings)
+ * plus any `tags`; each newly added tag fires Tag Added, and a contact
+ * this lead created fires New Contact Created.
  * Also accepted: `{ lead: {...} }`, `{ event: "lead.created", data: {...} }`
  * and first_name / last_name instead of name.
  */
@@ -174,32 +182,80 @@ export async function POST(request: Request, { params }: Params) {
       .eq('entity_id', resolved.contactId)
       .eq('status', 'pending')
 
+    // 1. Greeting. A failed greeting must not stop the tags and triggers
+    //    below — they are what start the workspace's own flows.
     const tpl = (lead.template && typeof lead.template === 'object' ? lead.template : {}) as Record<string, unknown>
     const templateName = str(tpl.name, 512) ?? integration.welcome_template_name
-    if (!templateName) {
-      return NextResponse.json({
-        contact_id: resolved.contactId,
-        conversation_id: resolved.conversationId,
-        message_sent: false,
+    let sent: { messageId: string; whatsappMessageId: string } | null = null
+    let sendError: SendMessageError | null = null
+    if (templateName) {
+      try {
+        const templateLanguage = str(tpl.language, 20) ?? integration.welcome_template_language ?? null
+        const params = await templateParams(db, accountId, templateName, tpl.variables, name || null)
+        sent = await sendMessageToConversation(db, accountId, {
+          conversationId: resolved.conversationId,
+          messageType: 'template',
+          templateName,
+          templateLanguage,
+          templateParams: params,
+        })
+      } catch (err) {
+        if (!(err instanceof SendMessageError)) throw err
+        sendError = err
+        console.warn('[crm-inbound] welcome template not sent:', err.code, err.message)
+      }
+    }
+
+    const context = { conversation_id: resolved.conversationId }
+
+    // 2. New Contact Created, for a contact this lead just created.
+    if (resolved.contactCreated) {
+      await runAutomationsForTrigger({
+        accountId,
+        triggerType: 'new_contact_created',
+        contactId: resolved.contactId,
+        context,
       })
     }
-    const templateLanguage = str(tpl.language, 20) ?? integration.welcome_template_language ?? null
-    const params = await templateParams(db, accountId, templateName, tpl.variables, name || null)
 
-    const sent = await sendMessageToConversation(db, accountId, {
-      conversationId: resolved.conversationId,
-      messageType: 'template',
-      templateName,
-      templateLanguage,
-      templateParams: params,
-    })
+    // 3. Tags: the one mapped to this lead source in the integration
+    //    settings, plus any the payload names. Each new tag fires Tag Added.
+    const tagNames = leadTagNames(options.source_tags, source, lead.tags)
+    const tagsAdded: string[] = []
+    if (tagNames.length > 0) {
+      try {
+        const auditUserId = await resolveAuditUserId(db, accountId)
+        const { tagIdByKey } = await resolveImportTagIds(db, {
+          accountId,
+          userId: auditUserId,
+          tagNames,
+          canCreateTags: true,
+        })
+        for (const tagName of tagNames) {
+          const tagId = tagIdByKey.get(tagName.toLowerCase())
+          if (!tagId) continue
+          const r = await addContactTagAndDispatch({
+            db,
+            accountId,
+            contactId: resolved.contactId,
+            tagId,
+            context,
+          })
+          if (r.added) tagsAdded.push(tagName)
+        }
+      } catch (err) {
+        console.error('[crm-inbound] could not tag the lead:', err)
+      }
+    }
 
     return NextResponse.json({
       contact_id: resolved.contactId,
       conversation_id: resolved.conversationId,
-      message_sent: true,
-      message_id: sent.messageId,
-      whatsapp_message_id: sent.whatsappMessageId,
+      contact_created: resolved.contactCreated,
+      tags_added: tagsAdded,
+      message_sent: !!sent,
+      ...(sent ? { message_id: sent.messageId, whatsapp_message_id: sent.whatsappMessageId } : {}),
+      ...(sendError ? { message_error: { code: sendError.code, error: sendError.message } } : {}),
     })
   } catch (err) {
     if (err instanceof SendMessageError) {

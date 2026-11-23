@@ -12,7 +12,14 @@ const h = vi.hoisted(() => ({
   notes: [] as Record<string, unknown>[],
   resolve: vi.fn(),
   send: vi.fn(),
+  trigger: vi.fn(),
+  tagAdd: vi.fn(),
+  tagIds: vi.fn(),
 }))
+
+vi.mock('@/lib/automations/engine', () => ({ runAutomationsForTrigger: h.trigger }))
+vi.mock('@/lib/contacts/tag-events', () => ({ addContactTagAndDispatch: h.tagAdd }))
+vi.mock('@/lib/contacts/resolve-import-tags', () => ({ resolveImportTagIds: h.tagIds }))
 
 vi.mock('@/lib/whatsapp/encryption', () => ({ decrypt: (v: string) => v.replace(/^enc\(|\)$/g, '') }))
 vi.mock('@/lib/api/v1/contacts', () => ({ resolveAuditUserId: async () => 'owner-1' }))
@@ -92,6 +99,11 @@ beforeEach(() => {
   h.templateBody = 'Hi {{1}}, thanks for your interest!'
   h.resolve.mockReset().mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: true })
   h.send.mockReset().mockResolvedValue({ messageId: 'm1', whatsappMessageId: 'wamid.1' })
+  h.trigger.mockReset().mockResolvedValue(undefined)
+  h.tagAdd.mockReset().mockResolvedValue({ added: true, dispatched: true })
+  h.tagIds.mockReset().mockImplementation(async (_db: unknown, p: { tagNames: string[] }) => ({
+    tagIdByKey: new Map(p.tagNames.map((n) => [n.toLowerCase(), `tag-${n.toLowerCase()}`])),
+  }))
 })
 
 describe('POST /api/integrations/real-expert/inbound/[id]', () => {
@@ -141,11 +153,34 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect((await call({ name: 'No phone' })).status).toBe(400)
   })
 
-  it('passes WhatsApp errors through', async () => {
+  it('reports a failed greeting but still adds, tags and triggers the lead', async () => {
+    h.integration!.options = { source_tags: { META: 'meta-form' } }
     h.send.mockRejectedValue(new SendMessageError('template_not_found', 'Template not approved', 400))
-    const res = await call({ phone: '9876543210' })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ code: 'template_not_found' })
+    const res = await call({ phone: '9876543210', source: 'META' })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      message_sent: false,
+      message_error: { code: 'template_not_found' },
+      tags_added: ['meta-form'],
+    })
+    expect(h.trigger).toHaveBeenCalledWith(expect.objectContaining({ triggerType: 'new_contact_created', contactId: 'c1' }))
+  })
+
+  it('tags the lead by source and payload tags, firing Tag Added in the conversation', async () => {
+    h.integration!.options = { source_tags: { META: 'meta-form', WEBSITE: 'website' } }
+    const res = await call({ phone: '9876543210', source: 'META', tags: ['meta-form', 'Hot lead'] })
+    expect(res.status).toBe(200)
+    expect(h.tagAdd).toHaveBeenCalledTimes(2)
+    expect(h.tagAdd.mock.calls[0][0]).toMatchObject({ accountId: 'acc1', contactId: 'c1', tagId: 'tag-meta-form', context: { conversation_id: 'conv1' } })
+    expect(h.tagAdd.mock.calls[1][0]).toMatchObject({ tagId: 'tag-hot lead' })
+    expect(await res.json()).toMatchObject({ tags_added: ['meta-form', 'Hot lead'] })
+  })
+
+  it('fires New Contact Created only for a contact the lead created', async () => {
+    h.resolve.mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: false })
+    await call({ phone: '9876543210' })
+    expect(h.trigger).not.toHaveBeenCalled()
+    expect(h.tagAdd).not.toHaveBeenCalled()
   })
 
   it('sends no variables to a template without placeholders', async () => {

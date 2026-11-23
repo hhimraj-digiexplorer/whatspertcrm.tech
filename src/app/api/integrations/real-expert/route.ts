@@ -197,17 +197,25 @@ export async function PUT(request: Request) {
       updated_at: now,
     }
     if (newKey) row.api_key = encrypt(newKey)
-    if (!prev || body.rotate_token === true) row.inbound_token = encrypt(generateInboundToken())
-    if (!prev) row.created_by = ctx.userId
+    if (body.rotate_token === true) row.inbound_token = encrypt(generateInboundToken())
     // A changed address or key deserves a fresh start on the error banner.
     if (newKey || baseUrl !== prev?.base_url) {
       row.last_error = null
       row.last_error_at = null
     }
 
+    // Update, never upsert: the row always exists here (connections are
+    // created from Real Expert), and an upsert's INSERT half is checked
+    // against NOT NULL columns (api_key, inbound_token) before the
+    // conflict is resolved, so it failed every save that didn't carry a
+    // new API key — i.e. every save on a partner-managed connection.
+    delete row.account_id
+    delete row.provider
     const { data: saved, error: saveErr } = await ctx.supabase
       .from('crm_integrations')
-      .upsert(row, { onConflict: 'account_id,provider' })
+      .update(row)
+      .eq('id', prev.id)
+      .eq('account_id', ctx.accountId)
       .select(SELECT)
       .single()
     if (saveErr) throw saveErr

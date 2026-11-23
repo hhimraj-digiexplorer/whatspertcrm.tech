@@ -213,3 +213,27 @@ async function findOrCreateConversationRow(
 
   return newConv.id;
 }
+
+/**
+ * Find or open the conversation for a contact that already exists —
+ * e.g. one added by hand or by API that has never chatted. Used when an
+ * automation sends an approved template (a business-initiated message,
+ * which needs no prior conversation), mirroring the manual "Send
+ * template" button.
+ */
+export async function findOrCreateConversationForContact(
+  db: SupabaseClient,
+  accountId: string,
+  contactId: string
+): Promise<string> {
+  let ownerUserId: string;
+  try {
+    ownerUserId = await resolveAuditUserId(db, accountId);
+  } catch (err) {
+    if (err instanceof ContactError) {
+      throw new SendMessageError('db_error', err.message, err.status);
+    }
+    throw err;
+  }
+  return findOrCreateConversationRow(db, accountId, contactId, ownerUserId);
+}

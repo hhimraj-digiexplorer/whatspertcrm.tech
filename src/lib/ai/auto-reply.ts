@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './admin-client'
+import { dispatchConversationAssigned } from '@/lib/automations/assignment'
 import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
 import { retrieveKnowledge } from './knowledge'
@@ -187,6 +188,13 @@ export async function dispatchInboundToAiReply(
         update.assigned_agent_id = config.handoffAgentId
       }
       await db.from('conversations').update(update).eq('id', conversationId)
+      if (update.assigned_agent_id) {
+        await dispatchConversationAssigned({
+          accountId,
+          conversationId,
+          agentId: update.assigned_agent_id as string,
+        })
+      }
       return
     }
 

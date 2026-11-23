@@ -68,6 +68,8 @@ interface Draft {
   inbound_enabled: boolean;
   welcome_template: string; // "name|language"
   options: RealExpertOptions;
+  /** Editable rows for options.source_tags. */
+  source_tag_rows: SourceTagRow[];
 }
 
 function toDraft(i: RealExpertIntegration | null): Draft {
@@ -83,6 +85,7 @@ function toDraft(i: RealExpertIntegration | null): Draft {
       ? `${i.welcome_template_name}|${i.welcome_template_language ?? ""}`
       : "",
     options: i?.options ?? DEFAULT_OPTIONS,
+    source_tag_rows: Object.entries(i?.options?.source_tags ?? {}).map(([source, tag]) => ({ source, tag })),
   };
 }
 
@@ -159,7 +162,14 @@ export function RealExpertPanel({
           inbound_enabled: draft.inbound_enabled,
           welcome_template_name: tplName || null,
           welcome_template_language: tplLang || null,
-          options: draft.options,
+          options: {
+            ...draft.options,
+            source_tags: Object.fromEntries(
+              draft.source_tag_rows
+                .map((r) => [r.source.trim(), r.tag.trim()] as const)
+                .filter(([src, tag]) => src && tag),
+            ),
+          },
           ...extra,
         }),
       });
@@ -316,6 +326,8 @@ export function RealExpertPanel({
                     ))}
                   </select>
                 </Field>
+                <p className="-mt-2 text-xs text-muted-foreground">{t("greetingNote")}</p>
+                <SourceTagsEditor rows={draft.source_tag_rows} onChange={(rows) => set("source_tag_rows", rows)} />
                 {integration ? (
                   <div className="space-y-3 rounded-xl bg-muted/60 p-4">
                     <p className="text-sm text-muted-foreground">{t("inboundSetup")}</p>
@@ -490,6 +502,70 @@ function CopyRow({
           <Copy className="size-4" />
         </button>
       </div>
+    </div>
+  );
+}
+
+type SourceTagRow = { source: string; tag: string };
+
+const SOURCE_SUGGESTIONS = ["META", "WEBSITE", "GOOGLE_ADS", "GOOGLE_SHEET", "MANUAL"];
+
+/** Lead source → tag. Each tag fires Tag Added when a lead arrives. */
+function SourceTagsEditor({ rows, onChange }: { rows: SourceTagRow[]; onChange: (rows: SourceTagRow[]) => void }) {
+  const t = useTranslations("Integrations.realExpert");
+  const update = (i: number, patch: Partial<SourceTagRow>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <div className="space-y-2.5">
+      <div>
+        <p className="text-sm font-medium text-foreground">{t("sourceTagsTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("sourceTagsHint")}</p>
+      </div>
+      <datalist id="re-lead-sources">
+        {SOURCE_SUGGESTIONS.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            className={cn(inputCls, "font-mono uppercase")}
+            list="re-lead-sources"
+            value={r.source}
+            onChange={(e) => update(i, { source: e.target.value })}
+            placeholder={t("sourceTagsSource")}
+            aria-label={t("sourceTagsSource")}
+            maxLength={60}
+          />
+          <span className="text-muted-foreground" aria-hidden="true">→</span>
+          <input
+            className={inputCls}
+            value={r.tag}
+            onChange={(e) => update(i, { tag: e.target.value })}
+            placeholder={t("sourceTagsTag")}
+            aria-label={t("sourceTagsTag")}
+            maxLength={50}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(rows.filter((_, j) => j !== i))}
+            aria-label={t("sourceTagsRemove")}
+            title={t("sourceTagsRemove")}
+            className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      ))}
+      {rows.length < 30 && (
+        <button
+          type="button"
+          onClick={() => onChange([...rows, { source: "", tag: "" }])}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          + {t("sourceTagsAdd")}
+        </button>
+      )}
     </div>
   );
 }

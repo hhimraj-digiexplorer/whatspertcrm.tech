@@ -3,6 +3,7 @@ import {
   DEFAULT_OPTIONS,
   extractExternalId,
   isSafePath,
+  leadTagNames,
   normalizeBaseUrl,
   fillPath,
   parseOptions,
@@ -39,7 +40,21 @@ describe('parseOptions', () => {
       test_path: '/api/v1/me',
       default_country_code: '91',
       lead_source: 'WhatsApp',
+      source_tags: {},
     })
+  })
+  it('normalises source → tag mappings and rejects bad tag names', () => {
+    const ok = parseOptions({ source_tags: { meta: 'meta-form', 'Google Ads': ' google ads ', WEBSITE: '' } })
+    expect(ok.invalid).toEqual([])
+    expect(ok.options.source_tags).toEqual({ META: 'meta-form', GOOGLE_ADS: 'google ads' })
+    expect(parseOptions({ source_tags: { META: 'x'.repeat(51) } }).invalid).toEqual(['source_tags'])
+    expect(parseOptions({ source_tags: ['META'] }).invalid).toEqual(['source_tags'])
+  })
+  it('builds a lead tag list from its source and payload tags', () => {
+    const map = { META: 'meta-form' }
+    expect(leadTagNames(map, 'meta', ['Hot', 'meta-form', ' hot '])).toEqual(['meta-form', 'Hot'])
+    expect(leadTagNames(map, 'WEBSITE', 'a, b')).toEqual(['a', 'b'])
+    expect(leadTagNames(map, null, undefined)).toEqual([])
   })
   it('accepts valid overrides and reports bad ones', () => {
     const { options, invalid } = parseOptions({

@@ -26,6 +26,12 @@ export interface RealExpertOptions {
   default_country_code: string
   /** Sent as the lead's source; Real Expert never sends these leads back. */
   lead_source: string
+  /**
+   * Tags given to leads Real Expert pushes in, by lead source:
+   * { "META": "meta-form", "WEBSITE": "website" }. Keys are normalised
+   * with `sourceKey`; values are tag names (created if missing).
+   */
+  source_tags: Record<string, string>
 }
 
 export const DEFAULT_OPTIONS: RealExpertOptions = {
@@ -36,6 +42,22 @@ export const DEFAULT_OPTIONS: RealExpertOptions = {
   test_path: '/api/v1/me',
   default_country_code: '91',
   lead_source: 'WhatsApp',
+  source_tags: {},
+}
+
+export const MAX_SOURCE_TAGS = 30
+export const MAX_TAG_NAME = 50
+
+/** Normalise a lead source for matching: "Google Ads" → "GOOGLE_ADS". */
+export function sourceKey(source: string): string {
+  return source.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60)
+}
+
+/** A tag name we accept from settings or a payload, or null. */
+export function cleanTagName(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const name = v.trim().replace(/\s+/g, ' ')
+  return name && name.length <= MAX_TAG_NAME ? name : null
 }
 
 const PATH_KEYS = ['leads_path', 'stage_path', 'activities_path', 'test_path'] as const
@@ -65,7 +87,7 @@ export function fillPath(path: string, leadId?: string | null): string {
  */
 export function parseOptions(raw: unknown): { options: RealExpertOptions; invalid: string[] } {
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const options: RealExpertOptions = { ...DEFAULT_OPTIONS }
+  const options: RealExpertOptions = { ...DEFAULT_OPTIONS, source_tags: {} }
   const invalid: string[] = []
 
   if (src.auth_style !== undefined) {
@@ -85,6 +107,27 @@ export function parseOptions(raw: unknown): { options: RealExpertOptions; invali
   }
   if (typeof src.lead_source === 'string' && src.lead_source.trim()) {
     options.lead_source = src.lead_source.trim().slice(0, 60)
+  }
+  if (src.source_tags !== undefined && src.source_tags !== null) {
+    const map = src.source_tags
+    if (typeof map !== 'object' || Array.isArray(map)) {
+      invalid.push('source_tags')
+    } else {
+      const entries = Object.entries(map as Record<string, unknown>)
+      let bad = entries.length > MAX_SOURCE_TAGS
+      for (const [k, v] of entries.slice(0, MAX_SOURCE_TAGS)) {
+        const key = sourceKey(k)
+        if (!key) continue
+        if (v === '' || v === null) continue
+        const tag = cleanTagName(v)
+        if (!tag) {
+          bad = true
+          continue
+        }
+        options.source_tags[key] = tag
+      }
+      if (bad) invalid.push('source_tags')
+    }
   }
   return { options, invalid }
 }
@@ -157,4 +200,27 @@ export function slugify(v: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
+}
+
+/**
+ * Tag names for an incoming lead: the tag mapped to its source, then any
+ * in the payload's `tags`, de-duplicated (case-insensitive), max 10.
+ */
+export function leadTagNames(
+  sourceTags: Record<string, string>,
+  source: string | null,
+  payloadTags: unknown,
+): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  const push = (v: unknown) => {
+    const name = cleanTagName(v)
+    if (!name || seen.has(name.toLowerCase()) || out.length >= 10) return
+    seen.add(name.toLowerCase())
+    out.push(name)
+  }
+  if (source) push(sourceTags[sourceKey(source)])
+  if (Array.isArray(payloadTags)) payloadTags.forEach(push)
+  else if (typeof payloadTags === 'string') payloadTags.split(',').forEach(push)
+  return out
 }

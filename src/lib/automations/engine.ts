@@ -25,6 +25,8 @@ import { engineSendText, engineSendTemplate, engineSendInteractive } from './met
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive'
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 import { DEFAULT_CURRENCY } from '@/lib/currency'
+import { findOrCreateConversationForContact } from '@/lib/whatsapp/resolve-conversation'
+import { dispatchConversationAssigned } from './assignment'
 
 // ------------------------------------------------------------
 // Public API
@@ -400,7 +402,10 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       const cfg = step.step_config as SendTemplateStepConfig
       if (!args.contactId) throw new Error('send_template needs a contact')
       if (!cfg.template_name) throw new Error('send_template needs template_name')
-      const conversationId = await resolveConversationId(args)
+      // A template is a business-initiated message: open the
+      // conversation if the contact has never chatted (issue: tag_added
+      // flows on hand/API-added contacts stopped at their first send).
+      const conversationId = await resolveConversationId(args, { create: true })
       // Meta templates use positional {{1}}, {{2}}, … placeholders, so
       // we MUST emit params in strict numeric order. Lexicographic sort
       // of "1", "2", …, "10" yields "1", "10", "2", … which silently
@@ -497,11 +502,25 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         agentId = profiles?.[0]?.user_id
       }
       if (!agentId) return 'no agent resolved'
+      const { data: before } = await db
+        .from('conversations')
+        .select('id, assigned_agent_id')
+        .eq('account_id', args.automation.account_id)
+        .eq('contact_id', args.contactId)
       await db
         .from('conversations')
         .update({ assigned_agent_id: agentId })
         .eq('account_id', args.automation.account_id)
         .eq('contact_id', args.contactId)
+      for (const conv of (before ?? []) as { id: string; assigned_agent_id: string | null }[]) {
+        if (conv.assigned_agent_id === agentId) continue
+        await dispatchConversationAssigned({
+          accountId: args.automation.account_id,
+          conversationId: conv.id,
+          agentId,
+          context: args.context,
+        })
+      }
       return `assigned to ${agentId}`
     }
 
@@ -636,15 +655,31 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
  * manual engine POSTs. Throws if none exists — send steps have
  * no meaningful target without a conversation.
  */
-async function resolveConversationId(args: ExecuteArgs): Promise<string> {
+async function resolveConversationId(
+  args: ExecuteArgs,
+  opts: { create?: boolean } = {},
+): Promise<string> {
   const fromCtx = args.context.conversation_id
   if (fromCtx) return fromCtx
   if (!args.contactId) throw new Error('cannot resolve conversation: no contact')
+  if (opts.create) {
+    const id = await findOrCreateConversationForContact(
+      supabaseAdmin(),
+      args.automation.account_id,
+      args.contactId,
+    )
+    // Later steps in this run (send_message after the template, etc.)
+    // reuse it instead of looking it up again.
+    args.context.conversation_id = id
+    return id
+  }
   const { data, error } = await supabaseAdmin()
     .from('conversations')
     .select('id')
     .eq('account_id', args.automation.account_id)
     .eq('contact_id', args.contactId)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
   if (error) throw new Error(`conversation lookup failed: ${error.message}`)
   if (!data?.id) {
