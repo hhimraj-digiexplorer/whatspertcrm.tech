@@ -16,6 +16,7 @@ import type {
   UpdateContactFieldStepConfig,
   WaitStepConfig,
   CreateDealStepConfig,
+  UpdateDealStageStepConfig,
   AssignConversationStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
@@ -51,6 +52,8 @@ export interface AutomationContext {
    * that opted in with `include_flow_replies`.
    */
   flow_consumed?: boolean
+  /** This inbound is the contact's first-ever customer message. */
+  first_inbound?: boolean
 }
 
 export interface DispatchInput {
@@ -610,6 +613,43 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       return 'deal created'
     }
 
+    case 'update_deal_stage': {
+      const cfg = step.step_config as UpdateDealStageStepConfig
+      if (!args.contactId) throw new Error('update_deal_stage needs a contact')
+      if (!cfg.pipeline_id || !cfg.stage_id) throw new Error('update_deal_stage needs pipeline + stage')
+      // The stage must belong to the pipeline, and the pipeline to this
+      // account (service-role client: no RLS to lean on).
+      const { data: stage } = await db
+        .from('pipeline_stages')
+        .select('id, pipelines!inner(account_id)')
+        .eq('id', cfg.stage_id)
+        .eq('pipeline_id', cfg.pipeline_id)
+        .eq('pipelines.account_id', args.automation.account_id)
+        .maybeSingle()
+      if (!stage) throw new Error('update_deal_stage: stage not found in that pipeline')
+      // The contact's most recent deal in this pipeline that is still
+      // open (won / lost deals are left alone).
+      const { data: deal } = await db
+        .from('deals')
+        .select('id, stage_id')
+        .eq('account_id', args.automation.account_id)
+        .eq('contact_id', args.contactId)
+        .eq('pipeline_id', cfg.pipeline_id)
+        .not('status', 'in', '(won,lost)')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!deal) return 'no open deal in that pipeline — nothing moved'
+      if (deal.stage_id === cfg.stage_id) return 'deal already in that stage'
+      const { error: moveErr } = await db
+        .from('deals')
+        .update({ stage_id: cfg.stage_id, updated_at: new Date().toISOString() })
+        .eq('id', deal.id)
+        .eq('account_id', args.automation.account_id)
+      if (moveErr) throw new Error(`update_deal_stage failed: ${moveErr.message}`)
+      return `deal ${deal.id} moved to stage ${cfg.stage_id}`
+    }
+
     case 'send_webhook': {
       const cfg = step.step_config as SendWebhookStepConfig
       if (!cfg.url) throw new Error('send_webhook needs url')
@@ -741,6 +781,13 @@ export function triggerMatches(automation: Automation, ctx: AutomationContext | 
     ctx?.flow_consumed &&
     (automation.trigger_type === 'new_message_received' || automation.trigger_type === 'keyword_match') &&
     (automation.trigger_config as { include_flow_replies?: boolean } | null)?.include_flow_replies !== true
+  ) {
+    return false
+  }
+  if (
+    ctx?.first_inbound &&
+    automation.trigger_type === 'new_message_received' &&
+    (automation.trigger_config as { skip_first_message?: boolean } | null)?.skip_first_message === true
   ) {
     return false
   }

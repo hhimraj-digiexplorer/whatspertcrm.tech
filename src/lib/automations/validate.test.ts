@@ -60,6 +60,29 @@ describe("validateStepsForActivation", () => {
     ]);
   });
 
+  it("requires pipeline + stage for update_deal_stage", () => {
+    expect(validateStepsForActivation([{ step_type: "update_deal_stage", step_config: { pipeline_id: "p", stage_id: "s" } }])).toEqual([]);
+    expect(validateStepsForActivation([{ step_type: "update_deal_stage", step_config: {} }]).map((i) => i.path)).toEqual([
+      "steps[0].pipeline_id",
+      "steps[0].stage_id",
+    ]);
+  });
+
+  it("checks webhook headers", () => {
+    const ok = validateStepsForActivation([
+      { step_type: "send_webhook", step_config: { url: "https://x.example/h", headers: { Authorization: "Bearer abc" } } },
+    ]);
+    expect(ok).toEqual([]);
+    const bad = validateStepsForActivation([
+      { step_type: "send_webhook", step_config: { url: "https://x.example/h", headers: { "Bad Header": "x" } } },
+    ]);
+    expect(bad[0].path).toBe("steps[0].headers");
+    const injected = validateStepsForActivation([
+      { step_type: "send_webhook", step_config: { url: "https://x.example/h", headers: { "X-A": "a\r\nX-B: b" } } },
+    ]);
+    expect(injected[0].path).toBe("steps[0].headers");
+  });
+
   it("validates webhook URLs", () => {
     const good = validateStepsForActivation([
       {

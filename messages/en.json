@@ -966,7 +966,8 @@
         "wait": "Wait",
         "condition": "Condition (If/Else)",
         "send_webhook": "Send Webhook",
-        "close_conversation": "Close Conversation"
+        "close_conversation": "Close Conversation",
+        "update_deal_stage": "Update Deal Stage"
       },
       "triggers": {
         "new_message_received": {
@@ -1114,7 +1115,15 @@
         "matchExact": "Exact",
         "closeConversationHint": "Sets the conversation status to \"closed\". No configuration needed.",
         "includeFlowReplies": "Also run when a Flow handles the reply",
-        "includeFlowRepliesHint": "While a contact is inside a Flow, the Flow takes their replies and message automations are skipped. Turn this on for actions that must see every reply, such as a \"replied\" tag or STOP / opt-out. Leave it off for automations that send replies, or they will talk over the Flow."
+        "includeFlowRepliesHint": "While a contact is inside a Flow, the Flow takes their replies and message automations are skipped. Turn this on for actions that must see every reply, such as a \"replied\" tag or STOP / opt-out. Leave it off for automations that send replies, or they will talk over the Flow.",
+        "updateDealStageHint": "Moves the contact's latest open deal in this pipeline to the chosen stage. Won and lost deals are left alone; if there is no open deal, nothing changes.",
+        "skipFirstMessage": "Skip the contact's first message",
+        "skipFirstMessageHint": "Don't run on a contact's very first message (for example a click-to-WhatsApp opener) — only on their later replies.",
+        "headerName": "Name, e.g. Authorization",
+        "headerValue": "Value",
+        "headerAdd": "Add header",
+        "headerRemove": "Remove header",
+        "headersHint": "Sent with every call. Values are stored with the automation and visible to its editors."
       }
     }
   },

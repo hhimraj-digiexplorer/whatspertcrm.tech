@@ -966,7 +966,8 @@
         "wait": "Aguardar",
         "condition": "Condição (Se/Senão)",
         "send_webhook": "Enviar webhook",
-        "close_conversation": "Fechar conversa"
+        "close_conversation": "Fechar conversa",
+        "update_deal_stage": "Atualizar etapa do negócio"
       },
       "triggers": {
         "new_message_received": {
@@ -1114,7 +1115,15 @@
         "matchExact": "Exata",
         "closeConversationHint": "Define o status da conversa como \"fechada\". Nenhuma configuração necessária.",
         "includeFlowReplies": "Executar também quando um Fluxo tratar a resposta",
-        "includeFlowRepliesHint": "Enquanto um contato está dentro de um Fluxo, o Fluxo recebe as respostas e estas automações são ignoradas. Ative para ações que precisam ver cada resposta, como uma etiqueta \"respondeu\" ou STOP / descadastro. Deixe desligado em automações que respondem, ou elas vão se sobrepor ao Fluxo."
+        "includeFlowRepliesHint": "Enquanto um contato está dentro de um Fluxo, o Fluxo recebe as respostas e estas automações são ignoradas. Ative para ações que precisam ver cada resposta, como uma etiqueta \"respondeu\" ou STOP / descadastro. Deixe desligado em automações que respondem, ou elas vão se sobrepor ao Fluxo.",
+        "updateDealStageHint": "Move o negócio aberto mais recente do contato neste funil para a etapa escolhida. Negócios ganhos e perdidos não mudam; se não houver negócio aberto, nada muda.",
+        "skipFirstMessage": "Ignorar a primeira mensagem do contato",
+        "skipFirstMessageHint": "Não executa na primeira mensagem do contato (por exemplo, a de um anúncio de clique para WhatsApp), só nas respostas seguintes.",
+        "headerName": "Nome, ex.: Authorization",
+        "headerValue": "Valor",
+        "headerAdd": "Adicionar cabeçalho",
+        "headerRemove": "Remover cabeçalho",
+        "headersHint": "Enviados em toda chamada. Os valores ficam salvos com a automação e visíveis para quem a edita."
       }
     }
   },

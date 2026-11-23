@@ -515,6 +515,13 @@ describe("triggerMatches — replies a Flow handled", () => {
     ).toBe(true);
   });
 
+  it("skips a contact's first message when skip_first_message is set", () => {
+    const a = auto("new_message_received", { include_flow_replies: true, skip_first_message: true });
+    expect(triggerMatches(a, { first_inbound: true, flow_consumed: true })).toBe(false);
+    expect(triggerMatches(a, { flow_consumed: true })).toBe(true);
+    expect(triggerMatches(auto("new_message_received", {}), { first_inbound: true })).toBe(true);
+  });
+
   it("leaves other triggers and unconsumed replies alone", () => {
     expect(triggerMatches(auto("new_message_received", {}), { message_text: "hi" })).toBe(true);
     expect(triggerMatches(auto("first_inbound_message", {}), { flow_consumed: true })).toBe(true);

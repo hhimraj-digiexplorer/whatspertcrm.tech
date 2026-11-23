@@ -966,7 +966,8 @@
         "wait": "Esperar",
         "condition": "Condición (Si/Si no)",
         "send_webhook": "Enviar webhook",
-        "close_conversation": "Cerrar conversación"
+        "close_conversation": "Cerrar conversación",
+        "update_deal_stage": "Actualizar etapa del trato"
       },
       "triggers": {
         "new_message_received": {
@@ -1114,7 +1115,15 @@
         "matchExact": "Exacta",
         "closeConversationHint": "Cambia el estado de la conversación a \"cerrada\". No requiere configuración.",
         "includeFlowReplies": "Ejecutar también cuando un Flujo gestione la respuesta",
-        "includeFlowRepliesHint": "Mientras un contacto está dentro de un Flujo, el Flujo toma sus respuestas y se omiten estas automatizaciones. Actívalo para acciones que deben ver cada respuesta, como una etiqueta \"respondió\" o STOP / baja. Déjalo desactivado en automatizaciones que responden, o se solaparán con el Flujo."
+        "includeFlowRepliesHint": "Mientras un contacto está dentro de un Flujo, el Flujo toma sus respuestas y se omiten estas automatizaciones. Actívalo para acciones que deben ver cada respuesta, como una etiqueta \"respondió\" o STOP / baja. Déjalo desactivado en automatizaciones que responden, o se solaparán con el Flujo.",
+        "updateDealStageHint": "Mueve el trato abierto más reciente del contacto en este embudo a la etapa elegida. Los tratos ganados y perdidos no se tocan; si no hay trato abierto, no cambia nada.",
+        "skipFirstMessage": "Omitir el primer mensaje del contacto",
+        "skipFirstMessageHint": "No se ejecuta con el primer mensaje del contacto (por ejemplo, el de un anuncio de clic a WhatsApp), solo con sus respuestas posteriores.",
+        "headerName": "Nombre, p. ej. Authorization",
+        "headerValue": "Valor",
+        "headerAdd": "Añadir encabezado",
+        "headerRemove": "Quitar encabezado",
+        "headersHint": "Se envían en cada llamada. Los valores se guardan con la automatización y los ven quienes la editan."
       }
     }
   },

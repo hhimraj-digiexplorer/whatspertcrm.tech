@@ -966,7 +966,8 @@
         "wait": "대기",
         "condition": "조건 (If/Else)",
         "send_webhook": "웹훅 보내기",
-        "close_conversation": "대화 닫기"
+        "close_conversation": "대화 닫기",
+        "update_deal_stage": "거래 단계 변경"
       },
       "triggers": {
         "new_message_received": {
@@ -1114,7 +1115,15 @@
         "matchExact": "정확히 일치",
         "closeConversationHint": "대화 상태를 \"닫힘\"으로 설정합니다. 추가 설정이 필요 없습니다.",
         "includeFlowReplies": "플로우가 답장을 처리할 때도 실행",
-        "includeFlowRepliesHint": "연락처가 플로우 안에 있는 동안에는 플로우가 답장을 받고 이 자동화는 건너뜁니다. \"답장함\" 태그나 STOP / 수신 거부처럼 모든 답장을 봐야 하는 작업에 켜세요. 답장을 보내는 자동화에는 끄세요. 그렇지 않으면 플로우와 겹칩니다."
+        "includeFlowRepliesHint": "연락처가 플로우 안에 있는 동안에는 플로우가 답장을 받고 이 자동화는 건너뜁니다. \"답장함\" 태그나 STOP / 수신 거부처럼 모든 답장을 봐야 하는 작업에 켜세요. 답장을 보내는 자동화에는 끄세요. 그렇지 않으면 플로우와 겹칩니다.",
+        "updateDealStageHint": "이 파이프라인에서 연락처의 가장 최근 진행 중인 거래를 선택한 단계로 옮깁니다. 성사·실패한 거래는 그대로 두며, 진행 중인 거래가 없으면 아무것도 바뀌지 않습니다.",
+        "skipFirstMessage": "연락처의 첫 메시지는 건너뛰기",
+        "skipFirstMessageHint": "연락처의 맨 첫 메시지(예: 클릭 투 왓츠앱 광고)에는 실행하지 않고 이후 답장에만 실행합니다.",
+        "headerName": "이름 (예: Authorization)",
+        "headerValue": "값",
+        "headerAdd": "헤더 추가",
+        "headerRemove": "헤더 삭제",
+        "headersHint": "모든 호출에 함께 전송됩니다. 값은 자동화와 함께 저장되며 편집자가 볼 수 있습니다."
       }
     }
   },

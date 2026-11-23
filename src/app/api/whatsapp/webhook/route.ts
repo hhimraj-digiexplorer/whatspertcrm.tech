@@ -976,6 +976,7 @@ async function processMessage(
         // trigger's exact-id match.
         interactive_reply_id: interactiveReplyId ?? undefined,
         flow_consumed: flowConsumed || undefined,
+        first_inbound: isFirstInboundMessage || undefined,
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err))
   }

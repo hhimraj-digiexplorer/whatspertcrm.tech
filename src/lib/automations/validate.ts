@@ -107,6 +107,14 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.title`, message: 'title is required' })
       }
       break
+    case 'update_deal_stage':
+      if (!nonEmpty(c.pipeline_id)) {
+        issues.push({ path: `${path}.pipeline_id`, message: 'pipeline is required' })
+      }
+      if (!nonEmpty(c.stage_id)) {
+        issues.push({ path: `${path}.stage_id`, message: 'stage is required' })
+      }
+      break
     case 'wait':
       if (typeof c.amount !== 'number' || !Number.isFinite(c.amount) || c.amount <= 0) {
         issues.push({ path: `${path}.amount`, message: 'wait amount must be greater than 0' })
@@ -127,6 +135,19 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       }
       break
     case 'send_webhook':
+      if (c.headers !== undefined && c.headers !== null) {
+        const h = c.headers as Record<string, unknown>
+        if (typeof h !== 'object' || Array.isArray(h)) {
+          issues.push({ path: `${path}.headers`, message: 'headers must be name → value pairs' })
+        } else {
+          for (const [k, v] of Object.entries(h)) {
+            if (!/^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,100}$/.test(k) || typeof v !== 'string' || /[\r\n]/.test(v)) {
+              issues.push({ path: `${path}.headers`, message: `invalid header: ${k}` })
+              break
+            }
+          }
+        }
+      }
       if (!nonEmpty(c.url)) {
         issues.push({ path: `${path}.url`, message: 'webhook URL is required' })
         break

@@ -23,6 +23,7 @@ import {
   UserCheck,
   PencilLine,
   Briefcase,
+  MoveRight,
   Hourglass,
   GitBranch,
   Webhook,
@@ -116,6 +117,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   assign_conversation: { label: "assign_conversation", icon: UserCheck, border: "border-l-primary" },
   update_contact_field: { label: "update_contact_field", icon: PencilLine, border: "border-l-primary" },
   create_deal: { label: "create_deal", icon: Briefcase, border: "border-l-primary" },
+  update_deal_stage: { label: "update_deal_stage", icon: MoveRight, border: "border-l-primary" },
   wait: { label: "wait", icon: Hourglass, border: "border-l-border" },
   condition: { label: "condition", icon: GitBranch, border: "border-l-amber-500" },
   send_webhook: { label: "send_webhook", icon: Webhook, border: "border-l-primary" },
@@ -132,6 +134,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "assign_conversation",
   "update_contact_field",
   "create_deal",
+  "update_deal_stage",
   "wait",
   "condition",
   "send_webhook",
@@ -189,6 +192,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { field: "name", value: "" }
     case "create_deal":
       return { pipeline_id: "", stage_id: "", title: "", value: 0 }
+    case "update_deal_stage":
+      return { pipeline_id: "", stage_id: "" }
     case "wait":
       return { amount: 1, unit: "hours" }
     case "condition":
@@ -873,6 +878,24 @@ function TriggerCard({
                 </span>
               </label>
             )}
+            {type === "new_message_received" && (
+              <label className="flex items-start gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={config?.skip_first_message === true}
+                  onChange={(e) =>
+                    onConfigChange({ ...config, skip_first_message: e.target.checked || undefined })
+                  }
+                />
+                <span>
+                  {t("config.skipFirstMessage")}
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {t("config.skipFirstMessageHint")}
+                  </span>
+                </span>
+              </label>
+            )}
             {type === "interactive_reply" && (
               <InteractiveReplyConfig config={config} onChange={onConfigChange} t={t} />
             )}
@@ -1434,6 +1457,18 @@ function StepEditor({
           </FieldBlock>
         </>
       )
+    case "update_deal_stage":
+      return (
+        <>
+          <DealPipelineFields
+            pipelineId={(cfg.pipeline_id as string) ?? ""}
+            stageId={(cfg.stage_id as string) ?? ""}
+            onChange={(patch) => set(patch)}
+            t={t}
+          />
+          <p className="text-xs text-muted-foreground">{t("config.updateDealStageHint")}</p>
+        </>
+      )
     case "wait":
       return (
         <div className="grid grid-cols-2 gap-2">
@@ -1511,6 +1546,13 @@ function StepEditor({
               className="bg-muted text-foreground"
             />
           </FieldBlock>
+          <FieldBlock label={t("config.headersLabel")}>
+            <WebhookHeadersEditor
+              headers={(cfg.headers as Record<string, string> | undefined) ?? {}}
+              onChange={(headers) => set({ headers })}
+              t={t}
+            />
+          </FieldBlock>
           <FieldBlock label={t("config.bodyTemplateLabel")}>
             <Textarea
               value={(cfg.body_template as string) ?? ""}
@@ -1529,6 +1571,66 @@ function StepEditor({
     default:
       return null
   }
+}
+
+/**
+ * Name → value header rows for Send Webhook (e.g. Authorization).
+ * Rows with an empty name are dropped on change.
+ */
+function WebhookHeadersEditor({
+  headers,
+  onChange,
+  t,
+}: {
+  headers: Record<string, string>
+  onChange: (h: Record<string, string>) => void
+  t: ReturnType<typeof useTranslations>
+}) {
+  const [rows, setRows] = useState<{ k: string; v: string }[]>(() =>
+    Object.entries(headers).map(([k, v]) => ({ k, v })),
+  )
+  const commit = (next: { k: string; v: string }[]) => {
+    setRows(next)
+    onChange(Object.fromEntries(next.filter((r) => r.k.trim()).map((r) => [r.k.trim(), r.v])))
+  }
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r, i) => (
+        <div key={i} className="flex gap-1.5">
+          <Input
+            value={r.k}
+            placeholder={t("config.headerName")}
+            aria-label={t("config.headerName")}
+            onChange={(e) => commit(rows.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)))}
+            className="bg-muted font-mono text-xs text-foreground"
+          />
+          <Input
+            value={r.v}
+            placeholder={t("config.headerValue")}
+            aria-label={t("config.headerValue")}
+            onChange={(e) => commit(rows.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)))}
+            className="bg-muted font-mono text-xs text-foreground"
+          />
+          <button
+            type="button"
+            onClick={() => commit(rows.filter((_, j) => j !== i))}
+            aria-label={t("config.headerRemove")}
+            className="shrink-0 rounded-md px-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => setRows([...rows, { k: "", v: "" }])}
+        className="text-xs font-medium text-primary hover:underline"
+      >
+        + {t("config.headerAdd")}
+      </button>
+      <p className="text-[11px] text-muted-foreground">{t("config.headersHint")}</p>
+    </div>
+  )
 }
 
 function FieldBlock({

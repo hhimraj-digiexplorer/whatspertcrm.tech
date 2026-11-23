@@ -496,6 +496,7 @@ export type AutomationStepType =
   | 'assign_conversation'
   | 'update_contact_field'
   | 'create_deal'
+  | 'update_deal_stage'
   | 'wait'
   | 'condition'
   | 'send_webhook'
@@ -527,6 +528,9 @@ export interface KeywordMatchTriggerConfig {
  */
 export interface NewMessageTriggerConfig {
   include_flow_replies?: boolean;
+  /** Don't run on a contact's very first inbound message (e.g. a
+   *  click-to-WhatsApp opener) — only on later replies. */
+  skip_first_message?: boolean;
 }
 
 export interface TagTriggerConfig {
@@ -598,6 +602,12 @@ export interface CreateDealStepConfig {
   stage_id: string;
   title: string;
   value?: number;
+}
+
+/** Move the contact's latest open deal in a pipeline to another stage. */
+export interface UpdateDealStageStepConfig {
+  pipeline_id: string;
+  stage_id: string;
 }
 
 export interface WaitStepConfig {
