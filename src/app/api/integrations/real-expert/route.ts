@@ -150,10 +150,16 @@ export async function PUT(request: Request) {
       )
     }
 
-    const baseUrl = normalizeBaseUrl(
-      typeof body.base_url === 'string' ? body.base_url : prev?.base_url ?? '',
-      process.env.NODE_ENV !== 'production',
-    )
+    // Partner-managed: Real Expert owns the address and the key (it sets
+    // them when it links the workspace). Editing them here would let the
+    // sync send the Real Expert key and lead data to any host.
+    const partnerManaged = !!prev.partner_ref
+    const baseUrl = partnerManaged
+      ? prev.base_url
+      : normalizeBaseUrl(
+          typeof body.base_url === 'string' ? body.base_url : prev.base_url,
+          process.env.NODE_ENV !== 'production',
+        )
     if (!baseUrl) {
       return NextResponse.json(
         { error: 'Enter the Real Expert address, starting with https://', field: 'base_url' },
@@ -161,12 +167,12 @@ export async function PUT(request: Request) {
       )
     }
 
-    const newKey = text(body.api_key, 500)
-    if (!prev && !newKey) {
-      return NextResponse.json({ error: 'Enter your Real Expert API key.', field: 'api_key' }, { status: 400 })
-    }
+    const newKey = partnerManaged ? null : text(body.api_key, 500)
 
-    const { options, invalid } = parseOptions(body.options ?? prev?.options)
+    // Merge over what is stored, so a client that sends only some options
+    // (or one that predates source_tags / greeting_by) keeps the rest.
+    const submitted = body.options && typeof body.options === 'object' ? (body.options as Record<string, unknown>) : {}
+    const { options, invalid } = parseOptions({ ...parseOptions(prev.options).options, ...submitted })
     if (invalid.length > 0) {
       return NextResponse.json(
         { error: `Check these advanced settings: ${invalid.join(', ')}.`, field: 'options' },
@@ -192,7 +198,7 @@ export async function PUT(request: Request) {
       sync_messages: bool(body.sync_messages, prev?.sync_messages ?? false),
       inbound_enabled: inboundEnabled,
       welcome_template_name: templateName,
-      welcome_template_language: templateLanguage,
+      welcome_template_language: templateName ? templateLanguage : null,
       options,
       updated_at: now,
     }

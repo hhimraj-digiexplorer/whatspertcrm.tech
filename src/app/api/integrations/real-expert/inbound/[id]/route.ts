@@ -185,12 +185,16 @@ export async function POST(request: Request, { params }: Params) {
     // 1. Greeting. A failed greeting must not stop the tags and triggers
     //    below — they are what start the workspace's own flows.
     const tpl = (lead.template && typeof lead.template === 'object' ? lead.template : {}) as Record<string, unknown>
-    const templateName = str(tpl.name, 512) ?? integration.welcome_template_name
+    // The welcome template is skipped when the workspace lets Real Expert
+    // greet its own leads; a template named in the payload still goes out.
+    const templateName =
+      str(tpl.name, 512) ?? (options.greeting_by === 'whatspert' ? integration.welcome_template_name : null)
     let sent: { messageId: string; whatsappMessageId: string } | null = null
     let sendError: SendMessageError | null = null
     if (templateName) {
       try {
-        const templateLanguage = str(tpl.language, 20) ?? integration.welcome_template_language ?? null
+        const templateLanguage =
+          str(tpl.language, 20) ?? (str(tpl.name, 512) ? null : integration.welcome_template_language) ?? null
         const params = await templateParams(db, accountId, templateName, tpl.variables, name || null)
         sent = await sendMessageToConversation(db, accountId, {
           conversationId: resolved.conversationId,

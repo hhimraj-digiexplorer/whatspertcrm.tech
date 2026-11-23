@@ -185,6 +185,23 @@ contact is linked to this lead and not pushed back as a new one.
 
 `403` with `code: "crm_unpaid" | "whatsapp_unpaid"` means locked.
 
+A new number gets a contact and conversation created first. Template
+sends include the header image/video/document stored on the template in
+Whatspert.
+
+## 6b. Greeting and lead tags — `POST /settings`
+
+`{ "ref", "greeting_by"?: "whatspert" | "real_expert",
+"welcome_template"?: { "name", "language" } | null,
+"source_tags"?: { "META": "meta-form", "WEBSITE": "" } }` →
+`{ "greeting_by", "welcome_template", "source_tags" }`. Send only `ref`
+to read. Set `greeting_by: "real_expert"` before Real Expert starts
+greeting leads itself through `/send`, so a lead is never greeted twice;
+show the current owner on Real Expert's WhatsApp → Auto-flow page.
+Leads pushed to the inbound URL may carry `"tags": [...]`; each new tag
+starts the workspace's Tag Added automations, and a new contact starts
+New Contact Created automations.
+
 ## 7. Deactivate — `POST /unlink`
 
 Body `{ "ref" }`. Stops the sync; the client's Whatspert account and

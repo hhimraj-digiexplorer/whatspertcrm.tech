@@ -29,6 +29,11 @@ describe('normalizeBaseUrl', () => {
 })
 
 describe('parseOptions', () => {
+  it('accepts who greets new leads and rejects anything else', () => {
+    expect(parseOptions({ greeting_by: 'real_expert' }).options.greeting_by).toBe('real_expert')
+    expect(parseOptions({}).options.greeting_by).toBe('whatspert')
+    expect(parseOptions({ greeting_by: 'both' }).invalid).toEqual(['greeting_by'])
+  })
   it('defaults to Real Expert Public API v1', () => {
     const { options, invalid } = parseOptions(undefined)
     expect(invalid).toEqual([])
@@ -41,6 +46,7 @@ describe('parseOptions', () => {
       default_country_code: '91',
       lead_source: 'WhatsApp',
       source_tags: {},
+      greeting_by: 'whatspert',
     })
   })
   it('normalises source → tag mappings and rejects bad tag names', () => {

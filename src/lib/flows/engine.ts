@@ -41,6 +41,7 @@ import {
 } from "./meta-send";
 import { decideFallback, resolveFallbackPolicy } from "./fallback";
 import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
+import { dispatchConversationAssigned } from "@/lib/automations/assignment";
 import { removeContactTag } from "@/lib/contacts/tag-write";
 import {
   type CollectInputNodeConfig,
@@ -488,10 +489,27 @@ async function executeHandoff(
   };
   if (cfg.assign_to) convUpdate.assigned_agent_id = cfg.assign_to;
   if (run.conversation_id) {
+    const { data: before } = cfg.assign_to
+      ? await db
+          .from("conversations")
+          .select("assigned_agent_id")
+          .eq("id", run.conversation_id)
+          .maybeSingle()
+      : { data: null };
     await db
       .from("conversations")
       .update(convUpdate)
       .eq("id", run.conversation_id);
+    // Handing off to a named agent is an assignment: run the workspace's
+    // Conversation Assigned automations, unless it already was theirs.
+    const previous = (before as { assigned_agent_id?: string | null } | null)?.assigned_agent_id ?? null;
+    if (cfg.assign_to && previous !== cfg.assign_to) {
+      await dispatchConversationAssigned({
+        accountId: run.account_id,
+        conversationId: run.conversation_id,
+        agentId: cfg.assign_to,
+      });
+    }
   }
   await logEvent(db, run.id, "handoff", node.node_key, {
     note: cfg.note ?? null,

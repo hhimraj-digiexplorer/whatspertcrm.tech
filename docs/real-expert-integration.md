@@ -23,7 +23,7 @@ the missing step, on both sides.
 
 - The connection is created from Real Expert (WhatsApp → Activate), not
   in Whatspert. Real Expert calls the signed partner API
-  (`/api/partner/real-expert/link|status|unlink|chat|send`) with
+  (`/api/partner/real-expert/link|status|unlink|chat|send|settings`) with
   `REAL_EXPERT_PARTNER_SECRET`, and Whatspert creates the account,
   connects the sync and returns the webhook address for Real Expert.
 - An existing Whatspert customer links their account with a one-time
@@ -96,23 +96,84 @@ Authorization: Bearer rex_…
 
 { "lead_id": "…", "name": "Asha Verma", "phone": "+919876543210", "email": null,
   "company": null, "source": "META", "project": "GSR Heights", "city": "Lucknow",
-  "created_at": "2026-10-02T09:30:00Z" }
+  "created_at": "2026-10-02T09:30:00Z", "tags": ["meta-form"] }
 ```
 
-Whatspert then adds the lead as a WhatsApp contact (a number without a
-country code gets +91), links it to the Real Expert lead, saves source /
-project / city as a note on the contact, and sends the chosen welcome
-template with `{{1}}` set to the first name. A signed
-`X-Webhook-Signature` body (HMAC of the body with the token) and the
-`{ event, data }` wrapper are accepted too.
+Whatspert then, in order:
+
+1. adds the lead as a WhatsApp contact (a number without a country code
+   gets +91) with its conversation, links it to the Real Expert lead and
+   saves source / project / city as a note on the contact;
+2. **greets it** — the `template` in the body if any, else the welcome
+   template, with `{{1}}` set to the first name. Skipped when the
+   workspace chose "Real Expert CRM sends its own greeting";
+3. runs **New Contact Created** automations when the contact is new;
+4. **tags it** — the tag mapped to the lead's `source` under
+   Integrations → Real Expert → Lead tags (`META` → `meta-form`; sources
+   match case-insensitively, spaces and dashes as `_`) plus every name in
+   `tags`, up to 10. Missing tags are created, and each tag the contact
+   did not have yet runs **Tag Added** automations.
+
+Automations get the lead's conversation, so their send steps reply in it.
+
+A signed `X-Webhook-Signature` body (HMAC of the body with the token)
+and the `{ event, data }` wrapper are accepted too.
+
+A failed greeting does not fail the request: the lead is saved, tagged
+and its automations still run. Automations run before the reply, so
+allow Real Expert's call a few seconds.
 
 Responses:
 
 | Status | Meaning |
 | --- | --- |
-| 200 | `{ contact_id, conversation_id, message_sent, whatsapp_message_id }`, or `{ ignored: true }` |
-| 400 | Missing or invalid phone number, or WhatsApp rejected the template (`code` says why) |
+| 200 | `{ contact_id, conversation_id, contact_created, tags_added, message_sent, whatsapp_message_id?, message_error?: { code, error } }`, or `{ ignored: true }` |
+| 400 | Missing or invalid phone number |
 | 401 | Wrong token or signature |
-| 403 | Receiving leads is switched off for this account |
+| 403 | Receiving leads is switched off, or the add-on is locked |
 | 404 | Unknown integration id |
 | 429 | More than 120 requests a minute |
+
+## Greeting, lead tags and automations
+
+Only one side should greet a new lead. Integrations → Real Expert →
+**Who greets new leads** says which:
+
+- **Whatspert sends the welcome template** (default) — the template
+  chosen there goes to every pushed lead;
+- **Real Expert CRM sends its own greeting** — Whatspert sends none; Real
+  Expert greets through the partner `send` call. Tags and automations
+  still run in Whatspert.
+
+Real Expert can read and set the same values per workspace:
+
+```
+POST /api/partner/real-expert/settings   (signed like every partner call)
+{ "ref": "re:crm.digiexplorer.in:abc",
+  "greeting_by": "real_expert",                       // or "whatspert"
+  "welcome_template": { "name": "galleria_lead_received_auto", "language": "en" },  // or null
+  "source_tags": { "META": "meta-form", "WEBSITE": "website", "MANUAL": "" },       // "" removes one
+  "replace_source_tags": false }                      // true = replace the whole map
+→ 200 { "greeting_by", "welcome_template", "source_tags" }
+```
+
+Every field is optional; `{ "ref" }` alone reads the current values. A
+welcome template must exist in the workspace (400 otherwise).
+
+Automation triggers that now fire for Real Expert leads:
+
+| Trigger | Fires when |
+| --- | --- |
+| New Contact Created | a contact is created by an inbound message, a Real Expert push or `POST /api/v1/contacts` |
+| Tag Added | a tag is added by hand, by the API, by a flow/automation or by a Real Expert push |
+| Conversation Assigned | a conversation is assigned in the inbox, by an automation or flow step, or by an AI handoff / take-over (not on un-assign or re-assigning the same agent) |
+
+A **Send template** step opens the conversation when the contact has
+none (as the manual Send template button does). Free-text, button and
+list steps still need an existing conversation, because WhatsApp only
+allows them inside the 24-hour window. Template steps send the header
+image/video/document stored on the template, as manual sends do.
+
+Partner `send` with a template creates the contact and conversation for
+a new number, and sends the template's stored header media.
+

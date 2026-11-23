@@ -183,6 +183,18 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(h.tagAdd).not.toHaveBeenCalled()
   })
 
+  it('sends no welcome template when Real Expert does the greeting, but honours a template in the payload', async () => {
+    h.integration!.options = { greeting_by: 'real_expert' }
+    const res = await call({ phone: '+919876543210' })
+    expect(res.status).toBe(200)
+    expect(h.send).not.toHaveBeenCalled()
+    expect(await res.json()).toMatchObject({ message_sent: false })
+    await call({ phone: '+919876543210', template: { name: 'promo' } })
+    expect(h.send).toHaveBeenCalledTimes(1)
+    // A payload template without a language does not borrow the welcome template's.
+    expect(h.send.mock.calls[0][2]).toMatchObject({ templateName: 'promo', templateLanguage: null })
+  })
+
   it('sends no variables to a template without placeholders', async () => {
     h.templateBody = 'Welcome to our project!'
     await call({ phone: '9876543210', name: 'Ravi' })

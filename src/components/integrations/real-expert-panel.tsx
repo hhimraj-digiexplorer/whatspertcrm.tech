@@ -316,17 +316,24 @@ export function RealExpertPanel({
           <SyncRow icon={ArrowDownToLine} tone="bg-amber-500/14 text-amber-500" dir="in" title={t("inboundTitle")} desc={t("inboundDesc")} checked={draft.inbound_enabled} onChange={(v) => set("inbound_enabled", v)}>
             {draft.inbound_enabled && (
               <div className="mt-4 space-y-4">
-                <Field label={t("welcomeTemplate")} hint={templateChoices.length === 0 ? t("noTemplates") : t.raw("welcomeTemplateHint")}>
-                  <select className={inputCls} value={draft.welcome_template} onChange={(e) => set("welcome_template", e.target.value)}>
-                    <option value="">{t("chooseTemplate")}</option>
-                    {templateChoices.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
+                <Field label={t("greetingBy")} hint={draft.options.greeting_by === "real_expert" ? t("greetingByRealExpertHint") : t("greetingByWhatspertHint")}>
+                  <select className={inputCls} value={draft.options.greeting_by} onChange={(e) => setOpt("greeting_by", e.target.value as RealExpertOptions["greeting_by"])}>
+                    <option value="whatspert">{t("greetingByWhatspert")}</option>
+                    <option value="real_expert">{t("greetingByRealExpert")}</option>
                   </select>
                 </Field>
-                <p className="-mt-2 text-xs text-muted-foreground">{t("greetingNote")}</p>
+                {draft.options.greeting_by === "whatspert" && (
+                  <Field label={t("welcomeTemplate")} hint={templateChoices.length === 0 ? t("noTemplates") : t.raw("welcomeTemplateHint")}>
+                    <select className={inputCls} value={draft.welcome_template} onChange={(e) => set("welcome_template", e.target.value)}>
+                      <option value="">{t("chooseTemplate")}</option>
+                      {templateChoices.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
                 <SourceTagsEditor rows={draft.source_tag_rows} onChange={(rows) => set("source_tag_rows", rows)} />
                 {integration ? (
                   <div className="space-y-3 rounded-xl bg-muted/60 p-4">

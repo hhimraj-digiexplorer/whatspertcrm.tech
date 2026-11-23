@@ -32,7 +32,15 @@ export interface RealExpertOptions {
    * with `sourceKey`; values are tag names (created if missing).
    */
   source_tags: Record<string, string>
+  /**
+   * Who greets a new Real Expert lead: Whatspert (the welcome template)
+   * or Real Expert itself (partner `send`). Only one should, so a lead is
+   * never greeted twice.
+   */
+  greeting_by: GreetingBy
 }
+
+export type GreetingBy = 'whatspert' | 'real_expert'
 
 export const DEFAULT_OPTIONS: RealExpertOptions = {
   auth_style: 'bearer',
@@ -43,6 +51,7 @@ export const DEFAULT_OPTIONS: RealExpertOptions = {
   default_country_code: '91',
   lead_source: 'WhatsApp',
   source_tags: {},
+  greeting_by: 'whatspert',
 }
 
 export const MAX_SOURCE_TAGS = 30
@@ -128,6 +137,10 @@ export function parseOptions(raw: unknown): { options: RealExpertOptions; invali
       }
       if (bad) invalid.push('source_tags')
     }
+  }
+  if (src.greeting_by !== undefined) {
+    if (src.greeting_by === 'whatspert' || src.greeting_by === 'real_expert') options.greeting_by = src.greeting_by
+    else invalid.push('greeting_by')
   }
   return { options, invalid }
 }
