@@ -178,6 +178,30 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* Demo video */}
+      <section id="demo" className="scroll-mt-20">
+        <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
+          <SectionHeading
+            eyebrow="See it in action"
+            title="Your WhatsApp qualifies leads 24x7"
+            subtitle="A lead fills your Meta form at 2 AM. Whatspert greets them, the AI agent answers and qualifies, the site visit gets booked and your salesperson wakes up to a hot lead."
+          />
+          <div className="mt-10 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-2xl shadow-slate-900/15">
+            <video
+              className="aspect-video w-full"
+              src="/marketing/whatspert-demo.mp4"
+              poster="/marketing/whatspert-demo-poster.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="Demo: a WhatsApp lead greeted, qualified by the AI agent, booked for a site visit and assigned to a salesperson"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Industries */}
       <section className="border-y border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
