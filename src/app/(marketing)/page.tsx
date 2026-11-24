@@ -195,6 +195,7 @@ export default async function LandingPage() {
               muted
               loop
               playsInline
+              controls
               preload="metadata"
               aria-label="Demo: a WhatsApp lead greeted, qualified by the AI agent, booked for a site visit and assigned to a salesperson"
             />
