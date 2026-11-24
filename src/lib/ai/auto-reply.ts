@@ -15,6 +15,8 @@ import {
 import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { assertFeature, BillingBlockedError } from '@/lib/billing/server'
+import { triggerMatches } from '@/lib/automations/engine'
+import type { Automation } from '@/types'
 
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
@@ -28,6 +30,39 @@ interface DispatchArgs {
    *  a typing indicator (which also marks it read) is shown while the
    *  reply is generated. Optional so older callers keep working. */
   inboundMessageId?: string
+  /** Text of the inbound message, to see whether a message automation
+   *  that sends its own reply matched it (then the AI stands down). */
+  inboundText?: string
+  /** The inbound is the contact's first-ever message. */
+  firstInbound?: boolean
+}
+
+const SEND_STEPS = new Set(['send_message', 'send_template', 'send_buttons', 'send_list'])
+
+/**
+ * True when an active New Message / Keyword automation matches this
+ * inbound AND sends the customer something — the AI then stays quiet so
+ * the customer doesn't get two replies. Automations that only tag, score
+ * or move the lead (a "replied" marker) don't count.
+ */
+export async function replyingAutomationMatches(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  ctx: { message_text: string; first_inbound?: boolean },
+): Promise<boolean> {
+  const { data: autos } = await db
+    .from('automations')
+    .select('id, account_id, user_id, name, trigger_type, trigger_config, is_active')
+    .eq('account_id', accountId)
+    .eq('is_active', true)
+    .in('trigger_type', ['new_message_received', 'keyword_match'])
+  const matched = ((autos ?? []) as unknown as Automation[]).filter((a) => triggerMatches(a, ctx))
+  if (matched.length === 0) return false
+  const { data: steps } = await db
+    .from('automation_steps')
+    .select('automation_id, step_type')
+    .in('automation_id', matched.map((a) => a.id))
+  return (steps ?? []).some((s) => SEND_STEPS.has(s.step_type as string))
 }
 
 /**
@@ -82,14 +117,18 @@ export async function dispatchInboundToAiReply(
     // avoid double-texting the customer. (Relationship triggers like
     // `first_inbound_message` don't count — they're not per-message
     // auto-responders.)
-    const { data: autoResponders } = await db
-      .from('automations')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('is_active', true)
-      .in('trigger_type', ['new_message_received', 'keyword_match'])
-      .limit(1)
-    if (autoResponders && autoResponders.length > 0) return
+    // Only stand down when such an automation actually matched THIS
+    // message and replies itself — not merely because one exists (that
+    // silenced the AI for any workspace with, say, a STOP keyword).
+    if (
+      args.inboundText &&
+      (await replyingAutomationMatches(db, accountId, {
+        message_text: args.inboundText,
+        first_inbound: args.firstInbound,
+      }))
+    ) {
+      return
+    }
 
     const { data: conv, error: convErr } = await db
       .from('conversations')

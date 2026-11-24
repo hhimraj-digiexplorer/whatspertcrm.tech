@@ -13,7 +13,8 @@ const h = vi.hoisted(() => ({
   assertFeature: vi.fn(),
   state: {
     conv: null as Record<string, unknown> | null,
-    autoResponders: [] as { id: string }[],
+    autoResponders: [] as Record<string, unknown>[],
+    steps: [] as { automation_id: string; step_type: string }[],
     claim: true as boolean,
     updatePayload: null as Record<string, unknown> | null,
     rpcCalls: [] as { name: string; args: unknown }[],
@@ -38,14 +39,23 @@ vi.mock('@/lib/whatsapp/meta-api', () => ({
 vi.mock('./admin-client', () => ({
   supabaseAdmin: () => ({
     from: (table: string) => {
-      if (table === 'automations') {
-        // .select().eq().eq().in().limit() → active auto-responders
+      if (table === 'automations' || table === 'automation_steps') {
+        // .select().eq().eq().in() → active message automations / their steps
+        const data = table === 'automations' ? h.state.autoResponders : h.state.steps
         const chain = {
           select: () => chain,
           eq: () => chain,
-          in: () => chain,
-          limit: () =>
-            Promise.resolve({ data: h.state.autoResponders, error: null }),
+          in: (col: string, vals: string[]) =>
+            Object.assign(
+              Promise.resolve({
+                data:
+                  table === 'automation_steps'
+                    ? (data as { automation_id: string }[]).filter((r) => vals.includes(r.automation_id))
+                    : data,
+                error: null,
+              }),
+              chain,
+            ),
         }
         return chain
       }
@@ -102,6 +112,7 @@ beforeEach(() => {
     ai_reply_count: 0,
   }
   h.state.autoResponders = []
+  h.state.steps = []
   h.state.claim = true
   h.state.updatePayload = null
   h.state.rpcCalls = []
@@ -140,12 +151,31 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(systemPrompt).toContain('Returns accepted within 30 days.')
   })
 
-  it('stands down when an active message-level automation exists', async () => {
-    h.state.autoResponders = [{ id: 'auto-1' }]
-    await dispatchInboundToAiReply(ARGS)
+  const stopKeyword = {
+    id: 'auto-1', account_id: 'acct-1', user_id: 'u', name: 'STOP', is_active: true,
+    trigger_type: 'keyword_match', trigger_config: { keywords: ['stop'], match_type: 'word' },
+  }
+
+  it('stands down when a matching message automation sends its own reply', async () => {
+    h.state.autoResponders = [stopKeyword]
+    h.state.steps = [{ automation_id: 'auto-1', step_type: 'send_message' }]
+    await dispatchInboundToAiReply({ ...ARGS, inboundText: 'please stop' })
     expect(h.generateReply).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
+  })
+
+  it('still replies when message automations exist but none matches or none sends', async () => {
+    h.state.autoResponders = [
+      stopKeyword,
+      { ...stopKeyword, id: 'auto-2', name: 'Reply marker', trigger_type: 'new_message_received', trigger_config: {} },
+    ]
+    h.state.steps = [
+      { automation_id: 'auto-1', step_type: 'send_message' },
+      { automation_id: 'auto-2', step_type: 'add_tag' },
+    ]
+    await dispatchInboundToAiReply({ ...ARGS, inboundText: 'Hello' })
+    expect(h.generateReply).toHaveBeenCalled()
   })
 
   it('stays silent when the plan excludes AI or the account is blocked', async () => {
