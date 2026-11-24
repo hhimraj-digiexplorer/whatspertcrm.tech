@@ -13,6 +13,8 @@ export interface PlatformAi {
   model: string
   apiKey: string
   embeddingsApiKey: string | null
+  /** Sent as anthropic-workspace-id for user-linked (unscoped) keys. */
+  anthropicWorkspaceId: string | null
 }
 
 const DEFAULT_MODEL: Record<AiProvider, string> = {
@@ -30,6 +32,7 @@ export function platformAi(env: NodeJS.ProcessEnv = process.env): PlatformAi | n
     model: env.PLATFORM_AI_MODEL?.trim() || DEFAULT_MODEL[provider],
     apiKey,
     embeddingsApiKey: env.PLATFORM_AI_EMBEDDINGS_KEY?.trim() || null,
+    anthropicWorkspaceId: env.PLATFORM_AI_ANTHROPIC_WORKSPACE_ID?.trim() || null,
   }
 }
 

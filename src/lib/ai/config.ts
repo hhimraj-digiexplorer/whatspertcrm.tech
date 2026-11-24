@@ -67,6 +67,7 @@ export async function loadAiConfig(
       autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
       handoffAgentId: row.handoff_agent_id,
       embeddingsApiKey: p.embeddingsApiKey,
+      anthropicWorkspaceId: p.anthropicWorkspaceId,
     }
   }
 

@@ -31,6 +31,7 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
     systemPrompt,
     messages,
     timeoutMs,
+    workspaceId: config.anthropicWorkspaceId ?? null,
   }
 
   let result: { text: string; usage: AiUsage | null }

@@ -29,6 +29,9 @@ export interface AiConfig {
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
   embeddingsApiKey: string | null
+  /** Anthropic workspace ID for keys not scoped to a workspace
+   *  (Whatspert key only, from PLATFORM_AI_ANTHROPIC_WORKSPACE_ID). */
+  anthropicWorkspaceId?: string | null
 }
 
 /** A single conversation turn in the shape both providers accept. */

@@ -154,6 +154,18 @@ describe('generateReply — Anthropic', () => {
     expect(url).toContain('api.anthropic.com')
     expect(opts.headers['x-api-key']).toBe('sk-ant-x')
     expect(opts.headers['anthropic-version']).toBeTruthy()
+    expect(opts.headers['anthropic-workspace-id']).toBeUndefined()
+  })
+
+  it('sends the workspace header for an unscoped key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({ content: [{ type: 'text', text: 'Hi' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await generateReply({
+      config: config({ provider: 'anthropic', apiKey: 'sk-ant-x', anthropicWorkspaceId: 'wrkspc_abc' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'Hello' }],
+    })
+    expect(fetchMock.mock.calls[0][1].headers['anthropic-workspace-id']).toBe('wrkspc_abc')
   })
 
   it('detects handoff in the model output', async () => {

@@ -40,7 +40,7 @@ function normalizeForAnthropic(messages: ChatMessage[]): ChatMessage[] {
  * in `generateReply`).
  */
 export async function generateAnthropic(args: ProviderArgs): Promise<ProviderResult> {
-  const { apiKey, model, systemPrompt, messages, timeoutMs } = args
+  const { apiKey, model, systemPrompt, messages, timeoutMs, workspaceId } = args
 
   let res: Response
   try {
@@ -49,6 +49,7 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': ANTHROPIC_VERSION,
+        ...(workspaceId ? { 'anthropic-workspace-id': workspaceId } : {}),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

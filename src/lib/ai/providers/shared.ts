@@ -10,6 +10,9 @@ export interface ProviderArgs {
   systemPrompt: string
   messages: ChatMessage[]
   timeoutMs: number
+  /** Anthropic only: sent as `anthropic-workspace-id` for keys that
+   *  aren't scoped to a workspace (user-linked console keys). */
+  workspaceId?: string | null
 }
 
 /**
