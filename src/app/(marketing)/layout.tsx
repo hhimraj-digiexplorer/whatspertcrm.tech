@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { BRAND_NAME, COMPANY } from "@/lib/brand";
@@ -23,12 +24,29 @@ export const metadata: Metadata = {
   },
 };
 
+// Google tag (Analytics) for the public site only, never inside the app.
+// Override with NEXT_PUBLIC_GOOGLE_TAG_ID; set it to "off" to disable.
+const GOOGLE_TAG_ID = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID ?? "GTM-PL5ZRZB9";
+const tagOn = /^(GTM|G)-[A-Z0-9]+$/.test(GOOGLE_TAG_ID);
+
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-white text-slate-900 [color-scheme:light]">
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      {tagOn && (
+        <>
+          <Script id="google-tag-init" strategy="afterInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());`}
+          </Script>
+          <Script
+            id="google-tag"
+            strategy="afterInteractive"
+            src={`https://www.googletagmanager.com/gtm.js?id=${GOOGLE_TAG_ID}`}
+          />
+        </>
+      )}
     </div>
   );
 }
