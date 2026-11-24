@@ -6,7 +6,7 @@ export const PLAN_FEATURES: string[] = [
   "Scheduled broadcasts",
   "WhatsApp automation",
   "Chatbot flow builder",
-  "WhatsApp AI agent",
+  "WhatsApp AI agent (AI key not included)",
   "Interactive buttons & lists",
   "Audience segmentation (tags)",
   "Bulk contact import",

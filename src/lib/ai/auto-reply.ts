@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './admin-client'
 import { dispatchConversationAssigned } from '@/lib/automations/assignment'
 import { loadAiConfig } from './config'
+import { platformAiQuota } from './platform'
 import { buildConversationContext } from './context'
 import { retrieveKnowledge } from './knowledge'
 import { generateReply } from './generate'
@@ -100,6 +101,17 @@ export async function dispatchInboundToAiReply(
 
     const config = await loadAiConfig(db, accountId)
     if (!config || !config.autoReplyEnabled) return
+
+    // Whatspert key: monthly allowance of AI chatbot conversations.
+    if (config.onPlatformKey) {
+      const quota = await platformAiQuota(accountId, conversationId)
+      if (!quota.allowed) {
+        console.warn(
+          `[ai auto-reply] account ${accountId} used its ${quota.limit} AI conversations this month on the Whatspert key — skipping.`,
+        )
+        return
+      }
+    }
 
     // Plan must include AI, and the account must be in good standing.
     try {

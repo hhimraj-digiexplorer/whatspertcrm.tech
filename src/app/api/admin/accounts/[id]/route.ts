@@ -111,6 +111,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       patch.ai_platform_fee_inr = fee;
     }
 
+    if (body.ai_platform_conversation_limit !== undefined) {
+      const n = Number(body.ai_platform_conversation_limit);
+      if (!Number.isInteger(n) || n < 0 || n > 10_000_000) {
+        return NextResponse.json({ error: 'ai_platform_conversation_limit must be 0–10,000,000' }, { status: 400 });
+      }
+      patch.ai_platform_conversation_limit = n;
+    }
+
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }

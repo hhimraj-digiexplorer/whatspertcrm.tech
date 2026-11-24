@@ -43,7 +43,7 @@ const FEATURES = [
   {
     icon: Sparkles,
     title: "AI reply assistant",
-    body: "Draft replies from your own FAQs, prices and policies in one tap — or let the AI answer common questions and hand over to your team when needed.",
+    body: "Draft replies from your own FAQs, prices and policies in one tap — or let the AI answer common questions and hand over to your team when needed. Use your own AI key, or ours for ₹1,000/month.",
   },
   {
     icon: GitBranch,
@@ -94,6 +94,10 @@ const INDUSTRIES = [
 ];
 
 const FAQ: FaqItem[] = [
+  {
+    q: "Is the AI Agent's AI model included in the price?",
+    a: "No. The AI model (LLM) isn't included in plan prices. Connect your own OpenAI or Anthropic API key, or get it from us for ₹1,000/month (+ GST) with up to 2,500 AI chatbot conversations a month.",
+  },
   {
     q: "Is this the official WhatsApp Business API?",
     a: `Yes. ${BRAND_NAME} works on Meta's official WhatsApp Business (Cloud) API, so your number stays safe from bans that unofficial tools risk, and you can send campaigns at scale.`,

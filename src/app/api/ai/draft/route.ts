@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
+import { platformAiQuota } from '@/lib/ai/platform'
 import { buildConversationContext } from '@/lib/ai/context'
 import { retrieveKnowledge } from '@/lib/ai/knowledge'
 import { generateReply } from '@/lib/ai/generate'
@@ -76,6 +77,19 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       )
+    }
+
+    if (config.onPlatformKey) {
+      const quota = await platformAiQuota(accountId, conversationId)
+      if (!quota.allowed) {
+        return NextResponse.json(
+          {
+            error: `This month's ${quota.limit.toLocaleString('en-IN')} AI conversations on the Whatspert key are used up. Contact support to add more.`,
+            code: 'ai_quota_exceeded',
+          },
+          { status: 402 },
+        )
+      }
     }
 
     const messages = await buildConversationContext(supabase, conversationId)

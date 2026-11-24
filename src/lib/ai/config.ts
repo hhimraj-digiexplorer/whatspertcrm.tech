@@ -68,6 +68,7 @@ export async function loadAiConfig(
       handoffAgentId: row.handoff_agent_id,
       embeddingsApiKey: p.embeddingsApiKey,
       anthropicWorkspaceId: p.anthropicWorkspaceId,
+      onPlatformKey: true,
     }
   }
 

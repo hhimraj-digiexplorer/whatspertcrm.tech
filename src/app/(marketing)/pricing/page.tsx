@@ -41,6 +41,10 @@ export default async function PricingPage() {
                   a: "No. Meta bills some conversation types (such as marketing messages) directly to your Meta business account at its published rates.",
                 },
                 {
+                  q: "Is the AI Agent's AI model included?",
+                  a: "No. Add your own OpenAI or Anthropic API key, or get it from us for ₹1,000/month (+ GST) with up to 2,500 AI chatbot conversations a month.",
+                },
+                {
                   q: "Can I change plans later?",
                   a: "Yes. Upgrade or downgrade from Settings → Billing & plan. A new plan starts right away and your previous subscription is stopped.",
                 },

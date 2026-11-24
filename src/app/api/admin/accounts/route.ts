@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     if (ids.length > 0) {
       const { data: aiRows, error: aiErr } = await supabaseAdmin()
         .from('account_billing')
-        .select('account_id, ai_access, ai_key_source, ai_platform_fee_inr')
+        .select('account_id, ai_access, ai_key_source, ai_platform_fee_inr, ai_platform_conversation_limit')
         .in('account_id', ids);
       if (aiErr) throw aiErr;
       for (const r of aiRows ?? []) ai.set(r.account_id as string, r);
@@ -41,6 +41,7 @@ export async function GET(request: Request) {
         ai_access: ai.get(rest.account_id)?.ai_access ?? 'plan',
         ai_key_source: ai.get(rest.account_id)?.ai_key_source ?? 'client',
         ai_platform_fee_inr: ai.get(rest.account_id)?.ai_platform_fee_inr ?? 1000,
+        ai_platform_conversation_limit: ai.get(rest.account_id)?.ai_platform_conversation_limit ?? 2500,
       })),
       total: rows[0]?.total_count ?? 0,
       page,

@@ -32,6 +32,8 @@ export interface AiConfig {
   /** Anthropic workspace ID for keys not scoped to a workspace
    *  (Whatspert key only, from PLATFORM_AI_ANTHROPIC_WORKSPACE_ID). */
   anthropicWorkspaceId?: string | null
+  /** True when the workspace runs on the Whatspert key (metered). */
+  onPlatformKey?: boolean
 }
 
 /** A single conversation turn in the shape both providers accept. */

@@ -51,3 +51,39 @@ export async function aiKeySource(accountId: string): Promise<AiKeySource> {
   }
   return data?.ai_key_source === 'platform' ? 'platform' : 'client'
 }
+
+/**
+ * AI chatbot conversations used this calendar month (UTC) on the
+ * Whatspert key: distinct conversations the AI replied in or drafted
+ * for (ai_usage_log). The allowance is
+ * account_billing.ai_platform_conversation_limit (default 2,500).
+ * A conversation already counted this month may always continue.
+ */
+export async function platformAiQuota(
+  accountId: string,
+  conversationId: string | null,
+): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const db = supabaseAdmin()
+  const now = new Date()
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+  const [{ data: billing }, { data: rows, error }] = await Promise.all([
+    db.from('account_billing').select('ai_platform_conversation_limit').eq('account_id', accountId).maybeSingle(),
+    db
+      .from('ai_usage_log')
+      .select('conversation_id')
+      .eq('account_id', accountId)
+      .gte('created_at', since)
+      .not('conversation_id', 'is', null)
+      .limit(100000),
+  ])
+  const limit = Number(billing?.ai_platform_conversation_limit ?? 2500)
+  if (error) {
+    // Don't take the bot down over a metering read failure.
+    console.error('[ai] platform quota read failed:', error.message)
+    return { allowed: true, used: 0, limit }
+  }
+  const seen = new Set((rows ?? []).map((r) => r.conversation_id as string))
+  const used = seen.size
+  const allowed = (conversationId !== null && seen.has(conversationId)) || used < limit
+  return { allowed, used, limit }
+}

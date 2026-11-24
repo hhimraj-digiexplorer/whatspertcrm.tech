@@ -149,9 +149,17 @@ export function PricingCards({ plans }: { plans: PublicPlan[] }) {
           );
         })}
       </div>
-      <p className="mx-auto mt-8 w-fit rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">
-        Additional 18% GST on all plans. WhatsApp conversation charges from Meta are billed by Meta separately.
-      </p>
+      <div className="mx-auto mt-8 max-w-3xl space-y-3 text-center">
+        <p className="mx-auto w-fit rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          Additional 18% GST on all plans. WhatsApp conversation charges from Meta are billed by Meta separately.
+        </p>
+        <p id="ai-agent-pricing" className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700">
+          <span className="font-semibold text-slate-900">AI Agent:</span> the AI model (LLM) isn&apos;t included in plan prices.
+          Add your own OpenAI or Anthropic API key, or get it from us for{" "}
+          <span className="font-semibold text-slate-900">₹1,000/month</span> with up to{" "}
+          <span className="font-semibold text-slate-900">2,500 AI chatbot conversations</span> a month (+ GST).
+        </p>
+      </div>
     </div>
   );
 }

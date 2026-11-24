@@ -39,6 +39,7 @@ interface AccountRow {
   ai_access: "plan" | "enabled" | "disabled";
   ai_key_source: "client" | "platform";
   ai_platform_fee_inr: number;
+  ai_platform_conversation_limit: number;
 }
 
 const STATUS_FILTERS = [
@@ -307,6 +308,7 @@ function ManageAccountDialog({
   const [aiAccess, setAiAccess] = useState(row.ai_access ?? "plan");
   const [aiKeySource, setAiKeySource] = useState(row.ai_key_source ?? "client");
   const [aiFee, setAiFee] = useState(String(row.ai_platform_fee_inr ?? 1000));
+  const [aiLimit, setAiLimit] = useState(String(row.ai_platform_conversation_limit ?? 2500));
   const planAi = plans.find((p) => p.id === (row.plan_id ?? ""))?.ai_enabled ?? false;
   const aiOn = aiAccess === "enabled" || (aiAccess === "plan" && planAi);
 
@@ -427,12 +429,18 @@ function ManageAccountDialog({
                   <Input type="number" min={0} value={aiFee} onChange={(e) => setAiFee(e.target.value)} />
                 </div>
               )}
+              {aiKeySource === "platform" && (
+                <div className="space-y-1.5">
+                  <Label>AI conversations / month</Label>
+                  <Input type="number" min={0} value={aiLimit} onChange={(e) => setAiLimit(e.target.value)} />
+                </div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {!aiOn
                 ? "AI Agents are off for this account."
                 : aiKeySource === "platform"
-                  ? `AI runs on Whatspert's key; bill ₹${Number(aiFee || 0).toLocaleString("en-IN")} + GST a month on top of the plan.`
+                  ? `AI runs on Whatspert's key: up to ${Number(aiLimit || 0).toLocaleString("en-IN")} AI conversations a month; bill ₹${Number(aiFee || 0).toLocaleString("en-IN")} + GST a month on top of the plan.`
                   : "AI runs on the client's own OpenAI / Anthropic key (entered in their AI Agents setup)."}
             </p>
             <Button
@@ -440,7 +448,12 @@ function ManageAccountDialog({
               disabled={busy !== null}
               onClick={() =>
                 void patch(
-                  { ai_access: aiAccess, ai_key_source: aiKeySource, ai_platform_fee_inr: Math.max(0, Math.round(Number(aiFee) || 0)) },
+                  {
+                    ai_access: aiAccess,
+                    ai_key_source: aiKeySource,
+                    ai_platform_fee_inr: Math.max(0, Math.round(Number(aiFee) || 0)),
+                    ai_platform_conversation_limit: Math.max(0, Math.round(Number(aiLimit) || 0)),
+                  },
                   "ai",
                   "AI settings saved",
                 )
