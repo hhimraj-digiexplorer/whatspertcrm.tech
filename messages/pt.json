@@ -1974,7 +1974,8 @@
       "notInPlan": "Os Agentes de IA não estão incluídos no plano deste espaço, então o assistente não responde nem redige. Peça ao seu provedor Whatspert para ativá-los.",
       "platformKeyActive": "Sua chave de IA é fornecida pelo Whatspert — não precisa de chave. Defina abaixo as instruções e o comportamento do assistente.",
       "platformKeyModel": "Usando {provider} · {model}",
-      "platformKeyNotReady": "A chave de IA do Whatspert ainda não está configurada no servidor. Fale com o suporte."
+      "platformKeyNotReady": "A chave de IA do Whatspert ainda não está configurada no servidor. Fale com o suporte.",
+      "descriptionPlatform": "Sua chave de IA é fornecida pelo Whatspert. Defina abaixo as instruções e o comportamento do assistente. Isso alimenta as respostas redigidas por IA na caixa de entrada, o bot de resposta automática e o Playground."
     },
     "aiKnowledge": {
       "loadFailed": "Falha ao carregar a base de conhecimento",
@@ -2086,7 +2087,7 @@
   },
   "Agents": {
     "title": "Agentes de IA",
-    "description": "Seu agente de IA com chave própria — configure-o e teste no playground antes que ele responda aos clientes na caixa de entrada.",
+    "description": "Seu agente de IA — configure-o e teste no playground antes que ele responda clientes na caixa de entrada.",
     "tabPlayground": "Playground",
     "tabSetup": "Configuração",
     "tabUsage": "Uso",

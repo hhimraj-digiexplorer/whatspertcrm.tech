@@ -1974,7 +1974,8 @@
       "notInPlan": "AI Agents aren't included in this workspace's plan, so the assistant won't reply or draft. Ask your Whatspert provider to turn it on.",
       "platformKeyActive": "Your AI key is provided by Whatspert — no key needed. Set the assistant's instructions and behaviour below.",
       "platformKeyModel": "Using {provider} · {model}",
-      "platformKeyNotReady": "The Whatspert AI key isn't set up on the server yet. Contact support."
+      "platformKeyNotReady": "The Whatspert AI key isn't set up on the server yet. Contact support.",
+      "descriptionPlatform": "Your AI key is provided by Whatspert. Set the assistant's instructions and behaviour below. This powers AI-drafted replies in the inbox, the auto-reply bot, and the Playground."
     },
     "aiKnowledge": {
       "loadFailed": "Failed to load knowledge base",
@@ -2086,7 +2087,7 @@
   },
   "Agents": {
     "title": "AI Agents",
-    "description": "Your bring-your-own-key AI agent — set it up, then test it in the playground before it replies to customers in the inbox.",
+    "description": "Your AI agent — set it up, then test it in the playground before it replies to customers in the inbox.",
     "tabPlayground": "Playground",
     "tabSetup": "Setup",
     "tabUsage": "Usage",

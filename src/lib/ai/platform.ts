@@ -17,7 +17,7 @@ export interface PlatformAi {
 
 const DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: 'gpt-4o-mini',
-  anthropic: 'claude-haiku-4-5',
+  anthropic: 'claude-sonnet-5-5',
 }
 
 /** The platform key, or null when the server has none configured. */

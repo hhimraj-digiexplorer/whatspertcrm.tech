@@ -252,7 +252,7 @@ export function AiConfig() {
     <div>
       <SettingsPanelHead
         title={t('title')}
-        description={t('description')}
+        description={keySource === 'platform' ? t('descriptionPlatform') : t('description')}
       />
 
       {!canEdit && (
@@ -272,9 +272,11 @@ export function AiConfig() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" /> {t('providerAndKey')}
             </CardTitle>
-            <CardDescription>
-              {t('encryptionNotice')}
-            </CardDescription>
+            {keySource !== 'platform' && (
+              <CardDescription>
+                {t('encryptionNotice')}
+              </CardDescription>
+            )}
           </CardHeader>
           {keySource === 'platform' ? (
           <CardContent className="space-y-2">
