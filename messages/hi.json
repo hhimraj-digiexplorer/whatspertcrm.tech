@@ -1970,7 +1970,11 @@
       "saveSuccess": "AI असिस्टेंट सेव हो गया।",
       "saveFailed": "सेव नहीं हो सका।",
       "removeSuccess": "AI कॉन्फ़िगरेशन हटा दिया गया।",
-      "removeFailed": "हटाया नहीं जा सका।"
+      "removeFailed": "हटाया नहीं जा सका।",
+      "notInPlan": "इस वर्कस्पेस के प्लान में AI एजेंट शामिल नहीं हैं, इसलिए असिस्टेंट जवाब या ड्राफ़्ट नहीं देगा। इसे चालू करवाने के लिए अपने Whatspert प्रोवाइडर से कहें।",
+      "platformKeyActive": "आपकी AI key Whatspert देता है — आपको key की ज़रूरत नहीं। नीचे असिस्टेंट के निर्देश और व्यवहार सेट करें।",
+      "platformKeyModel": "{provider} · {model} इस्तेमाल हो रहा है",
+      "platformKeyNotReady": "Whatspert की AI key अभी सर्वर पर सेट नहीं है। सपोर्ट से संपर्क करें।"
     },
     "aiKnowledge": {
       "loadFailed": "नॉलेज बेस लोड नहीं हो सका",

@@ -48,6 +48,24 @@ export interface AccountBilling {
   razorpay_subscription_id: string | null;
   suspended_at: string | null;
   suspended_reason: string | null;
+  /** Platform-admin override for AI Agents (default 'plan'). */
+  ai_access?: AiAccess;
+  /** Whose AI key the workspace uses (default 'client'). */
+  ai_key_source?: 'client' | 'platform';
+  /** Monthly add-on for the Whatspert key, in rupees. */
+  ai_platform_fee_inr?: number;
+}
+
+export type AiAccess = 'plan' | 'enabled' | 'disabled';
+
+/** AI Agents on for this account: the admin override, else the plan. */
+export function aiAllowed(
+  billing: Pick<AccountBilling, 'ai_access'> | null,
+  plan: Pick<Plan, 'ai_enabled'> | null,
+): boolean {
+  if (billing?.ai_access === 'enabled') return true;
+  if (billing?.ai_access === 'disabled') return false;
+  return plan ? plan.ai_enabled : true;
 }
 
 /** Why an account can't be used right now, or null when it can. */

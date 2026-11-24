@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import {
   accessBlock,
+  aiAllowed,
   planFeatures,
   type AccessBlock,
   type AccountBilling,
@@ -87,7 +88,20 @@ const FEATURE_NAMES: Record<PlanFeature, string> = {
 
 /** Active account AND a plan that includes `feature`. */
 export async function assertFeature(accountId: string, feature: PlanFeature): Promise<void> {
-  const { plan } = await assertAccountActive(accountId);
+  const { plan, billing } = await assertAccountActive(accountId);
+  // AI Agents can be switched on or off per account by the platform
+  // admin, overriding the plan.
+  if (feature === 'ai') {
+    if (!aiAllowed(billing, plan)) {
+      throw new BillingBlockedError(
+        'feature_not_in_plan',
+        billing?.ai_access === 'disabled'
+          ? 'The AI assistant is turned off for this workspace. Contact support to turn it on.'
+          : `${FEATURE_NAMES.ai} is not included in your plan. Upgrade in Settings → Billing.`,
+      );
+    }
+    return;
+  }
   if (plan && !plan[FEATURE_FLAG[feature]]) {
     throw new BillingBlockedError(
       'feature_not_in_plan',

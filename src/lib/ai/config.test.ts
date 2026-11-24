@@ -6,6 +6,12 @@ vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: (v: string) => `plain:${v}`,
 }))
 
+const keySource = vi.hoisted(() => ({ value: 'client' as 'client' | 'platform' }))
+vi.mock('./platform', () => ({
+  aiKeySource: async () => keySource.value,
+  platformAi: () => ({ provider: 'anthropic', model: 'claude-x', apiKey: 'platform-key', embeddingsApiKey: null }),
+}))
+
 import { loadAiConfig } from './config'
 
 function dbReturning(row: Record<string, unknown> | null): SupabaseClient {
@@ -47,5 +53,30 @@ describe('loadAiConfig requireActive', () => {
     expect(
       await loadAiConfig(dbReturning(null), 'acct', { requireActive: false }),
     ).toBeNull()
+  })
+})
+
+describe('loadAiConfig on the Whatspert key', () => {
+  it('uses the platform provider, model and key but keeps the workspace prompt and toggles', async () => {
+    keySource.value = 'platform'
+    try {
+      const cfg = await loadAiConfig(
+        dbReturning({ ...ROW, api_key: null, is_active: true, system_prompt: 'Be brief' }),
+        'acc1',
+      )
+      expect(cfg).toMatchObject({
+        provider: 'anthropic',
+        model: 'claude-x',
+        apiKey: 'platform-key',
+        systemPrompt: 'Be brief',
+        isActive: true,
+      })
+    } finally {
+      keySource.value = 'client'
+    }
+  })
+
+  it('treats a client workspace without a key as not configured', async () => {
+    expect(await loadAiConfig(dbReturning({ ...ROW, api_key: null, is_active: true }), 'acc1')).toBeNull()
   })
 })

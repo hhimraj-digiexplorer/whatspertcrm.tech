@@ -1970,7 +1970,11 @@
       "saveSuccess": "AI assistant saved.",
       "saveFailed": "Failed to save.",
       "removeSuccess": "AI configuration removed.",
-      "removeFailed": "Failed to remove."
+      "removeFailed": "Failed to remove.",
+      "notInPlan": "AI Agents aren't included in this workspace's plan, so the assistant won't reply or draft. Ask your Whatspert provider to turn it on.",
+      "platformKeyActive": "Your AI key is provided by Whatspert — no key needed. Set the assistant's instructions and behaviour below.",
+      "platformKeyModel": "Using {provider} · {model}",
+      "platformKeyNotReady": "The Whatspert AI key isn't set up on the server yet. Contact support."
     },
     "aiKnowledge": {
       "loadFailed": "Failed to load knowledge base",

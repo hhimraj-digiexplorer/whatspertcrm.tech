@@ -65,6 +65,10 @@ export function AiConfig() {
   const [keyEdited, setKeyEdited] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [hasStoredKey, setHasStoredKey] = useState(false);
+  // 'platform' = Whatspert supplies the key (set by the platform admin).
+  const [keySource, setKeySource] = useState<'client' | 'platform'>('client');
+  const [platformInfo, setPlatformInfo] = useState<{ provider?: AiProvider; model?: string; ready: boolean } | null>(null);
+  const [aiAllowed, setAiAllowed] = useState(true);
   const [embeddingsKey, setEmbeddingsKey] = useState('');
   const [embeddingsKeyEdited, setEmbeddingsKeyEdited] = useState(false);
   const [hasStoredEmbeddingsKey, setHasStoredEmbeddingsKey] = useState(false);
@@ -91,6 +95,9 @@ export function AiConfig() {
         toast.error(data.error ?? t('loadFailed'));
         return;
       }
+      setKeySource(data.key_source === 'platform' ? 'platform' : 'client');
+      setPlatformInfo(data.platform ?? null);
+      setAiAllowed(data.ai_allowed !== false);
       if (data.configured) {
         setConfigured(true);
         setProvider(data.provider);
@@ -180,7 +187,7 @@ export function AiConfig() {
       toast.error(t('missingModel'));
       return;
     }
-    if (!configured && !keyEdited) {
+    if (!configured && !keyEdited && keySource !== 'platform') {
       toast.error(t('missingApiKey'));
       return;
     }
@@ -253,6 +260,11 @@ export function AiConfig() {
           {t('adminOnlyConfig')}
         </p>
       )}
+      {!aiAllowed && (
+        <p className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
+          {t('notInPlan')}
+        </p>
+      )}
 
       <div className="space-y-6">
         <Card>
@@ -264,6 +276,21 @@ export function AiConfig() {
               {t('encryptionNotice')}
             </CardDescription>
           </CardHeader>
+          {keySource === 'platform' ? (
+          <CardContent className="space-y-2">
+            <p className="text-sm text-foreground">{t('platformKeyActive')}</p>
+            {platformInfo?.ready ? (
+              <p className="text-xs text-muted-foreground">
+                {t('platformKeyModel', {
+                  provider: platformInfo.provider ? PROVIDER_LABEL[platformInfo.provider] : '',
+                  model: platformInfo.model ?? '',
+                })}
+              </p>
+            ) : (
+              <p className="text-xs text-destructive">{t('platformKeyNotReady')}</p>
+            )}
+          </CardContent>
+          ) : (
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -379,6 +406,7 @@ export function AiConfig() {
               </p>
             </div>
           </CardContent>
+          )}
         </Card>
 
         <Card>

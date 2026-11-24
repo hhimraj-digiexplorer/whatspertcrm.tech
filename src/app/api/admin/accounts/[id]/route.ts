@@ -16,6 +16,9 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
  *   extend_trial_days    1–365, added to max(now, trial_ends_at)
  *   suspend              { reason } to suspend, null to restore
  *   admin_notes          free text, ≤ 2000 chars
+ *   ai_access            'plan' | 'enabled' | 'disabled' (AI Agents override)
+ *   ai_key_source        'client' (their own key) | 'platform' (Whatspert's)
+ *   ai_platform_fee_inr  monthly add-on for the Whatspert key, 0–1,000,000
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,6 +89,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ error: 'admin_notes must be text' }, { status: 400 });
       }
       patch.admin_notes = body.admin_notes.slice(0, 2000);
+    }
+
+    if (body.ai_access !== undefined) {
+      if (!['plan', 'enabled', 'disabled'].includes(body.ai_access as string)) {
+        return NextResponse.json({ error: 'Invalid ai_access' }, { status: 400 });
+      }
+      patch.ai_access = body.ai_access;
+    }
+    if (body.ai_key_source !== undefined) {
+      if (body.ai_key_source !== 'client' && body.ai_key_source !== 'platform') {
+        return NextResponse.json({ error: 'Invalid ai_key_source' }, { status: 400 });
+      }
+      patch.ai_key_source = body.ai_key_source;
+    }
+    if (body.ai_platform_fee_inr !== undefined) {
+      const fee = Number(body.ai_platform_fee_inr);
+      if (!Number.isInteger(fee) || fee < 0 || fee > 1_000_000) {
+        return NextResponse.json({ error: 'ai_platform_fee_inr must be 0–1,000,000' }, { status: 400 });
+      }
+      patch.ai_platform_fee_inr = fee;
     }
 
     if (Object.keys(patch).length === 0) {

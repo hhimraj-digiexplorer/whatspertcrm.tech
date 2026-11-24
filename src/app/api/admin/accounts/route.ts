@@ -23,9 +23,25 @@ export async function GET(request: Request) {
     });
     if (error) throw error;
 
-    const rows = (data ?? []) as { total_count: number }[];
+    const rows = (data ?? []) as { total_count: number; account_id: string }[];
+    // AI Agents settings live on account_billing; merge them in.
+    const ids = rows.map((r) => r.account_id);
+    const ai = new Map<string, Record<string, unknown>>();
+    if (ids.length > 0) {
+      const { data: aiRows, error: aiErr } = await supabaseAdmin()
+        .from('account_billing')
+        .select('account_id, ai_access, ai_key_source, ai_platform_fee_inr')
+        .in('account_id', ids);
+      if (aiErr) throw aiErr;
+      for (const r of aiRows ?? []) ai.set(r.account_id as string, r);
+    }
     return NextResponse.json({
-      accounts: rows.map(({ total_count: _total, ...rest }) => rest),
+      accounts: rows.map(({ total_count: _total, ...rest }) => ({
+        ...rest,
+        ai_access: ai.get(rest.account_id)?.ai_access ?? 'plan',
+        ai_key_source: ai.get(rest.account_id)?.ai_key_source ?? 'client',
+        ai_platform_fee_inr: ai.get(rest.account_id)?.ai_platform_fee_inr ?? 1000,
+      })),
       total: rows[0]?.total_count ?? 0,
       page,
       pageSize: PAGE_SIZE,

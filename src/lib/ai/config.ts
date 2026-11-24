@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import type { AiConfig } from './types'
+import { aiKeySource, platformAi } from './platform'
 
 interface AiConfigRow {
   provider: 'openai' | 'anthropic'
   model: string
-  api_key: string
+  api_key: string | null
   system_prompt: string | null
   is_active: boolean
   auto_reply_enabled: boolean
@@ -47,9 +48,30 @@ export async function loadAiConfig(
   // The Playground passes requireActive:false so an admin can test the
   // agent before flipping the master switch on.
   if (requireActive && !row.is_active) return null
-  // Defensive: the column is NOT NULL, but a partial write / manual DB
-  // edit could leave it empty. Treat a missing key as "not configured"
-  // rather than letting decrypt() throw on null.
+
+  // On the Whatspert key the workspace keeps its own prompt, toggles and
+  // handoff, but provider / model / keys come from the server config.
+  if ((await aiKeySource(accountId)) === 'platform') {
+    const p = platformAi()
+    if (!p) {
+      console.error(`[ai config] account ${accountId} is on the Whatspert key but PLATFORM_AI_API_KEY is not set.`)
+      return null
+    }
+    return {
+      provider: p.provider,
+      model: p.model,
+      apiKey: p.apiKey,
+      systemPrompt: row.system_prompt,
+      isActive: row.is_active,
+      autoReplyEnabled: row.auto_reply_enabled,
+      autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
+      handoffAgentId: row.handoff_agent_id,
+      embeddingsApiKey: p.embeddingsApiKey,
+    }
+  }
+
+  // No key of its own (e.g. it was on the Whatspert key before): treat
+  // as "not configured" rather than letting decrypt() throw on null.
   if (!row.api_key) return null
 
   // The embeddings key is optional and independent of the chat key —
@@ -102,6 +124,9 @@ export async function loadEmbeddingsKey(
     .select('embeddings_api_key')
     .eq('account_id', accountId)
     .maybeSingle()
+  if ((await aiKeySource(accountId)) === 'platform') {
+    return { key: platformAi()?.embeddingsApiKey ?? null, corrupt: false }
+  }
   if (error || !data?.embeddings_api_key) return { key: null, corrupt: false }
   try {
     return { key: decrypt(data.embeddings_api_key), corrupt: false }

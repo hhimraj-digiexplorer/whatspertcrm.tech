@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   accessBlock,
+  aiAllowed,
   monthlyRevenue,
   parsePlanLimitError,
   planFeatures,
@@ -89,5 +90,15 @@ describe('plan helpers', () => {
   it('keeps only string features', () => {
     expect(planFeatures(['a', 1, 'b'])).toEqual(['a', 'b']);
     expect(planFeatures(null)).toEqual([]);
+  });
+});
+
+describe('aiAllowed', () => {
+  it('follows the plan unless the admin overrides it', () => {
+    expect(aiAllowed({ ai_access: 'plan' }, { ai_enabled: false })).toBe(false);
+    expect(aiAllowed({ ai_access: 'plan' }, { ai_enabled: true })).toBe(true);
+    expect(aiAllowed({ ai_access: 'enabled' }, { ai_enabled: false })).toBe(true);
+    expect(aiAllowed({ ai_access: 'disabled' }, { ai_enabled: true })).toBe(false);
+    expect(aiAllowed(null, null)).toBe(true);
   });
 });

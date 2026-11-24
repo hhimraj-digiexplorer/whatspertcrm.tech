@@ -9,6 +9,20 @@ import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
 import { embedTexts } from '@/lib/ai/embeddings'
 import { AiError, type AiProvider } from '@/lib/ai/types'
+import { aiKeySource, platformAi } from '@/lib/ai/platform'
+import { loadBilling } from '@/lib/billing/server'
+import { aiAllowed } from '@/lib/billing/plans'
+
+/** Who supplies the key, and whether the plan / admin allow AI at all. */
+async function aiAccessInfo(accountId: string) {
+  const [source, { billing, plan }] = await Promise.all([aiKeySource(accountId), loadBilling(accountId)])
+  const p = source === 'platform' ? platformAi() : null
+  return {
+    key_source: source,
+    ai_allowed: aiAllowed(billing, plan),
+    platform: p ? { provider: p.provider, model: p.model, ready: true } : source === 'platform' ? { ready: false } : null,
+  }
+}
 
 function bad(message: string) {
   return NextResponse.json({ error: message }, { status: 400 })
@@ -43,12 +57,14 @@ export async function GET() {
       )
     }
 
-    if (!data) return NextResponse.json({ configured: false })
+    const access = await aiAccessInfo(accountId)
+    if (!data) return NextResponse.json({ configured: false, ...access })
     // The keys are selected only to derive the has_* flags; neither is
     // returned to the client.
     const { api_key, embeddings_api_key, ...safe } = data
     return NextResponse.json({
       configured: true,
+      ...access,
       has_key: !!api_key,
       has_embeddings_key: !!embeddings_api_key,
       ...safe,
@@ -77,11 +93,22 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') return bad('Invalid request body')
 
-    const provider = body.provider as AiProvider
+    // On the Whatspert key the provider, model and key come from the
+    // server config; the workspace only sets its prompt and toggles.
+    const onPlatformKey = (await aiKeySource(accountId)) === 'platform'
+    const platform = onPlatformKey ? platformAi() : null
+    if (onPlatformKey && !platform) {
+      return NextResponse.json(
+        { error: 'The Whatspert AI key is not set up on the server yet. Contact support.' },
+        { status: 503 },
+      )
+    }
+
+    const provider = (platform?.provider ?? body.provider) as AiProvider
     if (provider !== 'openai' && provider !== 'anthropic') {
       return bad('provider must be "openai" or "anthropic"')
     }
-    const model = typeof body.model === 'string' ? body.model.trim() : ''
+    const model = platform?.model ?? (typeof body.model === 'string' ? body.model.trim() : '')
     if (!model) return bad('model is required')
 
     const systemPrompt =
@@ -114,7 +141,7 @@ export async function POST(request: Request) {
       handoffAgentId = rawHandoff
     }
 
-    const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
+    const rawKey = !onPlatformKey && typeof body.api_key === 'string' ? body.api_key.trim() : ''
 
     // Embeddings key (optional, for semantic KB search): a non-empty
     // string sets/replaces it; an explicit null clears it; absent leaves
@@ -133,7 +160,9 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     let apiKeyPlain: string
-    if (rawKey) {
+    if (platform) {
+      apiKeyPlain = platform.apiKey
+    } else if (rawKey) {
       apiKeyPlain = rawKey
     } else if (existing?.api_key) {
       try {
@@ -150,10 +179,10 @@ export async function POST(request: Request) {
     // edits the system prompt on an existing, already-validated config
     // skips the call — no wasted token/latency on the account's key.
     const credentialsChanged =
-      !existing ||
+      !platform && (!existing ||
       rawKey !== '' ||
       provider !== existing.provider ||
-      model !== existing.model
+      model !== existing.model)
 
     if (credentialsChanged) {
       try {
@@ -182,7 +211,7 @@ export async function POST(request: Request) {
 
     // Validate a new embeddings key before storing (a cheap 1-input
     // embed), same "verify before save" discipline as the chat key.
-    if (rawEmbeddingsKey) {
+    if (rawEmbeddingsKey && !platform) {
       try {
         await embedTexts(rawEmbeddingsKey, ['ping'])
       } catch (err) {
@@ -209,7 +238,7 @@ export async function POST(request: Request) {
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.
     if (handoffProvided) shared.handoff_agent_id = handoffAgentId
-    if (rawEmbeddingsKey) {
+    if (rawEmbeddingsKey && !platform) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
       shared.embeddings_api_key = null
@@ -231,7 +260,8 @@ export async function POST(request: Request) {
       const { error: insErr } = await supabase.from('ai_configs').insert({
         account_id: accountId,
         created_by: userId,
-        api_key: encryptedKey, // guaranteed non-null: rawKey required when no existing row
+        // null on the Whatspert key; otherwise rawKey was required above
+        api_key: encryptedKey,
         ...shared,
       })
       if (insErr) {

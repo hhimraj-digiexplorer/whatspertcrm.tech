@@ -1970,7 +1970,11 @@
       "saveSuccess": "Assistente de IA salvo.",
       "saveFailed": "Falha ao salvar.",
       "removeSuccess": "Configuração de IA removida.",
-      "removeFailed": "Falha ao remover."
+      "removeFailed": "Falha ao remover.",
+      "notInPlan": "Os Agentes de IA não estão incluídos no plano deste espaço, então o assistente não responde nem redige. Peça ao seu provedor Whatspert para ativá-los.",
+      "platformKeyActive": "Sua chave de IA é fornecida pelo Whatspert — não precisa de chave. Defina abaixo as instruções e o comportamento do assistente.",
+      "platformKeyModel": "Usando {provider} · {model}",
+      "platformKeyNotReady": "A chave de IA do Whatspert ainda não está configurada no servidor. Fale com o suporte."
     },
     "aiKnowledge": {
       "loadFailed": "Falha ao carregar a base de conhecimento",

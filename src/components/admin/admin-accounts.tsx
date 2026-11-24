@@ -36,6 +36,9 @@ interface AccountRow {
   members: number;
   contacts: number;
   messages_30d: number;
+  ai_access: "plan" | "enabled" | "disabled";
+  ai_key_source: "client" | "platform";
+  ai_platform_fee_inr: number;
 }
 
 const STATUS_FILTERS = [
@@ -187,6 +190,12 @@ export function AdminAccounts({ initialStatus }: { initialStatus: string }) {
                   <td className="px-4 py-3 text-foreground">
                     {r.plan_name ?? r.plan_id ?? "—"}
                     {r.billing_cycle && <span className="ml-1 text-xs text-muted-foreground">({r.billing_cycle})</span>}
+                    {r.ai_access === "enabled" && (
+                      <div className="text-xs text-primary">
+                        AI on{r.ai_key_source === "platform" ? ` · Whatspert key +₹${r.ai_platform_fee_inr.toLocaleString("en-IN")}/mo` : ""}
+                      </div>
+                    )}
+                    {r.ai_access === "disabled" && <div className="text-xs text-muted-foreground">AI off</div>}
                   </td>
                   <td className="px-4 py-3">
                     <StatusCell row={r} />
@@ -295,6 +304,11 @@ function ManageAccountDialog({
   const [extendDays, setExtendDays] = useState("7");
   const [suspendReason, setSuspendReason] = useState(row.suspended_reason ?? "");
   const [busy, setBusy] = useState<string | null>(null);
+  const [aiAccess, setAiAccess] = useState(row.ai_access ?? "plan");
+  const [aiKeySource, setAiKeySource] = useState(row.ai_key_source ?? "client");
+  const [aiFee, setAiFee] = useState(String(row.ai_platform_fee_inr ?? 1000));
+  const planAi = plans.find((p) => p.id === (row.plan_id ?? ""))?.ai_enabled ?? false;
+  const aiOn = aiAccess === "enabled" || (aiAccess === "plan" && planAi);
 
   async function patch(body: Record<string, unknown>, label: string, success: string) {
     setBusy(label);
@@ -386,6 +400,54 @@ function ManageAccountDialog({
             >
               {busy === "plan" && <Loader2 className="size-4 animate-spin" />}
               Save plan
+            </Button>
+          </section>
+
+          <section className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-sm font-semibold text-foreground">AI Agents</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Access</Label>
+                <select value={aiAccess} onChange={(e) => setAiAccess(e.target.value as typeof aiAccess)} className={selectClass}>
+                  <option value="plan">As per plan ({planAi ? "on" : "off"})</option>
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>API key</Label>
+                <select value={aiKeySource} onChange={(e) => setAiKeySource(e.target.value as typeof aiKeySource)} className={selectClass}>
+                  <option value="client">Client&apos;s own key</option>
+                  <option value="platform">Whatspert key (add-on)</option>
+                </select>
+              </div>
+              {aiKeySource === "platform" && (
+                <div className="space-y-1.5">
+                  <Label>Add-on per month (₹)</Label>
+                  <Input type="number" min={0} value={aiFee} onChange={(e) => setAiFee(e.target.value)} />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {!aiOn
+                ? "AI Agents are off for this account."
+                : aiKeySource === "platform"
+                  ? `AI runs on Whatspert's key; bill ₹${Number(aiFee || 0).toLocaleString("en-IN")} + GST a month on top of the plan.`
+                  : "AI runs on the client's own OpenAI / Anthropic key (entered in their AI Agents setup)."}
+            </p>
+            <Button
+              size="sm"
+              disabled={busy !== null}
+              onClick={() =>
+                void patch(
+                  { ai_access: aiAccess, ai_key_source: aiKeySource, ai_platform_fee_inr: Math.max(0, Math.round(Number(aiFee) || 0)) },
+                  "ai",
+                  "AI settings saved",
+                )
+              }
+            >
+              {busy === "ai" && <Loader2 className="size-4 animate-spin" />}
+              Save AI settings
             </Button>
           </section>
 
