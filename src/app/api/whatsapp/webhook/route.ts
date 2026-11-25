@@ -18,6 +18,9 @@ import { reopenClosedConversation } from '@/lib/conversations/reopen'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
+import { OPT_OUT_TAG, optOutIntent, setContactOptOut } from '@/lib/contacts/opt-out'
+import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
+import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver'
 import { drainCrmQueue } from '@/lib/integrations/real-expert/sync'
@@ -919,7 +922,62 @@ async function processMessage(
   // no active flows take the runner's early-exit "no_match" path
   // basically for free (one indexed SELECT for the active run).
   // ============================================================
-  const flowResult = await dispatchInboundToFlows({
+  // ============================================================
+  // Opt-out / opt-in (migration 053). Checked BEFORE the flow runner so
+  // "STOP" works in the middle of a bot menu: the contact is marked
+  // opted out, gets the "Opted out" tag (Tag Added automations run),
+  // and the message is NOT handed to the flow. From now on automatic
+  // senders skip this contact (see lib/contacts/opt-out).
+  // ============================================================
+  const optIntent = interactiveReplyId ? null : optOutIntent(contentText ?? message.text?.body ?? '')
+  if (optIntent) {
+    try {
+      const changed = await setContactOptOut(supabaseAdmin(), {
+        accountId,
+        contactId: contactRecord.id,
+        optedOut: optIntent === 'opt_out',
+        source: 'keyword',
+      })
+      if (changed && optIntent === 'opt_out') {
+        const { tagIdByKey } = await resolveImportTagIds(supabaseAdmin(), {
+          accountId,
+          userId: configOwnerUserId,
+          tagNames: [OPT_OUT_TAG],
+          canCreateTags: true,
+        })
+        const tagId = tagIdByKey.get(OPT_OUT_TAG.toLowerCase())
+        if (tagId) {
+          await addContactTagAndDispatch({
+            db: supabaseAdmin(),
+            accountId,
+            contactId: contactRecord.id,
+            tagId,
+            context: { conversation_id: conversation.id },
+          })
+        }
+      } else if (changed && optIntent === 'opt_in') {
+        const { data: tagRow } = await supabaseAdmin()
+          .from('tags')
+          .select('id')
+          .eq('account_id', accountId)
+          .ilike('name', OPT_OUT_TAG)
+          .maybeSingle()
+        if (tagRow) {
+          await supabaseAdmin()
+            .from('contact_tags')
+            .delete()
+            .eq('contact_id', contactRecord.id)
+            .eq('tag_id', (tagRow as { id: string }).id)
+        }
+      }
+    } catch (err) {
+      console.error('[opt-out] could not update the contact:', err)
+    }
+  }
+
+  const flowResult = optIntent
+    ? { consumed: false }
+    : await dispatchInboundToFlows({
     accountId,
     userId: configOwnerUserId,
     contactId: contactRecord.id,
@@ -1007,7 +1065,7 @@ async function processMessage(
   // the account has enabled it. Awaited inside `after()` (same reason as
   // the webhook dispatch below); `dispatchInboundToAiReply` owns its
   // eligibility gates + try/catch and never throws.
-  if (!flowConsumed && !interactiveReplyId && inboundText.trim()) {
+  if (!flowConsumed && !optIntent && !interactiveReplyId && inboundText.trim()) {
     await dispatchInboundToAiReply({
       accountId,
       conversationId: conversation.id,

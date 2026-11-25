@@ -22,6 +22,10 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
+vi.mock('@/lib/contacts/opt-out', () => ({
+  assertCanAutoMessage: async () => undefined,
+  ContactOptedOutError: class ContactOptedOutError extends Error {},
+}))
 vi.mock('@/lib/billing/server', async () => {
   class BillingBlockedError extends Error {}
   return { assertFeature: h.assertFeature, BillingBlockedError }

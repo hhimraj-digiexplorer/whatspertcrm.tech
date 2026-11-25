@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   trigger: vi.fn(),
   tagAdd: vi.fn(),
   tagIds: vi.fn(),
+  contactTags: [] as { tags: { name: string } }[],
+  optedOutAt: null as string | null,
 }))
 
 vi.mock('@/lib/automations/engine', () => ({ runAutomationsForTrigger: h.trigger }))
@@ -60,6 +62,12 @@ vi.mock('@/lib/automations/admin-client', () => ({
           },
         }
       }
+      if (table === 'contact_tags') {
+        const c = chain(() => ({ data: null, error: null }))
+        c.then = (res: (v: unknown) => unknown) => Promise.resolve({ data: h.contactTags, error: null }).then(res)
+        return c
+      }
+      if (table === 'contacts') return chain(() => ({ data: { opted_out_at: h.optedOutAt }, error: null }))
       if (table === 'crm_sync_queue') {
         h.deletedJobs++
         return chain(() => ({ data: null, error: null }))
@@ -96,6 +104,8 @@ beforeEach(() => {
   h.ownLink = null
   h.entitled = true
   h.notes = []
+  h.contactTags = []
+  h.optedOutAt = null
   h.templateBody = 'Hi {{1}}, thanks for your interest!'
   h.resolve.mockReset().mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: true })
   h.send.mockReset().mockResolvedValue({ messageId: 'm1', whatsappMessageId: 'wamid.1' })
@@ -273,5 +283,61 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
       note_text: 'Real Expert lead #b1c2 · Source: META · Project: GSR Heights · City: Lucknow',
     })
     expect(h.send.mock.calls[0][2]).toMatchObject({ templateName: 'welcome_lead', templateParams: ['Asha'] })
+  })
+
+  describe('projects (channel partners)', () => {
+    beforeEach(() => {
+      h.integration = {
+        ...h.integration,
+        options: {
+          fallback_welcome: false,
+          projects: {
+            'The Galleria': { tag: 'p-galleria', welcome: { template: 'galleria_welcome', language: 'en' } },
+            'Green Valley': { tag: 'p-green-valley', welcome: { template: 'green_valley_welcome', language: 'en' } },
+          },
+        },
+      }
+    })
+
+    it("test 1: a project A lead gets A's tag and only A's welcome", async () => {
+      const res = await call({ lead_id: 'RE-1', name: 'Asha', phone: '9876543210', project: 'The Galleria', project_code: 'GAL', source: 'META', tags: ['meta-form', 'p-galleria'] })
+      const body = await res.json()
+      expect(h.send).toHaveBeenCalledTimes(1)
+      expect(h.send.mock.calls[0][2]).toMatchObject({ templateName: 'galleria_welcome' })
+      expect(body.tags_added).toEqual(['p-galleria', 'meta-form'])
+      expect(body.project).toBe('The Galleria')
+    })
+
+    it("test 2: the same phone for project B adds B's tag and B's welcome", async () => {
+      h.resolve.mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: false })
+      h.contactTags = [{ tags: { name: 'p-galleria' } }]
+      const res = await call({ lead_id: 'RE-2', name: 'Asha', phone: '9876543210', project: 'Green Valley', is_repeat_enquiry: true, tags: ['p-green-valley'] })
+      const body = await res.json()
+      expect(h.send.mock.calls[0][2]).toMatchObject({ templateName: 'green_valley_welcome' })
+      expect(h.tagAdd).toHaveBeenCalledWith(expect.objectContaining({ tagId: 'tag-p-green-valley', contactId: 'c1' }))
+      expect(body.welcome).toEqual({ template: 'green_valley_welcome', reason: 'project' })
+      expect(h.notes[0].note_text).toContain('Repeat enquiry: yes')
+    })
+
+    it('does not greet again for a project the contact already enquired about', async () => {
+      h.resolve.mockResolvedValue({ conversationId: 'conv1', contactId: 'c1', contactCreated: false })
+      h.contactTags = [{ tags: { name: 'p-galleria' } }]
+      const body = await (await call({ lead_id: 'RE-3', phone: '9876543210', project: 'The Galleria' })).json()
+      expect(h.send).not.toHaveBeenCalled()
+      expect(body.welcome).toEqual({ skipped: 'already_enquired' })
+    })
+
+    it('sends no welcome for an unknown project when the default is off', async () => {
+      const body = await (await call({ lead_id: 'RE-4', phone: '9876543210', project: 'Somewhere Else' })).json()
+      expect(h.send).not.toHaveBeenCalled()
+      expect(body.welcome).toEqual({ skipped: 'no_fallback' })
+    })
+
+    it('never greets a contact who sent STOP', async () => {
+      h.optedOutAt = '2026-11-20T10:00:00Z'
+      const body = await (await call({ lead_id: 'RE-5', phone: '9876543210', project: 'The Galleria' })).json()
+      expect(h.send).not.toHaveBeenCalled()
+      expect(body.welcome).toEqual({ skipped: 'opted_out' })
+    })
   })
 })

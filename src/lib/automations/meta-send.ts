@@ -1,3 +1,4 @@
+import { assertCanAutoMessage } from '@/lib/contacts/opt-out'
 import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers'
 import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
@@ -135,6 +136,8 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
   if (contactErr || !contact) {
     throw new Error('contact not found for this account')
   }
+  // STOP (migration 053): no automatic messages after the opt-out.
+  await assertCanAutoMessage(db, input.accountId, input.contactId)
 
   // Phone number, or the business-scoped user ID when Meta has never
   // given us a number for this customer (issue #519).

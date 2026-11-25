@@ -274,7 +274,19 @@ export async function deliverBroadcast(
   db: SupabaseClient,
   plan: BroadcastPlan
 ): Promise<void> {
+  // STOP (migration 053): never broadcast to a contact who opted out.
+  const optedOutRows = await optedOutRecipientRows(
+    db,
+    plan.planned.map((r) => r.recipientRowId),
+  );
+  if (optedOutRows.size > 0) {
+    await db
+      .from('broadcast_recipients')
+      .update({ status: 'failed', error_message: 'Contact opted out (sent STOP)' })
+      .in('id', [...optedOutRows]);
+  }
   for (const recipient of plan.planned) {
+    if (optedOutRows.has(recipient.recipientRowId)) continue;
     const variants = phoneVariants(recipient.phone);
     let sentMessageId: string | null = null;
     let lastError: string | null = null;
@@ -368,4 +380,22 @@ export async function finalizeBroadcastStatus(
       updated_at: new Date().toISOString(),
     })
     .eq('id', broadcastId);
+}
+
+/** Recipient rows whose contact has opted out (any time — no grace for broadcasts). */
+async function optedOutRecipientRows(db: SupabaseClient, rowIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < rowIds.length; i += 500) {
+    const { data, error } = await db
+      .from('broadcast_recipients')
+      .select('id, contact:contacts!inner(opted_out_at)')
+      .in('id', rowIds.slice(i, i + 500))
+      .not('contact.opted_out_at', 'is', null);
+    if (error) {
+      console.warn('[broadcast] opt-out check failed:', error.message);
+      continue;
+    }
+    for (const r of data ?? []) out.add((r as { id: string }).id);
+  }
+  return out;
 }

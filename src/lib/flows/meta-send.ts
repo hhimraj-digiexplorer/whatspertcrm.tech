@@ -1,3 +1,4 @@
+import { assertCanAutoMessage } from '@/lib/contacts/opt-out'
 import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers'
 import {
   sendInteractiveButtons,
@@ -106,6 +107,8 @@ export async function engineSendText(
   if (contactErr || !contact) {
     throw new Error('contact not found for this account')
   }
+  // STOP (migration 053): no automatic messages after the opt-out.
+  await assertCanAutoMessage(db, args.accountId, args.contactId)
 
   // Phone number, or the business-scoped user ID when Meta has never
   // given us a number for this customer (issue #519).
@@ -216,6 +219,8 @@ export async function engineSendMedia(
   if (contactErr || !contact) {
     throw new Error('contact not found for this account')
   }
+  // STOP (migration 053): no automatic messages after the opt-out.
+  await assertCanAutoMessage(db, args.accountId, args.contactId)
 
   // Phone number, or the business-scoped user ID when Meta has never
   // given us a number for this customer (issue #519).
@@ -368,6 +373,8 @@ async function sendInteractiveViaMeta(
   if (contactErr || !contact) {
     throw new Error('contact not found for this account')
   }
+  // STOP (migration 053): no automatic messages after the opt-out.
+  await assertCanAutoMessage(db, input.accountId, input.contactId)
 
   // Phone number, or the business-scoped user ID when Meta has never
   // given us a number for this customer (issue #519).

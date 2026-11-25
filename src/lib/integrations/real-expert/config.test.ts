@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  chooseWelcome,
+  leadNamesProject,
+  matchProject,
   DEFAULT_OPTIONS,
   extractExternalId,
   isSafePath,
@@ -47,6 +50,8 @@ describe('parseOptions', () => {
       lead_source: 'WhatsApp',
       source_tags: {},
       greeting_by: 'whatspert',
+      projects: {},
+      fallback_welcome: true,
     })
   })
   it('normalises source → tag mappings and rejects bad tag names', () => {
@@ -119,5 +124,86 @@ describe('extractExternalId', () => {
     expect(extractExternalId({ success: true, data: { lead: { id: 7 } } })).toBe('7')
     expect(extractExternalId({ success: true })).toBeNull()
     expect(extractExternalId(null)).toBeNull()
+  })
+})
+
+describe('projects (channel partners)', () => {
+  const { options } = parseOptions({
+    projects: {
+      'The Galleria': { tag: 'p-galleria', welcome: { template: 'galleria_welcome', language: 'en' } },
+      'GV-12': { name: 'Green Valley', tag: 'p-green-valley', welcome: 'none' },
+      'Sky Towers': { tag: 'p-sky' },
+    },
+    fallback_welcome: false,
+  })
+
+  it('parses project settings keyed by name or code', () => {
+    expect(Object.keys(options.projects).sort()).toEqual(['GV_12', 'SKY_TOWERS', 'THE_GALLERIA'])
+    expect(options.projects.GV_12).toEqual({ name: 'Green Valley', tag: 'p-green-valley', welcome: 'none' })
+    expect(options.fallback_welcome).toBe(false)
+  })
+
+  it('rejects a bad template name or tag', () => {
+    expect(parseOptions({ projects: { X: { welcome: { template: 'Bad Name!' } } } }).invalid).toContain('projects')
+    expect(parseOptions({ projects: { X: { tag: 'x'.repeat(60) } } }).invalid).toContain('projects')
+  })
+
+  it('matches a lead on code, tag, id or name', () => {
+    expect(matchProject(options.projects, { project_code: 'gv-12' })?.setting.name).toBe('Green Valley')
+    expect(matchProject(options.projects, { project: 'the galleria' })?.setting.tag).toBe('p-galleria')
+    expect(matchProject(options.projects, { project: 'Unknown', project_code: 'sky towers' })?.key).toBe('SKY_TOWERS')
+    expect(matchProject(options.projects, { project: 'Unknown' })).toBeNull()
+    expect(leadNamesProject({ project: 'Unknown' })).toBe(true)
+    expect(leadNamesProject({})).toBe(false)
+  })
+
+  const base = {
+    options,
+    payloadTemplate: null,
+    defaultTemplate: { name: 'default_welcome', language: 'en' },
+    alreadyEnquired: false,
+  }
+  it("sends only the lead's own project welcome — never another project's", () => {
+    expect(chooseWelcome({ ...base, project: matchProject(options.projects, { project: 'The Galleria' }) })).toMatchObject({
+      kind: 'template',
+      template: 'galleria_welcome',
+      reason: 'project',
+    })
+    expect(chooseWelcome({ ...base, project: matchProject(options.projects, { project_code: 'GV-12' }) })).toEqual({
+      kind: 'none',
+      reason: 'project_none',
+    })
+    // No welcome of its own and fallback off → nothing, not the default.
+    expect(chooseWelcome({ ...base, project: matchProject(options.projects, { project: 'Sky Towers' }) })).toEqual({
+      kind: 'none',
+      reason: 'no_fallback',
+    })
+  })
+
+  it('uses the default welcome only when fallback is on', () => {
+    const single = parseOptions({}).options
+    expect(chooseWelcome({ ...base, options: single, project: null })).toMatchObject({ kind: 'template', reason: 'default' })
+  })
+
+  it('does not greet a repeat enquiry for the same project, or an opted-out contact', () => {
+    const p = matchProject(options.projects, { project: 'The Galleria' })
+    expect(chooseWelcome({ ...base, project: p, alreadyEnquired: true })).toEqual({ kind: 'none', reason: 'already_enquired' })
+    expect(chooseWelcome({ ...base, project: p, optedOut: true })).toEqual({ kind: 'none', reason: 'opted_out' })
+  })
+
+  it('a template named in the payload always wins (unless opted out)', () => {
+    expect(chooseWelcome({ ...base, project: null, payloadTemplate: { name: 'custom', language: null } })).toMatchObject({
+      kind: 'template',
+      template: 'custom',
+      reason: 'payload',
+    })
+  })
+
+  it("adds the project's tag next to the source and payload tags", () => {
+    expect(leadTagNames({ META: 'meta-form' }, 'Meta', ['hot'], ['p-galleria', 'p-galleria'])).toEqual([
+      'meta-form',
+      'p-galleria',
+      'hot',
+    ])
   })
 })

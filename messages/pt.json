@@ -2428,7 +2428,17 @@
       "greetingByWhatspert": "O Whatspert envia o modelo de boas-vindas",
       "greetingByRealExpert": "O Real Expert CRM envia a própria saudação",
       "greetingByWhatspertHint": "O Whatspert envia o modelo abaixo a cada lead vindo do Real Expert. Mantenha a saudação do Real Expert desativada para não enviar duas.",
-      "greetingByRealExpertHint": "O Whatspert não envia saudação; o Real Expert CRM cumprimenta cada lead. Tags e automações continuam funcionando aqui."
+      "greetingByRealExpertHint": "O Whatspert não envia saudação; o Real Expert CRM cumprimenta cada lead. Tags e automações continuam funcionando aqui.",
+      "projectsTitle": "Projetos",
+      "projectsHint": "Para parceiros que vendem vários projetos. O lead é associado a um projeto pelo código, etiqueta ou nome, recebe a etiqueta desse projeto (que inicia as automações dele) e só a boas-vindas desse projeto.",
+      "projectsName": "Nome ou código do projeto",
+      "projectsTag": "Etiqueta (ex.: p-galleria)",
+      "projectsWelcome": "Boas-vindas",
+      "projectsWelcomeDefault": "Boas-vindas padrão",
+      "projectsWelcomeNone": "Sem boas-vindas (a automação envia)",
+      "projectsAdd": "Adicionar projeto",
+      "fallbackWelcome": "Enviar as boas-vindas padrão quando o projeto do lead não tiver as suas",
+      "fallbackWelcomeHint": "Desative se vende vários projetos, para que o comprador nunca receba as boas-vindas de outro projeto."
     },
     "statusLocked": "Bloqueado",
     "statusAddon": "Complemento",

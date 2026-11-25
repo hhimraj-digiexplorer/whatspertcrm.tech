@@ -598,6 +598,21 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .select('default_currency')
         .eq('id', args.automation.account_id)
         .maybeSingle()
+      // One open deal per contact per pipeline: a contact who enquires
+      // again (or triggers the automation twice) keeps their deal
+      // instead of getting a duplicate.
+      if (args.contactId) {
+        const { data: existing } = await db
+          .from('deals')
+          .select('id')
+          .eq('account_id', args.automation.account_id)
+          .eq('pipeline_id', cfg.pipeline_id)
+          .eq('contact_id', args.contactId)
+          .eq('status', 'open')
+          .limit(1)
+          .maybeSingle()
+        if (existing) return 'deal already open in this pipeline — not duplicated'
+      }
       await db.from('deals').insert({
         // Tenancy + audit, same split as automation_logs above.
         account_id: args.automation.account_id,

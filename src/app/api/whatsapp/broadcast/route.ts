@@ -176,6 +176,21 @@ export async function POST(request: Request) {
     let sentCount = 0
     let failedCount = 0
 
+    // STOP (migration 053): never broadcast to a contact who opted out.
+    const optedOutDigits = new Set<string>()
+    {
+      const { data: optedOut } = await supabase
+        .from('contacts')
+        .select('phone')
+        .eq('account_id', accountId)
+        .not('opted_out_at', 'is', null)
+        .limit(50000)
+      for (const c of optedOut ?? []) {
+        const d = String((c as { phone?: string | null }).phone ?? '').replace(/\D/g, '')
+        if (d) optedOutDigits.add(d)
+      }
+    }
+
     for (const recipient of recipients) {
       const sanitized = sanitizePhoneForMeta(recipient.phone)
 
@@ -185,6 +200,11 @@ export async function POST(request: Request) {
           status: 'failed',
           error: 'Invalid phone number format',
         })
+        failedCount++
+        continue
+      }
+      if (optedOutDigits.has(sanitized.replace(/\D/g, ''))) {
+        results.push({ phone: recipient.phone, status: 'failed', error: 'Contact opted out (sent STOP)' })
         failedCount++
         continue
       }

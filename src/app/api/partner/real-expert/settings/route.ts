@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
-import { parseOptions } from '@/lib/integrations/real-expert/config'
+import { parseOptions, sourceKey } from '@/lib/integrations/real-expert/config'
 import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server'
 
 /**
@@ -9,7 +9,10 @@ import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server
  *         greeting_by?: 'whatspert' | 'real_expert',
  *         welcome_template?: { name, language? } | null,
  *         source_tags?: { [source]: tag | "" },     // "" removes one
- *         replace_source_tags?: boolean }           // default: merge
+ *         replace_source_tags?: boolean,            // default: merge
+ *         projects?: { [name|code]: { name?, tag?, welcome?: { template, language? } | 'none' } | null },
+ *         replace_projects?: boolean,               // default: merge; null removes one
+ *         fallback_welcome?: boolean }              // default welcome for unmatched projects
  *
  * Lets Real Expert set, for one linked workspace, who greets new leads,
  * the welcome template Whatspert sends when it greets, and the
@@ -45,6 +48,22 @@ export async function POST(request: Request) {
     const incoming = b.source_tags as Record<string, unknown>
     // Merge by default; "" / null removes one mapping.
     patch.source_tags = b.replace_source_tags === true ? incoming : { ...stored.source_tags, ...incoming }
+  }
+  if (b.fallback_welcome !== undefined) patch.fallback_welcome = b.fallback_welcome
+  if (b.projects !== undefined) {
+    if (!b.projects || typeof b.projects !== 'object' || Array.isArray(b.projects)) {
+      return NextResponse.json({ error: 'projects must be an object of project → settings.', field: 'projects' }, { status: 400 })
+    }
+    // Stored keys are normalised; normalise incoming the same way so a
+    // merge updates rather than duplicates. null removes one project.
+    const base: Record<string, unknown> = b.replace_projects === true ? {} : { ...stored.projects }
+    for (const [k, v] of Object.entries(b.projects as Record<string, unknown>)) {
+      const key = sourceKey(k)
+      if (!key) continue
+      if (v === null) delete base[key]
+      else base[key] = v && typeof v === 'object' && !Array.isArray(v) ? { name: k, ...(v as Record<string, unknown>) } : v
+    }
+    patch.projects = base
   }
   const { options, invalid } = parseOptions({ ...stored, ...patch })
   if (invalid.length > 0) {
@@ -100,5 +119,7 @@ export async function POST(request: Request) {
     greeting_by: options.greeting_by,
     welcome_template: templateName ? { name: templateName, language: templateLanguage } : null,
     source_tags: options.source_tags,
+    projects: options.projects,
+    fallback_welcome: options.fallback_welcome,
   })
 }

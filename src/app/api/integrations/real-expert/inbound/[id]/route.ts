@@ -5,7 +5,15 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation'
 import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
-import { leadTagNames, parseOptions, slugify, toInternationalDigits } from '@/lib/integrations/real-expert/config'
+import {
+  chooseWelcome,
+  cleanTagName,
+  leadTagNames,
+  matchProject,
+  parseOptions,
+  slugify,
+  toInternationalDigits,
+} from '@/lib/integrations/real-expert/config'
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
@@ -27,8 +35,17 @@ import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrat
  *
  * Body: the lead, flat (Real Expert's "Send new leads to"):
  *   { lead_id, name, phone, email?, company?, source?, project?, city?,
- *     created_at?, tags?: string[],
+ *     project_id?, project_code?, project_tag?, enquiry_id?,
+ *     is_repeat_enquiry?, created_at?, tags?: string[],
  *     template?: { name, language?, variables?: string[] } }
+ *
+ * Projects (channel partners): the lead's project is matched on its
+ * code / tag / id / name against Integrations → Real Expert → Projects.
+ * The project's tag is added and its own welcome sent (or none); the
+ * account default welcome only when allowed (fallback_welcome). A push
+ * for a project the contact already has (same tag) is not greeted
+ * again. A second project for the same phone adds that project's tag,
+ * which starts its automations; the first project's runs are untouched.
  *
  * The contact gets the tag mapped to its `source` (integration settings)
  * plus any `tags`; each newly added tag fires Tag Added, and a contact
@@ -141,10 +158,14 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     // Where the enquiry came from, for the agent reading the chat.
+    const repeat = lead.is_repeat_enquiry === true || lead.is_repeat_enquiry === 'true'
     const details = [
       ['Source', str(lead.source, 60)],
       ['Project', str(lead.project, 120)],
+      ['Project code', str(lead.project_code, 60)],
+      ['Enquiry', str(lead.enquiry_id, 100)],
       ['City', str(lead.city, 80)],
+      ['Repeat enquiry', repeat ? 'yes' : null],
     ].filter(([, v]) => v)
     if (details.length > 0) {
       try {
@@ -182,25 +203,45 @@ export async function POST(request: Request, { params }: Params) {
       .eq('entity_id', resolved.contactId)
       .eq('status', 'pending')
 
+    // Which project this lead is for, and its tag(s).
+    const project = matchProject(options.projects, lead)
+    const projectTagNames = [project?.setting.tag, lead.project_tag].filter(Boolean)
+    // Already enquired about this project? (contact had its tag before
+    // this push) — then don't greet it again.
+    const alreadyEnquired =
+      !resolved.contactCreated && (await contactHasAnyTag(db, accountId, resolved.contactId, projectTagNames))
+
     // 1. Greeting. A failed greeting must not stop the tags and triggers
     //    below — they are what start the workspace's own flows.
     const tpl = (lead.template && typeof lead.template === 'object' ? lead.template : {}) as Record<string, unknown>
-    // The welcome template is skipped when the workspace lets Real Expert
-    // greet its own leads; a template named in the payload still goes out.
-    const templateName =
-      str(tpl.name, 512) ?? (options.greeting_by === 'whatspert' ? integration.welcome_template_name : null)
+    const payloadTemplateName = str(tpl.name, 512)
+    const { data: optRow } = await db
+      .from('contacts')
+      .select('opted_out_at')
+      .eq('id', resolved.contactId)
+      .eq('account_id', accountId)
+      .maybeSingle()
+    const welcome = chooseWelcome({
+      optedOut: !!(optRow as { opted_out_at?: string | null } | null)?.opted_out_at,
+      options,
+      payloadTemplate: payloadTemplateName ? { name: payloadTemplateName, language: str(tpl.language, 20) } : null,
+      project,
+      defaultTemplate: {
+        name: (integration.welcome_template_name as string | null) ?? null,
+        language: (integration.welcome_template_language as string | null) ?? null,
+      },
+      alreadyEnquired,
+    })
     let sent: { messageId: string; whatsappMessageId: string } | null = null
     let sendError: SendMessageError | null = null
-    if (templateName) {
+    if (welcome.kind === 'template') {
       try {
-        const templateLanguage =
-          str(tpl.language, 20) ?? (str(tpl.name, 512) ? null : integration.welcome_template_language) ?? null
-        const params = await templateParams(db, accountId, templateName, tpl.variables, name || null)
+        const params = await templateParams(db, accountId, welcome.template, tpl.variables, name || null)
         sent = await sendMessageToConversation(db, accountId, {
           conversationId: resolved.conversationId,
           messageType: 'template',
-          templateName,
-          templateLanguage,
+          templateName: welcome.template,
+          templateLanguage: welcome.language,
           templateParams: params,
         })
       } catch (err) {
@@ -224,7 +265,7 @@ export async function POST(request: Request, { params }: Params) {
 
     // 3. Tags: the one mapped to this lead source in the integration
     //    settings, plus any the payload names. Each new tag fires Tag Added.
-    const tagNames = leadTagNames(options.source_tags, source, lead.tags)
+    const tagNames = leadTagNames(options.source_tags, source, lead.tags, projectTagNames)
     const tagsAdded: string[] = []
     if (tagNames.length > 0) {
       try {
@@ -257,6 +298,8 @@ export async function POST(request: Request, { params }: Params) {
       conversation_id: resolved.conversationId,
       contact_created: resolved.contactCreated,
       tags_added: tagsAdded,
+      project: project ? project.setting.name : null,
+      welcome: welcome.kind === 'template' ? { template: welcome.template, reason: welcome.reason } : { skipped: welcome.reason },
       message_sent: !!sent,
       ...(sent ? { message_id: sent.messageId, whatsapp_message_id: sent.whatsappMessageId } : {}),
       ...(sendError ? { message_error: { code: sendError.code, error: sendError.message } } : {}),
@@ -294,4 +337,25 @@ async function templateParams(
   if (n === 0) return []
   const first = name?.split(/\s+/)[0] || 'there'
   return Array.from({ length: n }, (_, i) => (i === 0 ? first : name || first))
+}
+
+/** Whether the contact already carries any of these tags (by name). */
+async function contactHasAnyTag(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  contactId: string,
+  names: unknown[],
+): Promise<boolean> {
+  const wanted = names.map((n) => cleanTagName(n)?.toLowerCase()).filter((n): n is string => !!n)
+  if (wanted.length === 0) return false
+  const { data } = await db
+    .from('contact_tags')
+    .select('tags!inner(name, account_id)')
+    .eq('contact_id', contactId)
+    .eq('tags.account_id', accountId)
+  return (data ?? []).some((row) => {
+    const t = (row as { tags?: { name?: string } | { name?: string }[] }).tags
+    const tagName = Array.isArray(t) ? t[0]?.name : t?.name
+    return !!tagName && wanted.includes(tagName.toLowerCase())
+  })
 }

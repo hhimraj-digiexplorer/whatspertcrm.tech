@@ -2428,7 +2428,17 @@
       "greetingByWhatspert": "Whatspert स्वागत टेम्पलेट भेजेगा",
       "greetingByRealExpert": "Real Expert CRM अपना स्वागत संदेश भेजेगा",
       "greetingByWhatspertHint": "Real Expert से आए हर लीड को Whatspert नीचे वाला टेम्पलेट भेजेगा। Real Expert का अपना स्वागत संदेश बंद रखें, ताकि लीड को दो बार संदेश न जाए।",
-      "greetingByRealExpertHint": "Whatspert स्वागत संदेश नहीं भेजेगा; Real Expert CRM खुद भेजेगा। टैग और ऑटोमेशन यहाँ फिर भी चलेंगे।"
+      "greetingByRealExpertHint": "Whatspert स्वागत संदेश नहीं भेजेगा; Real Expert CRM खुद भेजेगा। टैग और ऑटोमेशन यहाँ फिर भी चलेंगे।",
+      "projectsTitle": "प्रोजेक्ट",
+      "projectsHint": "कई प्रोजेक्ट बेचने वाले चैनल पार्टनर के लिए। लीड को उसके कोड, टैग या नाम से प्रोजेक्ट से मिलाया जाता है; उसे उसी प्रोजेक्ट का टैग (जिससे उसकी ऑटोमेशन शुरू होती है) और सिर्फ़ उसी प्रोजेक्ट का वेलकम मिलता है।",
+      "projectsName": "प्रोजेक्ट का नाम या कोड",
+      "projectsTag": "टैग (जैसे p-galleria)",
+      "projectsWelcome": "वेलकम",
+      "projectsWelcomeDefault": "डिफ़ॉल्ट वेलकम",
+      "projectsWelcomeNone": "कोई वेलकम नहीं (ऑटोमेशन भेजेगी)",
+      "projectsAdd": "प्रोजेक्ट जोड़ें",
+      "fallbackWelcome": "जब लीड के प्रोजेक्ट का अपना वेलकम न हो, तो डिफ़ॉल्ट वेलकम भेजें",
+      "fallbackWelcomeHint": "कई प्रोजेक्ट बेचते हों तो बंद रखें, ताकि ख़रीदार को कभी दूसरे प्रोजेक्ट का वेलकम न जाए।"
     },
     "statusLocked": "लॉक",
     "statusAddon": "ऐड-ऑन",

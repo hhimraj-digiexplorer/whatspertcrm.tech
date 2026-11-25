@@ -146,15 +146,8 @@ export function TemplatePicker({
 
   function pickTemplate(template: MessageTemplate) {
     const slots = collectVariableSlots(template);
-    const noInputsNeeded =
-      slots.bodyVars.length === 0 &&
-      slots.headerVarCount === 0 &&
-      slots.urlButtonSlots.length === 0;
-    if (noInputsNeeded) {
-      onSelect(template, { body: [] });
-      handleOpenChange(false);
-      return;
-    }
+    // Always show the template with a Send button — one click must not
+    // send a message to the customer (even when there's nothing to fill).
     setSelected(template);
     setParams(new Array(slots.bodyVars.length).fill(""));
     setHeaderText("");

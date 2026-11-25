@@ -2428,7 +2428,17 @@
       "greetingByWhatspert": "Whatspert sends the welcome template",
       "greetingByRealExpert": "Real Expert CRM sends its own greeting",
       "greetingByWhatspertHint": "Whatspert sends the template below to every lead Real Expert pushes. Keep Real Expert's own greeting off, so leads aren't greeted twice.",
-      "greetingByRealExpertHint": "Whatspert sends no greeting; Real Expert CRM greets each lead itself. Tags and automations still run here."
+      "greetingByRealExpertHint": "Whatspert sends no greeting; Real Expert CRM greets each lead itself. Tags and automations still run here.",
+      "projectsTitle": "Projects",
+      "projectsHint": "For channel partners selling several projects. A lead is matched to a project by its code, tag or name, gets that project's tag (which starts its automations) and only that project's welcome.",
+      "projectsName": "Project name or code",
+      "projectsTag": "Tag (e.g. p-galleria)",
+      "projectsWelcome": "Welcome",
+      "projectsWelcomeDefault": "Default welcome",
+      "projectsWelcomeNone": "No welcome (automation greets)",
+      "projectsAdd": "Add project",
+      "fallbackWelcome": "Send the default welcome when a lead's project has no welcome of its own",
+      "fallbackWelcomeHint": "Turn off when you sell several projects, so a buyer never gets another project's welcome."
     },
     "statusLocked": "Locked",
     "statusAddon": "Add-on",

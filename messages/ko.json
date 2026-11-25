@@ -2428,7 +2428,17 @@
       "greetingByWhatspert": "Whatspert가 환영 템플릿 전송",
       "greetingByRealExpert": "Real Expert CRM이 자체 인사 전송",
       "greetingByWhatspertHint": "Real Expert에서 들어온 모든 리드에게 Whatspert가 아래 템플릿을 보냅니다. 두 번 보내지 않도록 Real Expert의 인사는 꺼 두세요.",
-      "greetingByRealExpertHint": "Whatspert는 인사를 보내지 않고 Real Expert CRM이 직접 보냅니다. 태그와 자동화는 여기서 계속 실행됩니다."
+      "greetingByRealExpertHint": "Whatspert는 인사를 보내지 않고 Real Expert CRM이 직접 보냅니다. 태그와 자동화는 여기서 계속 실행됩니다.",
+      "projectsTitle": "프로젝트",
+      "projectsHint": "여러 프로젝트를 판매하는 채널 파트너용입니다. 리드는 코드, 태그 또는 이름으로 프로젝트와 연결되고, 해당 프로젝트의 태그(자동화 시작)와 그 프로젝트의 환영 메시지만 받습니다.",
+      "projectsName": "프로젝트 이름 또는 코드",
+      "projectsTag": "태그(예: p-galleria)",
+      "projectsWelcome": "환영 메시지",
+      "projectsWelcomeDefault": "기본 환영 메시지",
+      "projectsWelcomeNone": "환영 메시지 없음(자동화가 발송)",
+      "projectsAdd": "프로젝트 추가",
+      "fallbackWelcome": "리드의 프로젝트에 자체 환영 메시지가 없으면 기본 환영 메시지 보내기",
+      "fallbackWelcomeHint": "여러 프로젝트를 판매한다면 끄세요. 구매자가 다른 프로젝트의 환영 메시지를 받지 않습니다."
     },
     "statusLocked": "잠김",
     "statusAddon": "추가 기능",

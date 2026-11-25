@@ -1,3 +1,4 @@
+import { assertCanAutoMessage, ContactOptedOutError } from '@/lib/contacts/opt-out'
 import { supabaseAdmin } from './admin-client'
 import { dispatchConversationAssigned } from '@/lib/automations/assignment'
 import { loadAiConfig } from './config'
@@ -101,6 +102,13 @@ export async function dispatchInboundToAiReply(
 
     const config = await loadAiConfig(db, accountId)
     if (!config || !config.autoReplyEnabled) return
+    // STOP (migration 053): the AI never writes to an opted-out contact.
+    try {
+      await assertCanAutoMessage(db, accountId, contactId)
+    } catch (err) {
+      if (err instanceof ContactOptedOutError) return
+      throw err
+    }
 
     // Whatspert key: monthly allowance of AI chatbot conversations.
     if (config.onPlatformKey) {

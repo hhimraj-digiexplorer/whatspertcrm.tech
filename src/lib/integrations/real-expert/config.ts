@@ -38,9 +38,33 @@ export interface RealExpertOptions {
    * never greeted twice.
    */
   greeting_by: GreetingBy
+  /**
+   * Channel partners sell several projects from one number. Per project
+   * (keyed by `sourceKey` of its name, code or tag): the tag a lead for
+   * it gets, and its own welcome — a template, or 'none' when the
+   * project's own automation greets.
+   */
+  projects: Record<string, ProjectSetting>
+  /**
+   * Send the account's default welcome template when a lead's project has
+   * no welcome of its own (or the lead names no project). Turn off for
+   * multi-project accounts so a buyer never gets another project's welcome.
+   */
+  fallback_welcome: boolean
 }
 
 export type GreetingBy = 'whatspert' | 'real_expert'
+
+export interface ProjectSetting {
+  /** Display name, as typed in settings. */
+  name: string
+  /** Tag every lead for this project gets (created if missing). */
+  tag?: string
+  /** Welcome for this project: an approved template, or 'none'. Unset = fallback. */
+  welcome?: { template: string; language?: string } | 'none'
+}
+
+export const MAX_PROJECTS = 50
 
 export const DEFAULT_OPTIONS: RealExpertOptions = {
   auth_style: 'bearer',
@@ -52,6 +76,8 @@ export const DEFAULT_OPTIONS: RealExpertOptions = {
   lead_source: 'WhatsApp',
   source_tags: {},
   greeting_by: 'whatspert',
+  projects: {},
+  fallback_welcome: true,
 }
 
 export const MAX_SOURCE_TAGS = 30
@@ -96,7 +122,7 @@ export function fillPath(path: string, leadId?: string | null): string {
  */
 export function parseOptions(raw: unknown): { options: RealExpertOptions; invalid: string[] } {
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const options: RealExpertOptions = { ...DEFAULT_OPTIONS, source_tags: {} }
+  const options: RealExpertOptions = { ...DEFAULT_OPTIONS, source_tags: {}, projects: {} }
   const invalid: string[] = []
 
   if (src.auth_style !== undefined) {
@@ -142,7 +168,114 @@ export function parseOptions(raw: unknown): { options: RealExpertOptions; invali
     if (src.greeting_by === 'whatspert' || src.greeting_by === 'real_expert') options.greeting_by = src.greeting_by
     else invalid.push('greeting_by')
   }
+  if (src.fallback_welcome !== undefined) {
+    if (typeof src.fallback_welcome === 'boolean') options.fallback_welcome = src.fallback_welcome
+    else invalid.push('fallback_welcome')
+  }
+  if (src.projects !== undefined && src.projects !== null) {
+    const parsed = parseProjects(src.projects)
+    options.projects = parsed.projects
+    if (parsed.bad) invalid.push('projects')
+  }
   return { options, invalid }
+}
+
+const TEMPLATE_NAME_RE = /^[a-z0-9_]{1,512}$/
+const LANGUAGE_RE = /^[a-z]{2,3}(_[A-Z]{2})?$/
+
+function parseProjects(raw: unknown): { projects: Record<string, ProjectSetting>; bad: boolean } {
+  const projects: Record<string, ProjectSetting> = {}
+  if (typeof raw !== 'object' || Array.isArray(raw)) return { projects, bad: true }
+  const entries = Object.entries(raw as Record<string, unknown>)
+  let bad = entries.length > MAX_PROJECTS
+  for (const [k, v] of entries.slice(0, MAX_PROJECTS)) {
+    const key = sourceKey(k)
+    if (!key || !v || typeof v !== 'object' || Array.isArray(v)) {
+      bad = true
+      continue
+    }
+    const r = v as Record<string, unknown>
+    const name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 120) : k.trim().slice(0, 120)
+    const setting: ProjectSetting = { name }
+    if (r.tag !== undefined && r.tag !== null && r.tag !== '') {
+      const tag = cleanTagName(r.tag)
+      if (tag) setting.tag = tag
+      else bad = true
+    }
+    if (r.welcome === 'none') setting.welcome = 'none'
+    else if (r.welcome && typeof r.welcome === 'object') {
+      const w = r.welcome as Record<string, unknown>
+      const template = typeof w.template === 'string' ? w.template.trim() : ''
+      const language = typeof w.language === 'string' ? w.language.trim() : ''
+      if (TEMPLATE_NAME_RE.test(template) && (!language || LANGUAGE_RE.test(language))) {
+        setting.welcome = language ? { template, language } : { template }
+      } else bad = true
+    } else if (r.welcome !== undefined && r.welcome !== null && r.welcome !== '') bad = true
+    projects[key] = setting
+  }
+  return { projects, bad }
+}
+
+/** The project fields a Real Expert lead push may carry. */
+export interface LeadProjectFields {
+  project?: unknown
+  project_id?: unknown
+  project_code?: unknown
+  project_tag?: unknown
+}
+
+/**
+ * The configured project a lead is for, matched on its code, tag, id or
+ * name (in that order). Null when the lead names no configured project.
+ */
+export function matchProject(
+  projects: Record<string, ProjectSetting>,
+  lead: LeadProjectFields,
+): { key: string; setting: ProjectSetting } | null {
+  for (const v of [lead.project_code, lead.project_tag, lead.project_id, lead.project]) {
+    if ((typeof v !== 'string' || !v.trim()) && typeof v !== 'number') continue
+    const key = sourceKey(String(v))
+    if (key && projects[key]) return { key, setting: projects[key] }
+  }
+  return null
+}
+
+/** Does the lead name any project at all (configured or not)? */
+export function leadNamesProject(lead: LeadProjectFields): boolean {
+  return [lead.project_code, lead.project_tag, lead.project_id, lead.project].some(
+    (v) => (typeof v === 'string' && v.trim() !== '') || typeof v === 'number',
+  )
+}
+
+export type WelcomeChoice =
+  | { kind: 'template'; template: string; language: string | null; reason: 'payload' | 'project' | 'default' }
+  | { kind: 'none'; reason: 'real_expert_greets' | 'project_none' | 'no_fallback' | 'no_template' | 'already_enquired' | 'opted_out' }
+
+/**
+ * Which welcome a pushed lead gets. Never another project's: a project
+ * with its own setting uses it; otherwise the account default only when
+ * `fallback_welcome` is on.
+ */
+export function chooseWelcome(args: {
+  options: RealExpertOptions
+  payloadTemplate: { name: string; language: string | null } | null
+  project: { key: string; setting: ProjectSetting } | null
+  defaultTemplate: { name: string | null; language: string | null }
+  alreadyEnquired: boolean
+  /** The contact sent STOP — no welcome at all, not even a named one. */
+  optedOut?: boolean
+}): WelcomeChoice {
+  const { options, payloadTemplate, project, defaultTemplate, alreadyEnquired } = args
+  if (args.optedOut) return { kind: 'none', reason: 'opted_out' }
+  if (payloadTemplate) return { kind: 'template', template: payloadTemplate.name, language: payloadTemplate.language, reason: 'payload' }
+  if (options.greeting_by !== 'whatspert') return { kind: 'none', reason: 'real_expert_greets' }
+  if (alreadyEnquired) return { kind: 'none', reason: 'already_enquired' }
+  const w = project?.setting.welcome
+  if (w === 'none') return { kind: 'none', reason: 'project_none' }
+  if (w) return { kind: 'template', template: w.template, language: w.language ?? null, reason: 'project' }
+  if (!options.fallback_welcome) return { kind: 'none', reason: 'no_fallback' }
+  if (!defaultTemplate.name) return { kind: 'none', reason: 'no_template' }
+  return { kind: 'template', template: defaultTemplate.name, language: defaultTemplate.language, reason: 'default' }
 }
 
 /**
@@ -223,6 +356,8 @@ export function leadTagNames(
   sourceTags: Record<string, string>,
   source: string | null,
   payloadTags: unknown,
+  /** The project's tag (settings) and/or the payload's `project_tag`. */
+  projectTags: unknown[] = [],
 ): string[] {
   const out: string[] = []
   const seen = new Set<string>()
@@ -233,6 +368,7 @@ export function leadTagNames(
     out.push(name)
   }
   if (source) push(sourceTags[sourceKey(source)])
+  projectTags.forEach(push)
   if (Array.isArray(payloadTags)) payloadTags.forEach(push)
   else if (typeof payloadTags === 'string') payloadTags.split(',').forEach(push)
   return out
