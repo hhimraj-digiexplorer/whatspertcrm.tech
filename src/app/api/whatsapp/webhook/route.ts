@@ -19,7 +19,8 @@ import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { OPT_OUT_TAG, optOutIntent, setContactOptOut } from '@/lib/contacts/opt-out'
-import { applyAdReferral, parseReferral } from '@/lib/integrations/real-expert/ad-referral'
+import { applyInboundProject, parseReferral } from '@/lib/projects/inbound'
+import { contactTagsInGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
@@ -932,21 +933,24 @@ async function processMessage(
   // and the message is NOT handed to the flow. From now on automatic
   // senders skip this contact (see lib/contacts/opt-out).
   // ============================================================
-  // Click-to-WhatsApp ad (channel partners): save the referral and tag
-  // the contact with the ad's project BEFORE the flow runner, so that
-  // project's own first-message flow opens instead of the picker.
+  // Projects (channel partners): a Click-to-WhatsApp ad's referral, or a
+  // project keyword in a project-less contact's message, puts the contact
+  // on that project BEFORE the flow runner — so the project's own flow,
+  // automations and AI agent handle the chat from its first message.
   const referral = parseReferral(message.referral)
-  if (referral) {
+  const projectText = interactiveReplyId ? null : (contentText ?? message.text?.body ?? null)
+  if (referral || projectText) {
     try {
-      await applyAdReferral(supabaseAdmin(), {
+      await applyInboundProject(supabaseAdmin(), {
         accountId,
         contactId: contactRecord.id,
         conversationId: conversation.id,
         userId: configOwnerUserId,
         referral,
+        text: projectText,
       })
     } catch (err) {
-      console.error('[ad-referral] could not apply the referral:', err)
+      console.error('[projects] could not place the contact on a project:', err)
     }
   }
 
@@ -1107,12 +1111,18 @@ async function processMessage(
   // when the account has no matching endpoint and never throws.
   // (conversation.created is emitted earlier, right after the thread is
   // opened.)
+  // The contact's projects ride along, so any CRM can file the message
+  // under the right project.
+  const projectTags = await contactTagsInGroup(supabaseAdmin(), accountId, contactRecord.id, PROJECT_TAG_GROUP)
+    .then((tags) => tags.map((t) => t.name))
+    .catch(() => [] as string[])
   await dispatchWebhookEvent(supabaseAdmin(), accountId, 'message.received', {
     conversation_id: conversation.id,
     contact_id: contactRecord.id,
     whatsapp_message_id: message.id,
     content_type: contentType,
     text: contentText,
+    project_tags: projectTags,
   })
 }
 

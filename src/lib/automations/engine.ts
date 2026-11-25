@@ -28,7 +28,8 @@ import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 import { DEFAULT_CURRENCY } from '@/lib/currency'
 import { findOrCreateConversationForContact } from '@/lib/whatsapp/resolve-conversation'
 import { dispatchConversationAssigned } from './assignment'
-import { contactTagsInGroup, isTagGroupTest, passesGroupTest } from '@/lib/tags/groups'
+import { contactTagsInGroup, contactTagsWithGroups, isTagGroupTest, passesGroupTest } from '@/lib/tags/groups'
+import { parseEntryCondition, passesEntryCondition, type ContactTagFacts } from '@/lib/flows/entry-condition'
 
 // ------------------------------------------------------------
 // Public API
@@ -124,8 +125,30 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
     }
     if (!automations || automations.length === 0) return
 
+    // "Only for contacts who…" (trigger_config.entry_condition): e.g. a
+    // keyword "price" automation that answers only project A's buyers.
+    // The contact's tags are loaded once, and only when needed.
+    let contactTags: ContactTagFacts[] | null = null
+    const allowed = async (automation: Automation): Promise<boolean> => {
+      const cond = parseEntryCondition(
+        (automation.trigger_config as { entry_condition?: unknown } | null)?.entry_condition,
+      )
+      if (!cond) return true
+      if (!input.contactId) return false
+      if (!contactTags) {
+        try {
+          contactTags = await contactTagsWithGroups(db, input.accountId, input.contactId)
+        } catch (err) {
+          console.error('[automations] could not load contact tags for entry condition:', err)
+          return false
+        }
+      }
+      return passesEntryCondition(cond, contactTags)
+    }
+
     for (const automation of automations as Automation[]) {
       if (!triggerMatches(automation, input.context)) continue
+      if (!(await allowed(automation))) continue
       try {
         await executeAutomation(automation, input)
       } catch (err) {

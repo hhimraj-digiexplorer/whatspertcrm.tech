@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       userPrompt: config.systemPrompt,
       mode: 'draft',
       knowledge,
-      ...(scope ? { projectScope: { projects: scope.displayNames } } : {}),
+      ...(scope ? { projectScope: { projects: scope.displayNames, instructions: scope.instructions } } : {}),
     })
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })

@@ -17,6 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { extractExternalId, fillPath, parseOptions, projectForTags, type RealExpertOptions } from './config'
 import { PROJECT_TAG_GROUP, sameGroup } from '@/lib/tags/groups'
+import { withWorkspaceProjects } from './projects-bridge'
 import { realExpertRequest, RealExpertError, type RealExpertTarget } from './client'
 
 /** Give up on a job after this many attempts. */
@@ -451,6 +452,8 @@ export async function drainCrmQueue(
       if (!deps) {
         try {
           deps = dbDeps(db, integration, targetFor(integration))
+          // Project names / codes come from the workspace's Projects.
+          deps.options = await withWorkspaceProjects(db, integration.account_id, deps.options)
         } catch {
           deps = new Error('The saved API key could not be read. Please enter it again.')
         }

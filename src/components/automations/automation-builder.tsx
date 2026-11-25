@@ -322,6 +322,72 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
 const SELECT_CLASS =
   "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
 
+type EntryCond =
+  | { kind: "tag"; tag_id: string; negate?: boolean }
+  | { kind: "tag_group"; group: string; test: "none" | "any" | "one" | "more_than_one" }
+
+/**
+ * "Only for contacts who…" — limits the whole automation, e.g. a
+ * keyword "price" reply that only project A's buyers get.
+ */
+function AutomationEntryCondition({
+  value,
+  onChange,
+  t,
+}: {
+  value: EntryCond | undefined
+  onChange: (v: EntryCond | undefined) => void
+  t: ReturnType<typeof useTranslations>
+}) {
+  const mode = !value
+    ? "anyone"
+    : value.kind === "tag"
+      ? value.negate
+        ? "lacks_tag"
+        : "has_tag"
+      : `group_${value.test}`
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs font-medium text-muted-foreground">{t("entry.label")}</label>
+      <select
+        value={mode}
+        onChange={(e) => {
+          const m = e.target.value
+          if (m === "anyone") return onChange(undefined)
+          if (m === "has_tag" || m === "lacks_tag") {
+            return onChange({
+              kind: "tag",
+              tag_id: value?.kind === "tag" ? value.tag_id : "",
+              ...(m === "lacks_tag" ? { negate: true } : {}),
+            })
+          }
+          onChange({
+            kind: "tag_group",
+            group: value?.kind === "tag_group" ? value.group : "Project",
+            test: m.replace("group_", "") as "none" | "any" | "one" | "more_than_one",
+          })
+        }}
+        className={SELECT_CLASS}
+      >
+        <option value="anyone">{t("entry.anyone")}</option>
+        <option value="has_tag">{t("entry.hasTag")}</option>
+        <option value="lacks_tag">{t("entry.lacksTag")}</option>
+        <option value="group_none">{t("entry.groupNone")}</option>
+        <option value="group_any">{t("entry.groupAny")}</option>
+        <option value="group_one">{t("entry.groupOne")}</option>
+        <option value="group_more_than_one">{t("entry.groupMany")}</option>
+      </select>
+      {value?.kind === "tag" && (
+        <TagSelect value={value.tag_id} onChange={(v) => onChange({ ...value, tag_id: v })} t={t} />
+      )}
+      {value?.kind === "tag_group" && (
+        <TagGroupInput value={value.group} onChange={(g) => onChange({ ...value, group: g })} t={t} />
+      )}
+      <p className="text-[11px] text-muted-foreground">{t("entry.hint")}</p>
+    </div>
+  )
+}
+
 /** Tag group name with the account's existing groups as suggestions. */
 function TagGroupInput({
   value,
@@ -942,6 +1008,18 @@ function TriggerCard({
                   t={t}
                 />
               </div>
+            )}
+            {type !== "time_based" && (
+              <AutomationEntryCondition
+                value={config.entry_condition as EntryCond | undefined}
+                onChange={(entry_condition) => {
+                  const next = { ...config }
+                  if (entry_condition) next.entry_condition = entry_condition
+                  else delete next.entry_condition
+                  onConfigChange(next)
+                }}
+                t={t}
+              />
             )}
             {type === "time_based" && (
               <div>

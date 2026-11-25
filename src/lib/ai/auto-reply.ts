@@ -19,6 +19,8 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { assertFeature, BillingBlockedError } from '@/lib/billing/server'
 import { triggerMatches } from '@/lib/automations/engine'
 import { loadProjectScope } from './project-scope'
+import { contactTagsWithGroups } from '@/lib/tags/groups'
+import { parseEntryCondition, passesEntryCondition } from '@/lib/flows/entry-condition'
 import type { Automation } from '@/types'
 
 interface DispatchArgs {
@@ -52,6 +54,7 @@ export async function replyingAutomationMatches(
   db: ReturnType<typeof supabaseAdmin>,
   accountId: string,
   ctx: { message_text: string; first_inbound?: boolean },
+  contactId?: string,
 ): Promise<boolean> {
   const { data: autos } = await db
     .from('automations')
@@ -59,8 +62,18 @@ export async function replyingAutomationMatches(
     .eq('account_id', accountId)
     .eq('is_active', true)
     .in('trigger_type', ['new_message_received', 'keyword_match'])
-  const matched = ((autos ?? []) as unknown as Automation[]).filter((a) => triggerMatches(a, ctx))
+  let matched = ((autos ?? []) as unknown as Automation[]).filter((a) => triggerMatches(a, ctx))
   if (matched.length === 0) return false
+  // An automation limited to other contacts ("only for project A") won't
+  // reply to this one, so it must not silence the AI either.
+  if (matched.some((a) => parseEntryCondition((a.trigger_config as { entry_condition?: unknown })?.entry_condition))) {
+    const tags = contactId ? await contactTagsWithGroups(db, accountId, contactId).catch(() => null) : []
+    matched = matched.filter((a) => {
+      const cond = parseEntryCondition((a.trigger_config as { entry_condition?: unknown })?.entry_condition)
+      return !cond || (tags !== null && passesEntryCondition(cond, tags))
+    })
+    if (matched.length === 0) return false
+  }
   const { data: steps } = await db
     .from('automation_steps')
     .select('automation_id, step_type')
@@ -146,7 +159,7 @@ export async function dispatchInboundToAiReply(
       (await replyingAutomationMatches(db, accountId, {
         message_text: args.inboundText,
         first_inbound: args.firstInbound,
-      }))
+      }, contactId))
     ) {
       return
     }
@@ -224,7 +237,7 @@ export async function dispatchInboundToAiReply(
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
-      ...(scope ? { projectScope: { projects: scope.displayNames } } : {}),
+      ...(scope ? { projectScope: { projects: scope.displayNames, instructions: scope.instructions } } : {}),
     })
 
     const { text, handoff, usage } = await generateReply({

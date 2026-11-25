@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
-import { parseOptions, projectTagNames, sourceKey } from '@/lib/integrations/real-expert/config'
-import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
+import { parseOptions } from '@/lib/integrations/real-expert/config'
+import { mergeProjectSettings } from '@/lib/integrations/real-expert/projects-bridge'
+import { applyPartnerProjects } from '@/lib/projects/partner-sync'
+import { loadProjects } from '@/lib/projects/store'
+import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server'
 
 /**
@@ -11,8 +14,10 @@ import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server
  *         welcome_template?: { name, language? } | null,
  *         source_tags?: { [source]: tag | "" },     // "" removes one
  *         replace_source_tags?: boolean,            // default: merge
- *         projects?: { [name|code]: { name?, tag?, code?, ads?: string[], welcome?: { template, language? } | 'none' } | null },
+ *         projects?: { [name|code]: { name?, tag?, code?, category?, keywords?, ad_ids?, ads?,
+ *                       welcome?: { template, language? } | 'none' | 'default', ai_instructions?, active? } | null },
  *         replace_projects?: boolean,               // default: merge; null removes one
+ *                                                   // (writes the workspace's Projects)
  *         fallback_welcome?: boolean }              // default welcome for unmatched projects
  *
  * Lets Real Expert set, for one linked workspace, who greets new leads,
@@ -51,24 +56,27 @@ export async function POST(request: Request) {
     patch.source_tags = b.replace_source_tags === true ? incoming : { ...stored.source_tags, ...incoming }
   }
   if (b.fallback_welcome !== undefined) patch.fallback_welcome = b.fallback_welcome
+  // Projects now live in the workspace's Projects (Settings → Projects),
+  // shared by every lead source; the integration's own copy is retired.
+  let projectErrors: string[] = []
   if (b.projects !== undefined) {
     if (!b.projects || typeof b.projects !== 'object' || Array.isArray(b.projects)) {
       return NextResponse.json({ error: 'projects must be an object of project → settings.', field: 'projects' }, { status: 400 })
     }
-    // Stored keys are normalised; normalise incoming the same way so a
-    // merge updates rather than duplicates. null removes one project.
-    const base: Record<string, unknown> = b.replace_projects === true ? {} : { ...stored.projects }
-    for (const [k, v] of Object.entries(b.projects as Record<string, unknown>)) {
-      const key = sourceKey(k)
-      if (!key) continue
-      if (v === null) delete base[key]
-      else base[key] = v && typeof v === 'object' && !Array.isArray(v) ? { name: k, ...(v as Record<string, unknown>) } : v
-    }
-    patch.projects = base
+    const auditUserId = await resolveAuditUserId(db, integration.account_id)
+    const applied = await applyPartnerProjects(db, {
+      accountId: integration.account_id,
+      userId: auditUserId,
+      projects: b.projects as Record<string, unknown>,
+      replace: b.replace_projects === true,
+    })
+    projectErrors = applied.errors
+    patch.projects = {}
   }
   const { options, invalid } = parseOptions({ ...stored, ...patch })
-  if (invalid.length > 0) {
-    return NextResponse.json({ error: `Check: ${invalid.join(', ')}.`, fields: invalid }, { status: 400 })
+  if (invalid.length > 0 || projectErrors.length > 0) {
+    const fields = [...invalid, ...projectErrors]
+    return NextResponse.json({ error: `Check: ${fields.join(', ')}.`, fields }, { status: 400 })
   }
 
   let templateName = row.welcome_template_name as string | null
@@ -114,16 +122,15 @@ export async function POST(request: Request) {
       })
       .eq('id', integration.id)
     if (upErr) return NextResponse.json({ error: 'Could not save the settings.' }, { status: 500 })
-    await assignTagsToGroup(db, integration.account_id, projectTagNames(options.projects), PROJECT_TAG_GROUP).catch(
-      (err) => console.error('[partner settings] could not group project tags:', err),
-    )
   }
 
+  const workspaceProjects = await loadProjects(db, integration.account_id)
   return NextResponse.json({
     greeting_by: options.greeting_by,
     welcome_template: templateName ? { name: templateName, language: templateLanguage } : null,
     source_tags: options.source_tags,
-    projects: options.projects,
+    projects: mergeProjectSettings({}, workspaceProjects),
+    workspace_projects: workspaceProjects,
     fallback_welcome: options.fallback_welcome,
   })
 }

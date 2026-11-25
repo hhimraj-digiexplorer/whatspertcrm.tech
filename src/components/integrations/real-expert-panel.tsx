@@ -70,8 +70,6 @@ interface Draft {
   options: RealExpertOptions;
   /** Editable rows for options.source_tags. */
   source_tag_rows: SourceTagRow[];
-  /** Editable rows for options.projects. */
-  project_rows: ProjectRow[];
 }
 
 function toDraft(i: RealExpertIntegration | null): Draft {
@@ -88,13 +86,6 @@ function toDraft(i: RealExpertIntegration | null): Draft {
       : "",
     options: i?.options ?? DEFAULT_OPTIONS,
     source_tag_rows: Object.entries(i?.options?.source_tags ?? {}).map(([source, tag]) => ({ source, tag })),
-    project_rows: Object.values(i?.options?.projects ?? {}).map((p) => ({
-      name: p.name,
-      tag: p.tag ?? "",
-      welcome: p.welcome === "none" ? "none" : p.welcome ? `${p.welcome.template}|${p.welcome.language ?? ""}` : "",
-      code: p.code ?? "",
-      ads: (p.ads ?? []).join(", "),
-    })),
   };
 }
 
@@ -177,26 +168,6 @@ export function RealExpertPanel({
               draft.source_tag_rows
                 .map((r) => [r.source.trim(), r.tag.trim()] as const)
                 .filter(([src, tag]) => src && tag),
-            ),
-            projects: Object.fromEntries(
-              draft.project_rows
-                .filter((r) => r.name.trim())
-                .map((r) => {
-                  const [tplName, tplLang] = r.welcome.split("|");
-                  return [
-                    r.name.trim(),
-                    {
-                      name: r.name.trim(),
-                      tag: r.tag.trim() || undefined,
-                      welcome: r.welcome === "none" ? "none" : tplName ? { template: tplName, language: tplLang || undefined } : undefined,
-                      code: r.code.trim() || undefined,
-                      ads: r.ads
-                        .split(",")
-                        .map((a) => a.trim())
-                        .filter(Boolean),
-                    },
-                  ] as const;
-                }),
             ),
           },
           ...extra,
@@ -364,12 +335,13 @@ export function RealExpertPanel({
                   </Field>
                 )}
                 <SourceTagsEditor rows={draft.source_tag_rows} onChange={(rows) => set("source_tag_rows", rows)} />
-                <ProjectsEditor
-                  rows={draft.project_rows}
-                  onChange={(rows) => set("project_rows", rows)}
-                  templates={templates}
-                  showWelcome={draft.options.greeting_by === "whatspert"}
-                />
+                <div className="rounded-xl border border-border p-3 text-sm">
+                  <p className="font-medium text-foreground">{t("projectsTitle")}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t("projectsMoved")}</p>
+                  <a href="/settings?tab=projects" className="mt-2 inline-block text-sm font-medium text-primary hover:underline">
+                    {t("projectsOpen")} →
+                  </a>
+                </div>
                 {draft.options.greeting_by === "whatspert" && (
                   <label className="flex items-start gap-2 text-sm text-foreground">
                     <input
@@ -626,116 +598,3 @@ function SourceTagsEditor({ rows, onChange }: { rows: SourceTagRow[]; onChange: 
   );
 }
 
-type ProjectRow = {
-  name: string;
-  tag: string;
-  welcome: string /* "" | "none" | "name|lang" */;
-  code: string;
-  /** Comma-separated ad ids or words. */
-  ads: string;
-};
-
-/**
- * Projects (channel partners): a lead's project — matched on its code,
- * tag, id or name — gets this tag and this welcome.
- */
-function ProjectsEditor({
-  rows,
-  onChange,
-  templates,
-  showWelcome,
-}: {
-  rows: ProjectRow[];
-  onChange: (rows: ProjectRow[]) => void;
-  templates: TemplateOption[];
-  showWelcome: boolean;
-}) {
-  const t = useTranslations("Integrations.realExpert");
-  const update = (i: number, patch: Partial<ProjectRow>) =>
-    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  return (
-    <div className="space-y-2.5">
-      <div>
-        <p className="text-sm font-medium text-foreground">{t("projectsTitle")}</p>
-        <p className="text-xs text-muted-foreground">{t("projectsHint")}</p>
-      </div>
-      {rows.map((r, i) => (
-        <div key={i} className="space-y-2 rounded-xl border border-border p-3">
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1.3fr_auto] sm:items-center">
-          <input
-            className={inputCls}
-            value={r.name}
-            onChange={(e) => update(i, { name: e.target.value })}
-            placeholder={t("projectsName")}
-            aria-label={t("projectsName")}
-            maxLength={120}
-          />
-          <input
-            className={inputCls}
-            value={r.tag}
-            onChange={(e) => update(i, { tag: e.target.value })}
-            placeholder={t("projectsTag")}
-            aria-label={t("projectsTag")}
-            maxLength={50}
-          />
-          {showWelcome ? (
-            <select className={inputCls} value={r.welcome} onChange={(e) => update(i, { welcome: e.target.value })} aria-label={t("projectsWelcome")}>
-              <option value="">{t("projectsWelcomeDefault")}</option>
-              <option value="none">{t("projectsWelcomeNone")}</option>
-              {templates.map((tp) => (
-                <option key={`${tp.name}|${tp.language ?? ""}`} value={`${tp.name}|${tp.language ?? ""}`}>
-                  {tp.name} ({tp.language ?? "—"})
-                </option>
-              ))}
-              {r.welcome && r.welcome !== "none" && !templates.some((tp) => `${tp.name}|${tp.language ?? ""}` === r.welcome) && (
-                <option value={r.welcome}>{r.welcome.replace("|", " (")})</option>
-              )}
-            </select>
-          ) : (
-            <span className="hidden sm:block" />
-          )}
-          <button
-            type="button"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            aria-label={t("sourceTagsRemove")}
-            title={t("sourceTagsRemove")}
-            className="justify-self-end rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_2.3fr_auto] sm:items-center">
-          <input
-            className={inputCls}
-            value={r.code}
-            onChange={(e) => update(i, { code: e.target.value })}
-            placeholder={t("projectsCode")}
-            aria-label={t("projectsCode")}
-            maxLength={60}
-          />
-          <input
-            className={inputCls}
-            value={r.ads}
-            onChange={(e) => update(i, { ads: e.target.value })}
-            placeholder={t("projectsAds")}
-            aria-label={t("projectsAds")}
-            title={t("projectsAdsHint")}
-            maxLength={1200}
-          />
-          <span className="hidden w-8 sm:block" />
-        </div>
-        </div>
-      ))}
-      {rows.length > 0 && <p className="text-xs text-muted-foreground">{t("projectsAdsHint")}</p>}
-      {rows.length < 50 && (
-        <button
-          type="button"
-          onClick={() => onChange([...rows, { name: "", tag: "", welcome: "", code: "", ads: "" }])}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          + {t("projectsAdd")}
-        </button>
-      )}
-    </div>
-  );
-}

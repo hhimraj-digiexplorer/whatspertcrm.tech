@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { matchProject, parseOptions, projectForReferral, projectForTags, projectTagNames } from './config'
-import { parseReferral } from './ad-referral'
+import { parseReferral } from '@/lib/projects/inbound'
 
 const { options, invalid } = parseOptions({
   projects: {

@@ -16,6 +16,7 @@ import { TemplateManager } from '@/components/settings/template-manager';
 import { QuickRepliesManager } from '@/components/settings/quick-replies-manager';
 import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
 import { DealsSettings } from '@/components/settings/deals-settings';
+import { ProjectsPanel } from '@/components/settings/projects-panel';
 import { MembersTab } from '@/components/settings/members-tab';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import { BillingPanel } from '@/components/settings/billing-panel';
@@ -79,6 +80,7 @@ function SettingsPageInner() {
     templates: <TemplateManager />,
     'quick-replies': <QuickRepliesManager />,
     fields: <FieldsAndTagsPanel />,
+    projects: <ProjectsPanel />,
     deals: <DealsSettings />,
     members: <MembersTab />,
     billing: <BillingPanel />,

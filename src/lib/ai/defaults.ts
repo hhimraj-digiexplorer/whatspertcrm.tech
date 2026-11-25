@@ -59,7 +59,7 @@ export function buildSystemPrompt(args: {
    * tags in the "Project" group, as display names). Set only when the
    * account turned project scope on.
    */
-  projectScope?: { projects: string[] }
+  projectScope?: { projects: string[]; instructions?: string[] }
 }): string {
   const { userPrompt, mode, knowledge, projectScope } = args
   const parts: string[] = [
@@ -84,6 +84,9 @@ export function buildSystemPrompt(args: {
 
   if (projectScope) {
     parts.push(projectScopeInstruction(projectScope.projects, mode))
+    if (projectScope.instructions && projectScope.instructions.length > 0) {
+      parts.push(`Project notes from the business (use only for the matching project):\n${projectScope.instructions.join('\n\n')}`)
+    }
   }
 
   if (knowledge && knowledge.length > 0) {

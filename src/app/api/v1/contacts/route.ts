@@ -9,6 +9,9 @@
 // ============================================================
 
 import { requireApiKey } from '@/lib/auth/api-context';
+import { supabaseAdmin } from '@/lib/automations/admin-client';
+import { matchByValue, type Project } from '@/lib/projects/match';
+import { assignContactProject, loadProjects } from '@/lib/projects/store';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
 import {
@@ -111,6 +114,26 @@ export async function POST(request: Request) {
       return fail('bad_request', "'phone' is required", 400);
     }
 
+    // Optional project (code, tag or name from Settings → Projects): the
+    // contact gets the project's tag and its Tag Added automations start.
+    const projectValue =
+      typeof body.project === 'string' || typeof body.project === 'number'
+        ? String(body.project)
+        : typeof body.project_code === 'string'
+          ? body.project_code
+          : null;
+    let projectMatch: Project | null = null;
+    if (projectValue) {
+      const match = matchByValue(
+        (await loadProjects(supabaseAdmin(), ctx.accountId)).filter((p) => p.is_active),
+        [projectValue],
+      );
+      if (!match.project) {
+        return fail('bad_request', match.ambiguous ? `'project' matches more than one project` : `Unknown 'project': ${projectValue}`, 400);
+      }
+      projectMatch = match.project;
+    }
+
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 
     const { id, created } = await findOrCreateContact(
@@ -142,6 +165,16 @@ export async function POST(request: Request) {
         accountId: ctx.accountId,
         triggerType: 'new_contact_created',
         contactId: id,
+      });
+    }
+
+    if (projectMatch) {
+      await assignContactProject(supabaseAdmin(), {
+        accountId: ctx.accountId,
+        contactId: id,
+        userId: auditUserId,
+        project: projectMatch,
+        context: { source: 'api' },
       });
     }
 

@@ -17,6 +17,7 @@ import {
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
+import { withWorkspaceProjects } from '@/lib/integrations/real-expert/projects-bridge'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
 
@@ -119,7 +120,8 @@ export async function POST(request: Request, { params }: Params) {
   const nested = [raw.data, raw.lead].find((v) => v && typeof v === 'object')
   const lead = (nested ?? raw) as Record<string, unknown>
 
-  const options = parseOptions(integration.options).options
+  // Projects come from the workspace's Projects list (Settings → Projects).
+  const options = await withWorkspaceProjects(db, integration.account_id as string, parseOptions(integration.options).options)
   const digits = toInternationalDigits(lead.phone ?? lead.mobile ?? lead.whatsapp, options.default_country_code)
   if (!digits) {
     return NextResponse.json({ error: 'The lead has no valid phone number.' }, { status: 400 })
