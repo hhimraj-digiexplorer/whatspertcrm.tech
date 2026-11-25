@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account'
+import { getCurrentAccount, requireRole, toErrorResponse } from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
+import { connectionErrorResponse, loadAccountConnection } from '@/lib/whatsapp/connection'
+import { addPhoneNumber } from '@/lib/whatsapp/meta-api'
+import { explainMetaError, metaErrorPayload } from '@/lib/whatsapp/meta-error-explain'
+import { parseNewNumber } from '@/lib/whatsapp/number-onboarding'
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const FIELDS = [
@@ -24,6 +29,7 @@ export interface WabaNumberHealth {
   messaging_limit_tier: string | null
   status: string | null
   name_status: string | null
+  code_verification_status?: string | null
   platform_type: string | null
   last_onboarded_time: string | null
 }
@@ -95,5 +101,47 @@ export async function GET() {
     }
   } catch (err) {
     return toErrorResponse(err)
+  }
+}
+
+const ADD_ERRORS = {
+  cc: 'Enter the country code, e.g. 91.',
+  phone_number: 'Enter the phone number without the country code.',
+  verified_name: 'Enter a display name of 3 to 75 characters (usually your business name).',
+} as const
+
+/**
+ * POST /api/whatsapp/numbers — add a phone number to the connected
+ * WhatsApp Business Account. Body: { cc, phone_number, verified_name }.
+ * Returns { id }; the page then sends the SMS/voice code to it.
+ */
+export async function POST(request: Request) {
+  try {
+    const ctx = await requireRole('admin')
+    const limit = checkRateLimit(`wa-number-add:${ctx.userId}`, RATE_LIMITS.adminAction)
+    if (!limit.success) return rateLimitResponse(limit)
+
+    const parsed = parseNewNumber(await request.json().catch(() => null))
+    if ('error' in parsed) {
+      return NextResponse.json({ error: ADD_ERRORS[parsed.error], field: parsed.error }, { status: 400 })
+    }
+    const conn = await loadAccountConnection(ctx.supabase, ctx.accountId, { requireWaba: true })
+    try {
+      const { id } = await addPhoneNumber({
+        wabaId: conn.wabaId!,
+        accessToken: conn.accessToken,
+        ...parsed.value,
+      })
+      return NextResponse.json({ id })
+    } catch (err) {
+      const explained = explainMetaError(err, 'add_number', { wabaId: conn.wabaId })
+      console.error('[numbers] add failed:', explained.metaMessage)
+      return NextResponse.json(
+        { error: explained.summary, meta: metaErrorPayload(explained) },
+        { status: explained.httpStatus },
+      )
+    }
+  } catch (err) {
+    return connectionErrorResponse(err) ?? toErrorResponse(err)
   }
 }

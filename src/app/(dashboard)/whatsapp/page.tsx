@@ -26,6 +26,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useEmbeddedSignup, type SignupResult } from "@/components/whatsapp/use-embedded-signup";
 import { WhatsAppConfig } from "@/components/settings/whatsapp-config";
+import { AddNumberDialog, type AddNumberStart } from "@/components/whatsapp/add-number-dialog";
+import { ConnectionHealth } from "@/components/whatsapp/connection-health";
 import { cn } from "@/lib/utils";
 
 interface NumberHealth {
@@ -36,6 +38,7 @@ interface NumberHealth {
   messaging_limit_tier: string | null;
   status: string | null;
   name_status: string | null;
+  code_verification_status?: string | null;
 }
 
 interface NumbersResponse {
@@ -65,6 +68,7 @@ export default function WhatsAppSetupPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [showOptions, setShowOptions] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [addStart, setAddStart] = useState<AddNumberStart | null>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
   const manualRef = useRef<HTMLDivElement>(null);
 
@@ -281,6 +285,15 @@ export default function WhatsAppSetupPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {canEditSettings && data.waba_id && (
+                <button
+                  type="button"
+                  onClick={() => setAddStart({ step: "details" })}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                >
+                  <Plus className="size-4" /> {t("addNumber")}
+                </button>
+              )}
               <button type="button" onClick={reload} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5">
                 <RefreshCw className="size-4" /> {t("refresh")}
               </button>
@@ -325,12 +338,13 @@ export default function WhatsAppSetupPage() {
                     <th className="px-5 py-3 font-medium">{t("colLimit")}</th>
                     <th className="px-5 py-3 font-medium">{t("colLastSync")}</th>
                     <th className="px-5 py-3 font-medium">{t("colInUse")}</th>
+                    {canEditSettings && <th className="px-5 py-3 font-medium"><span className="sr-only">{t("colActions")}</span></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {numbers.length === 0 ? (
                     <tr className="border-t border-border">
-                      <td colSpan={6} className="px-5 py-6 text-center text-muted-foreground">{t("noNumbers")}</td>
+                      <td colSpan={canEditSettings ? 7 : 6} className="px-5 py-6 text-center text-muted-foreground">{t("noNumbers")}</td>
                     </tr>
                   ) : (
                     numbers.map((n) => {
@@ -374,6 +388,29 @@ export default function WhatsAppSetupPage() {
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </td>
+                          {canEditSettings && (
+                            <td className="px-5 py-4 text-right">
+                              {n.id !== data.phone_number_id && data.waba_id && (
+                                n.code_verification_status && n.code_verification_status !== "VERIFIED" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAddStart({ step: "code", phoneNumberId: n.id, display: n.display_phone_number })}
+                                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
+                                  >
+                                    {t("verifyNumber")}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAddStart({ step: "activate", phoneNumberId: n.id, display: n.display_phone_number })}
+                                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
+                                  >
+                                    {t("useNumber")}
+                                  </button>
+                                )
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -389,6 +426,17 @@ export default function WhatsAppSetupPage() {
       ) : !canEditSettings ? (
         <p className="text-sm text-muted-foreground">{t("askAdmin")}</p>
       ) : null}
+
+      {connected && data?.waba_id && (
+        <ConnectionHealth canRepair={canEditSettings} reloadKey={reloadKey} onRepaired={reload} />
+      )}
+
+      <AddNumberDialog
+        start={addStart}
+        hasNumberInUse={connected}
+        onClose={() => setAddStart(null)}
+        onDone={reload}
+      />
 
       {/* Manual credentials (existing form) */}
       {canEditSettings && (

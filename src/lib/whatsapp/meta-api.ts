@@ -319,6 +319,176 @@ export async function getSubscribedApps(
 }
 
 // ============================================================
+// Adding a number by SMS / voice code
+// ============================================================
+//
+//   POST /{waba_id}/phone_numbers      add the number (cc + number + display name)
+//   POST /{phone_number_id}/request_code   send a 6-digit code by SMS or call
+//   POST /{phone_number_id}/verify_code    confirm the code
+//   POST /{phone_number_id}/register       (above) put it on the Cloud API
+//
+// The display name goes to Meta for review; the number can message
+// while the name is pending.
+
+export interface AddPhoneNumberArgs {
+  wabaId: string
+  accessToken: string
+  /** Country calling code, digits only (e.g. "91"). */
+  cc: string
+  /** National number, digits only, without the country code. */
+  phoneNumber: string
+  /** Display name shown to customers; reviewed by Meta. */
+  verifiedName: string
+}
+
+export async function addPhoneNumber(args: AddPhoneNumberArgs): Promise<{ id: string }> {
+  const { wabaId, accessToken, cc, phoneNumber, verifiedName } = args
+  const response = await fetch(`${META_API_BASE}/${wabaId}/phone_numbers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ cc, phone_number: phoneNumber, verified_name: verifiedName }),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+  const data = (await response.json()) as { id?: string }
+  if (!data.id) throw new Error('Meta did not return the new phone number id.')
+  return { id: data.id }
+}
+
+export interface RequestVerificationCodeArgs {
+  phoneNumberId: string
+  accessToken: string
+  method: 'SMS' | 'VOICE'
+  /** Language of the SMS / call, e.g. "en" or "en_US". */
+  language: string
+}
+
+export async function requestVerificationCode(args: RequestVerificationCodeArgs): Promise<void> {
+  const { phoneNumberId, accessToken, method, language } = args
+  const response = await fetch(`${META_API_BASE}/${phoneNumberId}/request_code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ code_method: method, language }),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+}
+
+export interface VerifyPhoneCodeArgs {
+  phoneNumberId: string
+  accessToken: string
+  code: string
+}
+
+export async function verifyPhoneCode(args: VerifyPhoneCodeArgs): Promise<void> {
+  const { phoneNumberId, accessToken, code } = args
+  const response = await fetch(`${META_API_BASE}/${phoneNumberId}/verify_code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+}
+
+export interface PhoneNumberState {
+  id: string
+  status?: string
+  code_verification_status?: string
+  platform_type?: string
+  display_phone_number?: string
+}
+
+/** Registration-relevant state of one number (status, verification, platform). */
+export async function getPhoneNumberState(args: {
+  phoneNumberId: string
+  accessToken: string
+}): Promise<PhoneNumberState> {
+  const { phoneNumberId, accessToken } = args
+  const url = `${META_API_BASE}/${phoneNumberId}?fields=id,status,code_verification_status,platform_type,display_phone_number`
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+  return response.json()
+}
+
+// ============================================================
+// Account setup checks (why a business can't send)
+// ============================================================
+
+export interface WabaHealthError {
+  error_code?: number
+  error_description?: string
+  possible_solution?: string
+}
+
+export interface WabaHealthEntity {
+  entity_type?: string
+  id?: string
+  can_send_message?: string
+  errors?: WabaHealthError[]
+}
+
+export interface WabaSetupStatus {
+  name: string | null
+  /** PENDING | APPROVED | REJECTED */
+  accountReviewStatus: string | null
+  /** e.g. verified | unverified | pending | rejected | not_verified */
+  businessVerificationStatus: string | null
+  /** true when a payment method is attached; null when Meta didn't say */
+  hasPaymentMethod: boolean | null
+  /** AVAILABLE | LIMITED | BLOCKED, or null when Meta didn't say */
+  canSendMessage: string | null
+  healthEntities: WabaHealthEntity[]
+}
+
+/**
+ * Reads the fields that most often explain "my client can't send":
+ * business verification, account review, payment method and Meta's own
+ * health_status roll-up. Each group is fetched on its own so one field
+ * Meta won't return for this account doesn't hide the others.
+ */
+export async function getWabaSetupStatus(args: {
+  wabaId: string
+  accessToken: string
+}): Promise<WabaSetupStatus> {
+  const { wabaId, accessToken } = args
+  const get = async (fields: string) => {
+    const response = await fetch(`${META_API_BASE}/${wabaId}?fields=${fields}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    })
+    if (!response.ok) await throwMetaError(response, `Meta API error: ${response.status}`)
+    return (await response.json()) as Record<string, unknown>
+  }
+  const [core, funding, health] = await Promise.allSettled([
+    get('name,account_review_status,business_verification_status'),
+    get('primary_funding_id'),
+    get('health_status'),
+  ])
+  if (core.status === 'rejected') throw core.reason
+  const c = core.value
+  const healthStatus =
+    health.status === 'fulfilled'
+      ? (health.value.health_status as { can_send_message?: string; entities?: WabaHealthEntity[] } | undefined)
+      : undefined
+  return {
+    name: typeof c.name === 'string' ? c.name : null,
+    accountReviewStatus: typeof c.account_review_status === 'string' ? c.account_review_status : null,
+    businessVerificationStatus:
+      typeof c.business_verification_status === 'string' ? c.business_verification_status : null,
+    hasPaymentMethod:
+      funding.status === 'fulfilled' ? typeof funding.value.primary_funding_id === 'string' : null,
+    canSendMessage: healthStatus?.can_send_message ?? null,
+    healthEntities: healthStatus?.entities ?? [],
+  }
+}
+
+// ============================================================
 // Sending
 // ============================================================
 
