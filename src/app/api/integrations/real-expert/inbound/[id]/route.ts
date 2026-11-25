@@ -9,6 +9,7 @@ import {
   chooseWelcome,
   cleanTagName,
   leadTagNames,
+  leadNamesProject,
   matchProject,
   parseOptions,
   slugify,
@@ -18,6 +19,8 @@ import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { withWorkspaceProjects } from '@/lib/integrations/real-expert/projects-bridge'
+import { resolveProject } from '@/lib/projects/match'
+import { loadProjects } from '@/lib/projects/store'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
 
@@ -114,7 +117,8 @@ export async function POST(request: Request, { params }: Params) {
   }
   if (!raw || typeof raw !== 'object') return NextResponse.json({ error: 'Send the lead as JSON.' }, { status: 400 })
   // Real Expert webhooks carry every subscribed event; only new leads matter.
-  if (typeof raw.event === 'string' && raw.event !== 'lead.created') {
+  // `enquiry.created` = an existing lead enquired about another project.
+  if (typeof raw.event === 'string' && !['lead.created', 'enquiry.created', 'lead.enquiry_created'].includes(raw.event)) {
     return NextResponse.json({ ignored: true, reason: 'event' })
   }
   const nested = [raw.data, raw.lead].find((v) => v && typeof v === 'object')
@@ -168,6 +172,10 @@ export async function POST(request: Request, { params }: Params) {
       ['Project code', str(lead.project_code, 60)],
       ['Enquiry', str(lead.enquiry_id, 100)],
       ['City', str(lead.city, 80)],
+      ['Campaign', str(lead.campaign_name ?? lead.campaign, 120)],
+      ['Ad', str(lead.ad_name, 120)],
+      ['Form', str(lead.form_name, 120)],
+      ['Budget', str(lead.budget, 60)],
       ['Repeat enquiry', repeat ? 'yes' : null],
     ].filter(([, v]) => v)
     if (details.length > 0) {
@@ -207,7 +215,22 @@ export async function POST(request: Request, { params }: Params) {
       .eq('status', 'pending')
 
     // Which project this lead is for, and its tag(s).
-    const project = matchProject(options.projects, lead)
+    // The project: by code / tag / id / name, else (no project named) by
+    // the Meta ad id or a project keyword in the campaign / ad / form.
+    let project = matchProject(options.projects, lead)
+    if (!project && !leadNamesProject(lead)) {
+      const active = await loadProjects(db, accountId)
+        .then((all) => all.filter((p) => p.is_active))
+        .catch(() => [])
+      const fallback = resolveProject(active, {
+        adId: lead.ad_id,
+        sourceTexts: [lead.campaign_name, lead.campaign, lead.ad_name, lead.form_name, lead.utm_campaign],
+      })
+      if (fallback.project) {
+        const key = Object.keys(options.projects).find((k) => options.projects[k].tag?.toLowerCase() === fallback.project!.tag.toLowerCase())
+        if (key) project = { key, setting: options.projects[key] }
+      }
+    }
     const projectTagNames = [project?.setting.tag, lead.project_tag].filter(Boolean)
     // Already enquired about this project? (contact had its tag before
     // this push) — then don't greet it again.

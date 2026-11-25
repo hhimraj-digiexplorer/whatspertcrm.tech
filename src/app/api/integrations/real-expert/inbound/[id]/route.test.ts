@@ -25,6 +25,7 @@ vi.mock('@/lib/contacts/resolve-import-tags', () => ({ resolveImportTagIds: h.ta
 
 vi.mock('@/lib/whatsapp/encryption', () => ({ decrypt: (v: string) => v.replace(/^enc\(|\)$/g, '') }))
 vi.mock('@/lib/api/v1/contacts', () => ({ resolveAuditUserId: async () => 'owner-1' }))
+vi.mock('@/lib/projects/store', () => ({ loadProjects: async () => [] }))
 vi.mock('@/lib/whatsapp/resolve-conversation', () => ({ resolveConversationByPhone: h.resolve }))
 vi.mock('@/lib/whatsapp/send-message', async (orig) => ({
   ...(await orig<typeof import('@/lib/whatsapp/send-message')>()),
@@ -235,6 +236,12 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
       { params: Promise.resolve({ id: ID }) },
     )
     expect(res.status).toBe(401)
+  })
+
+  it('accepts enquiry.created — an existing lead enquiring about another project', async () => {
+    const res = await call({ event: 'enquiry.created', data: { lead_id: 9, first_name: 'Ravi', phone: '9876543210', source: 'website', project_code: 'SKY', is_repeat_enquiry: true } })
+    expect(res.status).toBe(200)
+    expect(h.resolve).toHaveBeenCalled()
   })
 
   it('ignores other Real Expert events', async () => {

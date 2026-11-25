@@ -1,7 +1,8 @@
 /**
  * Projects set from a partner CRM (Real Expert's signed settings API):
- * `{ [name|code]: { name?, tag?, code?, category?, keywords?, ad_ids?,
- * ads?, welcome?, ai_instructions?, active? } | null }`. Each entry is
+ * `{ [name|code]: { name?, tag?, code?, category? | type?, keywords?,
+ * ad_ids? | meta_ad_ids?, ads?, welcome?, ai_instructions? | ai_notes?,
+ * active? } | null }`. The key is used as the code when no code is sent. Each entry is
  * created or updated in the workspace's Projects (matched on code, tag,
  * then name); null deletes it; `replace` deletes projects not sent.
  */
@@ -22,15 +23,18 @@ export function partnerProjectBody(key: string, v: Record<string, unknown>): Rec
     name,
     tag: typeof v.tag === 'string' && v.tag.trim() ? v.tag.trim() : suggestTag(name),
   }
+  // The key is the project code unless the entry names one itself.
   if (v.code !== undefined) body.code = v.code
-  if (v.category !== undefined) body.category = v.category
+  else if (/^[\p{L}\p{N}][\p{L}\p{N}._\-/ ]{0,59}$/u.test(key.trim())) body.code = key.trim()
+  if (v.category !== undefined || v.type !== undefined) body.category = v.category ?? v.type
   const keywords = [
     ...(Array.isArray(v.keywords) ? v.keywords.map(String) : typeof v.keywords === 'string' ? v.keywords.split(',') : []),
     ...ads.filter((a) => !/^\s*\d+\s*$/.test(a)),
   ]
-  const adIds = [...(Array.isArray(v.ad_ids) ? v.ad_ids.map(String) : []), ...ads.filter((a) => /^\s*\d+\s*$/.test(a))]
+  const rawIds = v.ad_ids ?? v.meta_ad_ids
+  const adIds = [...(Array.isArray(rawIds) ? rawIds.map(String) : typeof rawIds === 'string' ? rawIds.split(',') : []), ...ads.filter((a) => /^\s*\d+\s*$/.test(a))]
   if (v.keywords !== undefined || v.ads !== undefined) body.keywords = keywords
-  if (v.ad_ids !== undefined || v.ads !== undefined) body.ad_ids = adIds.map((a) => a.trim())
+  if (rawIds !== undefined || v.ads !== undefined) body.ad_ids = adIds.map((a) => a.trim()).filter(Boolean)
   if (v.welcome === 'none') body.welcome_mode = 'none'
   else if (v.welcome && typeof v.welcome === 'object') {
     const w = v.welcome as Record<string, unknown>
@@ -38,7 +42,7 @@ export function partnerProjectBody(key: string, v: Record<string, unknown>): Rec
     body.welcome_template = w.template
     body.welcome_language = w.language ?? null
   } else if (v.welcome === null || v.welcome === 'default') body.welcome_mode = 'default'
-  if (v.ai_instructions !== undefined) body.ai_instructions = v.ai_instructions
+  if (v.ai_instructions !== undefined || v.ai_notes !== undefined) body.ai_instructions = v.ai_instructions ?? v.ai_notes
   if (typeof v.active === 'boolean') body.is_active = v.active
   return body
 }
