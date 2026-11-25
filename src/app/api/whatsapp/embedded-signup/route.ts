@@ -4,8 +4,11 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { encrypt } from '@/lib/whatsapp/encryption'
 import {
   EmbeddedSignupConfigError,
+  SignupAssetsError,
   exchangeCodeForToken,
   generateTwoStepPin,
+  pickSignupPair,
+  sharedWabaIds,
 } from '@/lib/whatsapp/embedded-signup'
 import {
   listWabaPhoneNumbers,
@@ -23,7 +26,11 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 
 /**
  * POST /api/whatsapp/embedded-signup
- * Body: { code, phone_number_id, waba_id, coexistence? }
+ * Body: { code, phone_number_id, waba_id, coexistence? }        (popup flow)
+ *    or: { code, redirect_uri, coexistence? }                     (mobile redirect flow)
+ *
+ * The redirect flow has no postMessage session info, so the WABA and
+ * number are read from what the client shared with the token.
  *
  * Finishes Meta Embedded Signup for the caller's account:
  *   1. exchange the popup's code for a business integration token;
@@ -43,9 +50,46 @@ export async function POST(request: Request) {
 
     const body = (await request.json().catch(() => null)) as Record<string, unknown> | null
     const code = typeof body?.code === 'string' ? body.code : ''
-    const phoneNumberId = typeof body?.phone_number_id === 'string' ? body.phone_number_id : ''
-    const wabaId = typeof body?.waba_id === 'string' ? body.waba_id : ''
+    let phoneNumberId = typeof body?.phone_number_id === 'string' ? body.phone_number_id : ''
+    let wabaId = typeof body?.waba_id === 'string' ? body.waba_id : ''
     const coexistence = body?.coexistence === true
+    const redirectUri = validRedirectUri(body?.redirect_uri, request)
+    if (body?.redirect_uri !== undefined && !redirectUri) {
+      return NextResponse.json({ error: 'Invalid signup return address.' }, { status: 400 })
+    }
+
+    let accessToken: string | null = null
+    if (redirectUri && code && !phoneNumberId && !wabaId) {
+      try {
+        accessToken = await exchangeCodeForToken(code, redirectUri)
+      } catch (err) {
+        if (err instanceof EmbeddedSignupConfigError) throw err
+        console.error('[embedded-signup] redirect code exchange failed:', err)
+        return NextResponse.json(
+          { error: 'Meta could not confirm the signup. Please run it again.' },
+          { status: 400 },
+        )
+      }
+      try {
+        const wabas = await sharedWabaIds(accessToken)
+        const candidates = await Promise.all(
+          wabas.map(async (id) => ({
+            wabaId: id,
+            phoneIds: (await listWabaPhoneNumbers({ wabaId: id, accessToken: accessToken! })).map((n) => n.id),
+          })),
+        )
+        const pair = pickSignupPair(candidates)
+        wabaId = pair.wabaId
+        phoneNumberId = pair.phoneNumberId
+      } catch (err) {
+        if (err instanceof EmbeddedSignupConfigError) throw err
+        const message =
+          err instanceof SignupAssetsError ? err.message : 'Could not read the WhatsApp account from Meta. Please try again.'
+        if (!(err instanceof SignupAssetsError)) console.error('[embedded-signup] asset lookup failed:', err)
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
+    }
+
     if (!code || !isNumericMetaId(phoneNumberId) || !isNumericMetaId(wabaId)) {
       return NextResponse.json(
         { error: 'Signup did not return a phone number. Please try again.' },
@@ -68,17 +112,19 @@ export async function POST(request: Request) {
       )
     }
 
-    let accessToken: string
-    try {
-      accessToken = await exchangeCodeForToken(code)
-    } catch (err) {
-      if (err instanceof EmbeddedSignupConfigError) throw err
-      console.error('[embedded-signup] code exchange failed:', err)
-      return NextResponse.json(
-        { error: 'Meta could not confirm the signup. Please run it again.' },
-        { status: 400 },
-      )
+    if (!accessToken) {
+      try {
+        accessToken = await exchangeCodeForToken(code)
+      } catch (err) {
+        if (err instanceof EmbeddedSignupConfigError) throw err
+        console.error('[embedded-signup] code exchange failed:', err)
+        return NextResponse.json(
+          { error: 'Meta could not confirm the signup. Please run it again.' },
+          { status: 400 },
+        )
+      }
     }
+    const token: string = accessToken!
     const metaCtx = { phoneNumberId, wabaId }
     const fail = (err: unknown, step: MetaConnectStep) => {
       const explained = explainMetaError(err, step, metaCtx)
@@ -90,7 +136,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const numbers = await listWabaPhoneNumbers({ wabaId, accessToken })
+      const numbers = await listWabaPhoneNumbers({ wabaId, accessToken: token })
       if (!phoneNumberBelongsToWaba(numbers, phoneNumberId)) {
         return NextResponse.json(
           { error: 'The selected number is not part of the selected WhatsApp Business Account.' },
@@ -102,7 +148,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      await subscribeWabaToApp({ wabaId, accessToken })
+      await subscribeWabaToApp({ wabaId, accessToken: token })
     } catch (err) {
       return fail(err, 'subscribe_waba')
     }
@@ -112,7 +158,7 @@ export async function POST(request: Request) {
     if (!coexistence) {
       pin = generateTwoStepPin()
       try {
-        await registerPhoneNumber({ phoneNumberId, accessToken, pin })
+        await registerPhoneNumber({ phoneNumberId, accessToken: token, pin })
       } catch (err) {
         // Keep the connection so the client can retry from the page.
         registrationError = explainMetaError(err, 'register', metaCtx).summary
@@ -122,7 +168,7 @@ export async function POST(request: Request) {
 
     let phoneInfo: Awaited<ReturnType<typeof verifyPhoneNumber>> | null = null
     try {
-      phoneInfo = await verifyPhoneNumber({ phoneNumberId, accessToken })
+      phoneInfo = await verifyPhoneNumber({ phoneNumberId, accessToken: token })
     } catch {
       // Display details only — the number already checked out above.
     }
@@ -133,7 +179,7 @@ export async function POST(request: Request) {
       user_id: ctx.userId,
       phone_number_id: phoneNumberId,
       waba_id: wabaId,
-      access_token: encrypt(accessToken),
+      access_token: encrypt(token),
       two_step_pin: pin ? encrypt(pin) : null,
       onboarding_method: coexistence ? 'coexistence' : 'embedded',
       status: registrationError ? 'disconnected' : 'connected',
@@ -159,4 +205,23 @@ export async function POST(request: Request) {
     }
     return toErrorResponse(err)
   }
+}
+
+/**
+ * The mobile flow's return address: must be this site's /whatsapp page
+ * (the same address the browser sent to Meta's dialog).
+ */
+function validRedirectUri(value: unknown, request: Request): string | null {
+  if (typeof value !== 'string' || value.length > 300) return null
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return null
+  }
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  const okProtocol = url.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && url.protocol === 'http:')
+  if (!okProtocol || url.pathname !== '/whatsapp' || url.search || url.hash) return null
+  if (host && url.host !== host) return null
+  return url.toString()
 }

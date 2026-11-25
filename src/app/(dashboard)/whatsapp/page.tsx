@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
-import { useEmbeddedSignup } from "@/components/whatsapp/use-embedded-signup";
+import { useEmbeddedSignup, type SignupResult } from "@/components/whatsapp/use-embedded-signup";
 import { WhatsAppConfig } from "@/components/settings/whatsapp-config";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,7 @@ export default function WhatsAppSetupPage() {
   const t = useTranslations("WhatsAppSetup");
   const format = useFormatter();
   const { canEditSettings } = useAuth();
-  const { configured, busy, start } = useEmbeddedSignup();
+  const { configured, busy, start, completeRedirect } = useEmbeddedSignup();
   const [data, setData] = useState<NumbersResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [showOptions, setShowOptions] = useState(false);
@@ -84,16 +84,31 @@ export default function WhatsAppSetupPage() {
     setReloadKey((k) => k + 1);
   }, []);
 
+  const handleResult = useCallback(
+    (result: SignupResult) => {
+      if (result.kind === "connected") {
+        if (result.registrationError) toast.warning(t("connectedRegisterFailed", { error: result.registrationError }));
+        else toast.success(t("connected"));
+        setShowOptions(false);
+        reload();
+      } else if (result.kind === "failed") {
+        toast.error(result.message === "not_configured" ? t("notConfigured") : result.message || t("signupFailed"));
+      }
+    },
+    [t, reload],
+  );
+
+  // Phones come back here from Meta's signup with ?code=… (redirect flow).
+  const redirectHandled = useRef(false);
+  useEffect(() => {
+    if (redirectHandled.current) return;
+    redirectHandled.current = true;
+    completeRedirect().then((r) => r && handleResult(r));
+  }, [completeRedirect, handleResult]);
+
   async function runSignup(coexistence: boolean) {
     const result = await start({ coexistence });
-    if (result.kind === "connected") {
-      if (result.registrationError) toast.warning(t("connectedRegisterFailed", { error: result.registrationError }));
-      else toast.success(t("connected"));
-      setShowOptions(false);
-      reload();
-    } else if (result.kind === "failed") {
-      toast.error(result.message === "not_configured" ? t("notConfigured") : result.message || t("signupFailed"));
-    }
+    handleResult(result);
   }
 
   async function disconnect() {

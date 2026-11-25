@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
   register: vi.fn(),
   subscribe: vi.fn(),
   exchange: vi.fn(),
+  shared: ['222'] as string[],
 }))
 
 vi.mock('@/lib/auth/account', async (orig) => ({
@@ -40,6 +41,7 @@ vi.mock('@/lib/whatsapp/embedded-signup', async (orig) => ({
   ...(await orig<typeof import('@/lib/whatsapp/embedded-signup')>()),
   exchangeCodeForToken: h.exchange,
   generateTwoStepPin: () => '123456',
+  sharedWabaIds: async () => h.shared,
 }))
 vi.mock('@/lib/whatsapp/meta-api', () => ({
   listWabaPhoneNumbers: async () => h.numbers,
@@ -50,8 +52,8 @@ vi.mock('@/lib/whatsapp/meta-api', () => ({
 
 import { POST } from './route'
 
-const call = (body: unknown) =>
-  POST(new Request('http://x', { method: 'POST', body: JSON.stringify(body) }))
+const call = (body: unknown, host = 'x') =>
+  POST(new Request(`http://${host}`, { method: 'POST', headers: { host }, body: JSON.stringify(body) }))
 
 const BODY = { code: 'c0de', phone_number_id: '111', waba_id: '222' }
 
@@ -61,6 +63,8 @@ beforeEach(() => {
   h.register.mockReset().mockResolvedValue({})
   h.subscribe.mockReset().mockResolvedValue(undefined)
   h.exchange.mockReset().mockResolvedValue('biz-token')
+  h.shared = ['222']
+  h.numbers = [{ id: '111', display_phone_number: '+91 90000 00000', verified_name: 'Shop' }]
 })
 
 describe('POST /api/whatsapp/embedded-signup', () => {
@@ -110,5 +114,38 @@ describe('POST /api/whatsapp/embedded-signup', () => {
     expect((await call({ code: 'x' })).status).toBe(400)
     h.exchange.mockRejectedValue(new Error('bad code'))
     expect((await call(BODY)).status).toBe(400)
+  })
+})
+
+describe('POST /api/whatsapp/embedded-signup (mobile redirect flow)', () => {
+  const RB = { code: 'c0de', redirect_uri: 'https://app.test/whatsapp' }
+
+  it('exchanges with the redirect_uri and finds the shared WABA + number', async () => {
+    const res = await call(RB, 'app.test')
+    expect(res.status).toBe(200)
+    expect(h.exchange).toHaveBeenCalledTimes(1)
+    expect(h.exchange).toHaveBeenCalledWith('c0de', 'https://app.test/whatsapp')
+    expect(h.saved[0]).toMatchObject({ phone_number_id: '111', waba_id: '222', status: 'connected' })
+  })
+
+  it('rejects a return address on another host or path', async () => {
+    expect((await call({ ...RB, redirect_uri: 'https://evil.test/whatsapp' }, 'app.test')).status).toBe(400)
+    expect((await call({ ...RB, redirect_uri: 'https://app.test/other' }, 'app.test')).status).toBe(400)
+    expect(h.exchange).not.toHaveBeenCalled()
+  })
+
+  it('asks to finish on a computer when more than one number was shared', async () => {
+    h.numbers = [{ id: '111' }, { id: '112' }]
+    const res = await call(RB, 'app.test')
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/computer/)
+    expect(h.saved).toHaveLength(0)
+  })
+
+  it('explains when no WhatsApp account was shared', async () => {
+    h.shared = []
+    const res = await call(RB, 'app.test')
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/did not share/)
   })
 })
