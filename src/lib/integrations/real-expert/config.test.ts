@@ -191,6 +191,14 @@ describe('projects (channel partners)', () => {
     expect(chooseWelcome({ ...base, project: p, optedOut: true })).toEqual({ kind: 'none', reason: 'opted_out' })
   })
 
+  it('"never message leads from this source" outranks every template, even a payload one', () => {
+    const p = matchProject(options.projects, { project: 'The Galleria' })
+    expect(chooseWelcome({ ...base, project: p, noMessage: true })).toEqual({ kind: 'none', reason: 'source_no_message' })
+    expect(
+      chooseWelcome({ ...base, project: p, noMessage: true, payloadTemplate: { name: 'custom', language: null } }),
+    ).toEqual({ kind: 'none', reason: 'source_no_message' })
+  })
+
   it('a template named in the payload always wins (unless opted out)', () => {
     expect(chooseWelcome({ ...base, project: null, payloadTemplate: { name: 'custom', language: null } })).toMatchObject({
       kind: 'template',

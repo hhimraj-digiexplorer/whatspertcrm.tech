@@ -335,7 +335,17 @@ export function leadNamesProject(lead: LeadProjectFields): boolean {
 
 export type WelcomeChoice =
   | { kind: 'template'; template: string; language: string | null; reason: 'payload' | 'project' | 'default' }
-  | { kind: 'none'; reason: 'real_expert_greets' | 'project_none' | 'no_fallback' | 'no_template' | 'already_enquired' | 'opted_out' }
+  | {
+      kind: 'none'
+      reason:
+        | 'real_expert_greets'
+        | 'project_none'
+        | 'no_fallback'
+        | 'no_template'
+        | 'already_enquired'
+        | 'opted_out'
+        | 'source_no_message'
+    }
 
 /**
  * Which welcome a pushed lead gets. Never another project's: a project
@@ -350,9 +360,12 @@ export function chooseWelcome(args: {
   alreadyEnquired: boolean
   /** The contact sent STOP — no welcome at all, not even a named one. */
   optedOut?: boolean
+  /** The push says "never message leads from this source" — outranks every template. */
+  noMessage?: boolean
 }): WelcomeChoice {
   const { options, payloadTemplate, project, defaultTemplate, alreadyEnquired } = args
   if (args.optedOut) return { kind: 'none', reason: 'opted_out' }
+  if (args.noMessage) return { kind: 'none', reason: 'source_no_message' }
   if (payloadTemplate) return { kind: 'template', template: payloadTemplate.name, language: payloadTemplate.language, reason: 'payload' }
   if (options.greeting_by !== 'whatspert') return { kind: 'none', reason: 'real_expert_greets' }
   if (alreadyEnquired) return { kind: 'none', reason: 'already_enquired' }

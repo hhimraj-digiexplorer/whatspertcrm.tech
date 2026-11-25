@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { parseOptions } from '@/lib/integrations/real-expert/config'
 import { mergeProjectSettings } from '@/lib/integrations/real-expert/projects-bridge'
-import { applyPartnerProjects } from '@/lib/projects/partner-sync'
+import { applyPartnerProjects, type PartnerProjectError } from '@/lib/projects/partner-sync'
 import { loadProjects } from '@/lib/projects/store'
 import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server'
@@ -17,6 +17,7 @@ import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server
  *         projects?: { [name|code]: { name?, tag?, code?, category?, keywords?, ad_ids?, ads?,
  *                       welcome?: { template, language? } | 'none' | 'default', ai_instructions?, active? } | null },
  *         replace_projects?: boolean,               // default: merge; null removes one
+ *         rename_codes?: [{ old_code, new_code }],  // applied first; project, tag, contacts unchanged
  *                                                   // (writes the workspace's Projects)
  *         fallback_welcome?: boolean }              // default welcome for unmatched projects
  *
@@ -58,25 +59,34 @@ export async function POST(request: Request) {
   if (b.fallback_welcome !== undefined) patch.fallback_welcome = b.fallback_welcome
   // Projects now live in the workspace's Projects (Settings → Projects),
   // shared by every lead source; the integration's own copy is retired.
-  let projectErrors: string[] = []
-  if (b.projects !== undefined) {
-    if (!b.projects || typeof b.projects !== 'object' || Array.isArray(b.projects)) {
-      return NextResponse.json({ error: 'projects must be an object of project → settings.', field: 'projects' }, { status: 400 })
+  let projectErrors: PartnerProjectError[] = []
+  if (b.rename_codes !== undefined && !Array.isArray(b.rename_codes)) {
+    return NextResponse.json({ error: 'rename_codes must be a list of { old_code, new_code }.', fields: ['rename_codes'] }, { status: 400 })
+  }
+  if (b.projects !== undefined || Array.isArray(b.rename_codes)) {
+    if (b.projects !== undefined && (!b.projects || typeof b.projects !== 'object' || Array.isArray(b.projects))) {
+      return NextResponse.json({ error: 'projects must be an object of project → settings.', fields: ['projects'] }, { status: 400 })
     }
     const auditUserId = await resolveAuditUserId(db, integration.account_id)
     const applied = await applyPartnerProjects(db, {
       accountId: integration.account_id,
       userId: auditUserId,
-      projects: b.projects as Record<string, unknown>,
-      replace: b.replace_projects === true,
+      projects: (b.projects ?? {}) as Record<string, unknown>,
+      replace: b.projects !== undefined && b.replace_projects === true,
+      renames: Array.isArray(b.rename_codes) ? (b.rename_codes as { old_code: string; new_code: string }[]) : [],
     })
     projectErrors = applied.errors
     patch.projects = {}
   }
   const { options, invalid } = parseOptions({ ...stored, ...patch })
   if (invalid.length > 0 || projectErrors.length > 0) {
-    const fields = [...invalid, ...projectErrors]
-    return NextResponse.json({ error: `Check: ${fields.join(', ')}.`, fields }, { status: 400 })
+    // Shown to the Real Expert admin as "Last sync failed": plain words.
+    // Entries without a problem in the same call were saved.
+    const messages = [...(invalid.length > 0 ? [`Check these settings: ${invalid.join(', ')}.`] : []), ...projectErrors.map((e) => e.message)]
+    return NextResponse.json(
+      { error: messages.join(' '), errors: projectErrors, fields: [...invalid, ...projectErrors.map((e) => e.field)] },
+      { status: 400 },
+    )
   }
 
   let templateName = row.welcome_template_name as string | null

@@ -90,8 +90,25 @@ export interface SyncDeps {
   loadDeal(id: string): Promise<DealRow | null>
   loadMessage(id: string): Promise<MessageRow | null>
   getLink(contactId: string): Promise<string | null>
+  /** Real Expert enquiry ids we were pushed for this contact, newest first. */
+  loadEnquiries?(contactId: string): Promise<EnquiryRow[]>
   saveLink(contactId: string, externalId: string): Promise<void>
   send(path: string, body: unknown, idempotencyKey: string): Promise<unknown>
+}
+
+export interface EnquiryRow {
+  project_tag: string
+  enquiry_id: string
+}
+
+/** The enquiry a message or deal belongs to: its project's, else the newest. */
+export function pickEnquiry(enquiries: EnquiryRow[], projectTag?: string | null): string | null {
+  if (enquiries.length === 0) return null
+  if (projectTag) {
+    const hit = enquiries.find((e) => e.project_tag.toLowerCase() === projectTag.toLowerCase())
+    if (hit) return hit.enquiry_id
+  }
+  return enquiries[0].enquiry_id
 }
 
 export type JobOutcome = 'done' | 'skipped'
@@ -130,7 +147,12 @@ export function buildLeadPayload(contact: ContactRow, options: RealExpertOptions
     // Every project the contact enquired about so far, so Real Expert can
     // open an enquiry per project when a lead arrives with several.
     ...(contact.project_tags && contact.project_tags.length > 0
-      ? { project_tags: contact.project_tags }
+      ? {
+          project_tags: contact.project_tags,
+          project_codes: contact.project_tags
+            .map((t) => projectForTags(options.projects, [t])?.setting.code)
+            .filter((c): c is string => !!c),
+        }
       : {}),
   }
 }
@@ -223,9 +245,11 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       if (!deal) return 'skipped'
       const leadId = await ensureLead(deal.contact_id, deps)
       if (!leadId) return 'skipped'
+      const enquiries = deps.loadEnquiries ? await deps.loadEnquiries(deal.contact_id) : []
+      const enquiryId = pickEnquiry(enquiries, dealProjectTag(deal, deps.options))
       await deps.send(
         fillPath(deps.options.stage_path, leadId),
-        buildStagePayload(deal, deps.options),
+        { ...buildStagePayload(deal, deps.options), ...(enquiryId ? { enquiry_id: enquiryId } : {}) },
         `deal-${deal.id}-${deal.updated_at ?? ''}`,
       )
       return 'done'
@@ -235,7 +259,14 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       if (!message) return 'skipped'
       const leadId = await ensureLead(message.contact_id, deps)
       if (!leadId) return 'skipped'
-      await deps.send(fillPath(deps.options.activities_path, leadId), buildMessagePayload(message), `message-${message.id}`)
+      // A WhatsApp message belongs to the buyer's latest enquiry.
+      const enquiries = deps.loadEnquiries ? await deps.loadEnquiries(message.contact_id) : []
+      const enquiryId = pickEnquiry(enquiries)
+      await deps.send(
+        fillPath(deps.options.activities_path, leadId),
+        { ...buildMessagePayload(message), ...(enquiryId ? { enquiry_id: enquiryId } : {}) },
+        `message-${message.id}`,
+      )
       return 'done'
     }
     case 'enquiry': {
@@ -374,7 +405,16 @@ export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: 
         .maybeSingle()
       return (data as { external_id: string } | null)?.external_id ?? null
     },
-    async saveLink(contactId, externalId) {
+    async loadEnquiries(contactId) {
+      const { data } = await db
+        .from('crm_enquiries')
+        .select('project_tag, enquiry_id, updated_at')
+        .eq('integration_id', integration.id)
+        .eq('contact_id', contactId)
+        .order('updated_at', { ascending: false })
+      return ((data ?? []) as EnquiryRow[]).map((r) => ({ project_tag: r.project_tag, enquiry_id: r.enquiry_id }))
+    },
+        async saveLink(contactId, externalId) {
       const { error } = await db.from('crm_contact_links').upsert(
         { integration_id: integration.id, contact_id: contactId, account_id: accountId, external_id: externalId },
         { onConflict: 'integration_id,contact_id', ignoreDuplicates: true },

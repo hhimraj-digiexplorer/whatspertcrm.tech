@@ -244,6 +244,21 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(h.resolve).toHaveBeenCalled()
   })
 
+  it('sends no welcome when Real Expert says never message this source, but still adds the lead', async () => {
+    const res = await call({ lead_id: 12, name: 'Asha', phone: '9876543210', source: 'website', welcome: 'none' })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.welcome).toEqual({ skipped: 'source_no_message' })
+    expect(h.send).not.toHaveBeenCalled()
+  })
+
+  it('warns, in plain words, about a project code Whatspert does not know', async () => {
+    const res = await call({ lead_id: 13, name: 'Asha', phone: '9876543210', source: 'website', project_code: 'NOPE-1', project_tag: 'p-nope-1' })
+    const body = await res.json()
+    expect(body.project).toBeNull()
+    expect(body.warning).toContain('NOPE-1 is not set up in Whatspert')
+  })
+
   it('ignores other Real Expert events', async () => {
     const res = await call({ event: 'deal.stage_changed', data: { lead_id: 1 } })
     expect(res.status).toBe(200)

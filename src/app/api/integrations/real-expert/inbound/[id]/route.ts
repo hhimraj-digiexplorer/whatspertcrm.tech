@@ -249,6 +249,8 @@ export async function POST(request: Request, { params }: Params) {
       .maybeSingle()
     const welcome = chooseWelcome({
       optedOut: !!(optRow as { opted_out_at?: string | null } | null)?.opted_out_at,
+      // Real Expert's "never message leads from this source".
+      noMessage: lead.welcome === 'none' || lead.send_welcome === false || lead.send_welcome === 'false',
       options,
       payloadTemplate: payloadTemplateName ? { name: payloadTemplateName, language: str(tpl.language, 20) } : null,
       project,
@@ -275,6 +277,22 @@ export async function POST(request: Request, { params }: Params) {
         sendError = err
         console.warn('[crm-inbound] welcome template not sent:', err.code, err.message)
       }
+    }
+
+    // Remember this enquiry against the contact and project, so the
+    // messages and stage changes we sync back name the right enquiry.
+    const enquiryId = str(lead.enquiry_id, 100)
+    if (enquiryId) {
+      const enquiryTag = String(project?.setting.tag ?? cleanTagName(lead.project_tag) ?? '')
+      await saveEnquiry(db, {
+        integrationId: integration.id as string,
+        accountId,
+        contactId: resolved.contactId,
+        projectTag: enquiryTag,
+        projectCode: project?.setting.code ?? str(lead.project_code, 60),
+        enquiryId,
+        leadId,
+      }).catch((err) => console.warn('[crm-inbound] could not save the enquiry id:', err))
     }
 
     const context = { conversation_id: resolved.conversationId, source: 'real_expert' }
@@ -332,6 +350,13 @@ export async function POST(request: Request, { params }: Params) {
       contact_created: resolved.contactCreated,
       tags_added: tagsAdded,
       project: project ? project.setting.name : null,
+      ...(!project && leadNamesProject(lead)
+        ? {
+            warning: `Project ${str(lead.project_code, 60) ?? str(lead.project, 120) ?? ''} is not set up in Whatspert — the lead was added${
+              cleanTagName(lead.project_tag) ? ` with tag ${cleanTagName(lead.project_tag)}` : ''
+            }, but no project welcome was used. Sync the project to fix it.`,
+          }
+        : {}),
       welcome: welcome.kind === 'template' ? { template: welcome.template, reason: welcome.reason } : { skipped: welcome.reason },
       message_sent: !!sent,
       ...(sent ? { message_id: sent.messageId, whatsapp_message_id: sent.whatsappMessageId } : {}),
@@ -391,4 +416,44 @@ async function contactHasAnyTag(
     const tagName = Array.isArray(t) ? t[0]?.name : t?.name
     return !!tagName && wanted.includes(tagName.toLowerCase())
   })
+}
+
+/** Store (or refresh) the Real Expert enquiry id for this contact + project. */
+async function saveEnquiry(
+  db: ReturnType<typeof supabaseAdmin>,
+  e: {
+    integrationId: string
+    accountId: string
+    contactId: string
+    projectTag: string
+    projectCode: string | null
+    enquiryId: string
+    leadId: string | null
+  },
+): Promise<void> {
+  const { data: rows } = await db
+    .from('crm_enquiries')
+    .select('id, project_tag')
+    .eq('integration_id', e.integrationId)
+    .eq('contact_id', e.contactId)
+  const hit = ((rows ?? []) as { id: string; project_tag: string }[]).find(
+    (r) => r.project_tag.toLowerCase() === e.projectTag.toLowerCase(),
+  )
+  const row = {
+    project_code: e.projectCode,
+    enquiry_id: e.enquiryId,
+    lead_id: e.leadId,
+    updated_at: new Date().toISOString(),
+  }
+  if (hit) {
+    await db.from('crm_enquiries').update(row).eq('id', hit.id)
+  } else {
+    await db.from('crm_enquiries').insert({
+      ...row,
+      integration_id: e.integrationId,
+      account_id: e.accountId,
+      contact_id: e.contactId,
+      project_tag: e.projectTag,
+    })
+  }
 }

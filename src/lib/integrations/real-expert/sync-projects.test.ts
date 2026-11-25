@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_OPTIONS, type RealExpertOptions } from './config'
-import { buildLeadPayload, buildStagePayload, dealProjectTag, processJob, type ContactRow, type DealRow, type SyncDeps, type SyncJob } from './sync'
+import { buildLeadPayload, buildStagePayload, dealProjectTag, pickEnquiry, processJob, type ContactRow, type DealRow, type SyncDeps, type SyncJob } from './sync'
 
 const options: RealExpertOptions = {
   ...DEFAULT_OPTIONS,
@@ -137,5 +137,43 @@ describe('processJob — enquiry', () => {
     expect(await processJob(enquiry({}), deps)).toBe('skipped')
     expect(await processJob(enquiry({ contact_id: 'c1', tag_name: 'p-sky' }), deps)).toBe('skipped')
     expect(send).not.toHaveBeenCalled()
+  })
+})
+
+describe('enquiry ids and project codes back to Real Expert', () => {
+  it('picks the project\'s enquiry, else the newest', () => {
+    const e = [
+      { project_tag: 'p-sky', enquiry_id: 'E-2' },
+      { project_tag: 'p-galleria', enquiry_id: 'E-1' },
+    ]
+    expect(pickEnquiry(e, 'P-GALLERIA')).toBe('E-1')
+    expect(pickEnquiry(e, 'p-other')).toBe('E-2')
+    expect(pickEnquiry(e)).toBe('E-2')
+    expect(pickEnquiry([], 'p-sky')).toBeNull()
+  })
+
+  it('the lead carries project_codes for every project tag', () => {
+    expect(buildLeadPayload({ ...contact, project_tags: ['p-galleria', 'p-sky', 'p-new'] }, options)).toMatchObject({
+      project_tags: ['p-galleria', 'p-sky', 'p-new'],
+      project_codes: ['GAL-01', 'SKY'],
+    })
+  })
+
+  it("a stage sync names the deal project's enquiry; a message names the newest", async () => {
+    const { deps, send, links } = makeDeps()
+    links.set('c1', 'RE-1')
+    deps.loadDeal = async () => deal({ project_tags: ['p-galleria', 'p-sky'], pipeline: { id: 'p', name: 'Sky Heights' } })
+    deps.loadEnquiries = async () => [
+      { project_tag: 'p-galleria', enquiry_id: 'E-9' },
+      { project_tag: 'p-sky', enquiry_id: 'E-4' },
+    ]
+    deps.loadMessage = async () => ({
+      id: 'm1', contact_id: 'c1', sender_type: 'customer', content_type: 'text', content_text: 'hi',
+      media_url: null, template_name: null, status: 'delivered', message_id: 'w1', created_at: null,
+    })
+    await processJob({ ...enquiry({}), kind: 'deal', entity_id: 'd1' }, deps)
+    expect(send.mock.calls[0][1]).toMatchObject({ enquiry_id: 'E-4', project_code: 'SKY' })
+    await processJob({ ...enquiry({}), kind: 'message', entity_id: 'm1' }, deps)
+    expect(send.mock.calls[1][1]).toMatchObject({ enquiry_id: 'E-9' })
   })
 })

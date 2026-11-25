@@ -168,7 +168,8 @@ export function projectForTag(projects: Project[], tag: string): Project | null 
 // ------------------------------------------------------------
 
 const TAG_RE = /^[\p{L}\p{N}][\p{L}\p{N} ._\-/&]{0,49}$/u
-const CODE_RE = /^[\p{L}\p{N}][\p{L}\p{N}._\-/ ]{0,59}$/u
+// Real Expert's code rule: 1–60 of letters, digits, . _ - / and space (not starting with a space).
+export const CODE_RE = /^[\p{L}\p{N}._\-/][\p{L}\p{N}._\-/ ]{0,59}$/u
 const TEMPLATE_RE = /^[a-z0-9_]{1,512}$/
 const LANG_RE = /^[a-z]{2,3}(_[A-Za-z]{2,4})?$/
 
