@@ -300,7 +300,12 @@ export async function POST(request: Request, { params }: Params) {
     // messages and stage changes we sync back name the right enquiry.
     const enquiryId = str(lead.enquiry_id, 100)
     if (enquiryId) {
-      const enquiryTag = String(project?.setting.tag ?? cleanTagName(lead.project_tag) ?? '')
+      // Keyed by the project tag; a project not set up here (no tag) is
+      // keyed by its code, so two such enquiries don't overwrite each other.
+      const pushedCode = project?.setting.code ?? str(lead.project_code, 60)
+      const enquiryTag = String(
+        project?.setting.tag ?? cleanTagName(lead.project_tag) ?? (pushedCode ? `code:${pushedCode}` : ''),
+      )
       await saveEnquiry(db, {
         integrationId: integration.id as string,
         accountId,
