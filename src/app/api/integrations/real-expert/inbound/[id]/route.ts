@@ -161,6 +161,9 @@ export async function POST(request: Request, { params }: Params) {
     const company = str(lead.company, 200)
     if (email) extra.email = email
     if (company) extra.company = company
+    // Where this enquiry came from (shown to agents, used by reports).
+    const meta = leadMetaFrom(lead)
+    if (meta) (extra as Record<string, unknown>).lead_meta = meta
     if (Object.keys(extra).length > 0) {
       await db.from('contacts').update(extra).eq('id', resolved.contactId).eq('account_id', accountId)
     }
@@ -174,9 +177,11 @@ export async function POST(request: Request, { params }: Params) {
       ['Enquiry', str(lead.enquiry_id, 100)],
       ['City', str(lead.city, 80)],
       ['Campaign', str(lead.campaign_name ?? lead.campaign, 120)],
+      ['Ad set', str(lead.adset_name, 120)],
       ['Ad', str(lead.ad_name, 120)],
       ['Form', str(lead.form_name, 120)],
-      ['Budget', str(lead.budget, 60)],
+      ['Budget', budgetText(lead)],
+      ['UTM', utmText(lead)],
       ['Repeat enquiry', repeat ? 'yes' : null],
     ].filter(([, v]) => v)
     if (details.length > 0) {
@@ -225,7 +230,16 @@ export async function POST(request: Request, { params }: Params) {
         .catch(() => [])
       const fallback = resolveProject(active, {
         adId: lead.ad_id,
-        sourceTexts: [lead.campaign_name, lead.campaign, lead.ad_name, lead.form_name, lead.utm_campaign],
+        sourceTexts: [
+          lead.campaign_name,
+          lead.campaign,
+          lead.adset_name,
+          lead.ad_name,
+          lead.form_name,
+          lead.utm_campaign,
+          lead.utm_content,
+          lead.utm_term,
+        ],
       })
       if (fallback.project) {
         const key = Object.keys(options.projects).find((k) => options.projects[k].tag?.toLowerCase() === fallback.project!.tag.toLowerCase())
@@ -457,5 +471,46 @@ async function saveEnquiry(
       contact_id: e.contactId,
       project_tag: e.projectTag,
     })
+  }
+}
+
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const
+
+/** "₹50L–90L" style range from budget_min / budget_max, or a single budget. */
+function budgetText(lead: Record<string, unknown>): string | null {
+  const min = str(lead.budget_min, 30)
+  const max = str(lead.budget_max, 30)
+  if (min && max) return min === max ? min : `${min}–${max}`
+  if (min) return `from ${min}`
+  if (max) return `up to ${max}`
+  return str(lead.budget, 60)
+}
+
+function utmText(lead: Record<string, unknown>): string | null {
+  const parts = UTM_KEYS.map((k) => [k.replace('utm_', ''), str(lead[k], 100)] as const).filter(([, v]) => v)
+  return parts.length > 0 ? parts.map(([k, v]) => `${k}=${v}`).join(', ') : null
+}
+
+/** contacts.lead_meta for a Real Expert push — null when it carries no source details. */
+function leadMetaFrom(lead: Record<string, unknown>): Record<string, unknown> | null {
+  const fields: Record<string, string | null> = {
+    source: str(lead.source, 100),
+    campaign: str(lead.campaign_name ?? lead.campaign, 200),
+    campaign_id: str(lead.campaign_id, 60),
+    adset: str(lead.adset_name, 200),
+    ad_name: str(lead.ad_name, 200),
+    ad_id: str(lead.ad_id, 60),
+    form_name: str(lead.form_name, 200),
+    form_id: str(lead.form_id, 60),
+    budget: budgetText(lead),
+  }
+  const utm = Object.fromEntries(UTM_KEYS.map((k) => [k, str(lead[k], 200)]).filter(([, v]) => v))
+  const has = Object.values(fields).some((v) => v) || Object.keys(utm).length > 0
+  if (!has) return null
+  return {
+    channel: 'real_expert',
+    ...Object.fromEntries(Object.entries(fields).filter(([, v]) => v)),
+    ...(Object.keys(utm).length > 0 ? { utm } : {}),
+    received_at: new Date().toISOString(),
   }
 }

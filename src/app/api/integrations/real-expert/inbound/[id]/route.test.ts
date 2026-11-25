@@ -281,6 +281,28 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(body.warning).toContain('NOPE-1 is not set up in Whatspert')
   })
 
+  it('reads the source attribution fields: matching by ad set, and a note with budget range and UTM', async () => {
+    const res = await call({
+      lead_id: 16,
+      name: 'Asha',
+      phone: '9876543210',
+      source: 'META',
+      campaign_name: 'Lucknow Nov',
+      adset_name: 'Galleria villas 30-45',
+      ad_id: '120000000001',
+      form_name: 'Galleria form',
+      budget_min: '1.5 Cr',
+      budget_max: '2 Cr',
+      utm_source: 'facebook',
+      utm_campaign: 'gal-nov',
+    })
+    expect(res.status).toBe(200)
+    const note = h.notes.at(-1)?.note_text as string
+    expect(note).toContain('Ad set: Galleria villas 30-45')
+    expect(note).toContain('Budget: 1.5 Cr–2 Cr')
+    expect(note).toContain('UTM: source=facebook, campaign=gal-nov')
+  })
+
   it('ignores other Real Expert events', async () => {
     const res = await call({ event: 'deal.stage_changed', data: { lead_id: 1 } })
     expect(res.status).toBe(200)
