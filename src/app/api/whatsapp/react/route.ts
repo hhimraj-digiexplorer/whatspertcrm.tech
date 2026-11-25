@@ -1,3 +1,4 @@
+import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers';
 import { NextResponse } from 'next/server';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { sendReactionMessage } from '@/lib/whatsapp/meta-api';
@@ -106,10 +107,15 @@ export async function POST(request: Request) {
     }
 
     const accessToken = decrypt(config.access_token);
+    const fromNumber = await pickSendingNumber(supabase, {
+      accountId,
+      primaryPhoneNumberId: config.phone_number_id,
+      conversationId: conversation.id,
+    });
 
     try {
       await sendReactionMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: fromNumber,
         accessToken,
         to: sendTarget.target,
         targetMessageId: targetMessage.message_id,

@@ -1,3 +1,4 @@
+import { accountForExtraNumber, rememberConversationNumber } from '@/lib/whatsapp/workspace-numbers'
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -329,10 +330,22 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
       // operators see the real cause in logs. ≥2 rows shouldn't happen
       // post-migration 013 (UNIQUE constraint), but a row created
       // before the constraint, or a race, would still surface here.
-      const { data: configRows, error: configError } = await supabaseAdmin()
+      let { data: configRows, error: configError } = await supabaseAdmin()
         .from('whatsapp_config')
         .select('*')
         .eq('phone_number_id', phoneNumberId)
+
+      // Not a primary number — maybe one of a workspace's extra numbers
+      // (migration 052). Those share the primary's WABA and token.
+      if (!configError && (!configRows || configRows.length === 0)) {
+        const extraAccountId = await accountForExtraNumber(supabaseAdmin(), phoneNumberId)
+        if (extraAccountId) {
+          ;({ data: configRows, error: configError } = await supabaseAdmin()
+            .from('whatsapp_config')
+            .select('*')
+            .eq('account_id', extraAccountId))
+        }
+      }
 
       if (configError) {
         console.error(
@@ -381,7 +394,9 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           // Default ON: the column is NOT NULL DEFAULT TRUE, but a row
           // read before migration 039 lands would have it undefined,
           // and losing attachments is the failure mode worth avoiding.
-          config.mirror_inbound_media !== false
+          config.mirror_inbound_media !== false,
+          // The number the customer wrote to — replies go back from it.
+          phoneNumberId
         )
       }
     }
@@ -686,7 +701,9 @@ async function processMessage(
   accessToken: string,
   // Per-account opt-out for the inbound-media mirror (migration 039).
   // See parseMessageContent for what it turns off.
-  mirrorMedia: boolean
+  mirrorMedia: boolean,
+  // Which of the workspace's numbers received this (multi-number).
+  inboundPhoneNumberId?: string
 ) {
   // Phone number OR business-scoped user ID — Meta sends only the
   // latter for a sender who has adopted a WhatsApp username (#519).
@@ -866,6 +883,10 @@ async function processMessage(
 
   if (convError) {
     console.error('Error updating conversation:', convError)
+  }
+
+  if (inboundPhoneNumberId) {
+    await rememberConversationNumber(supabaseAdmin(), conversation.id, inboundPhoneNumberId)
   }
 
   // A customer writing again re-opens the thread (issue #409). Kept as a

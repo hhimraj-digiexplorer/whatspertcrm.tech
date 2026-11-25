@@ -8,6 +8,11 @@ const h = vi.hoisted(() => ({
   verifyCode: vi.fn(),
   register: vi.fn(),
   subscribe: vi.fn(),
+  limit: 1,
+  extras: [] as { phone_number_id: string; account_id: string; id?: string; two_step_pin?: string | null }[],
+  deleted: [] as string[],
+  adminUpdates: [] as { table: string; row: Record<string, unknown> }[],
+  upserted: [] as Record<string, unknown>[],
 }))
 
 vi.mock('@/lib/auth/account', async (orig) => ({
@@ -30,13 +35,39 @@ vi.mock('@/lib/auth/account', async (orig) => ({
 }))
 vi.mock('@/lib/automations/admin-client', () => ({
   supabaseAdmin: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({ neq: () => ({ maybeSingle: async () => ({ data: h.claimed, error: null }) }) }),
-      }),
-    }),
+    from: (table: string) => {
+      const filters: Record<string, unknown> = {}
+      const chain = {
+        select: () => chain,
+        eq: (k: string, v: unknown) => {
+          filters[k] = v
+          return chain
+        },
+        neq: () => chain,
+        maybeSingle: async () => {
+          if (table === 'whatsapp_config') return { data: h.claimed, error: null }
+          const row = h.extras.find((e) => e.phone_number_id === filters.phone_number_id && e.account_id === 'acc1')
+          return { data: row ?? null, error: null }
+        },
+        then: (resolve: (v: unknown) => void) => resolve({ data: h.extras.filter((e) => e.account_id === 'acc1'), error: null }),
+        delete: () => {
+          h.deleted.push(table)
+          return chain
+        },
+        update: (row: Record<string, unknown>) => {
+          h.adminUpdates.push({ table, row })
+          return chain
+        },
+        upsert: async (row: Record<string, unknown>) => {
+          h.upserted.push(row)
+          return { error: null }
+        },
+      }
+      return chain
+    },
   }),
 }))
+vi.mock('@/lib/whatsapp/workspace-numbers', () => ({ workspaceNumberLimit: async () => h.limit }))
 vi.mock('@/lib/whatsapp/connection', async (orig) => ({
   ...(await orig<typeof import('@/lib/whatsapp/connection')>()),
   loadAccountConnection: async () => ({
@@ -66,6 +97,11 @@ const call = (id: string, body: unknown) =>
 
 beforeEach(() => {
   h.numbers = [{ id: '111' }, { id: '333' }]
+  h.limit = 1
+  h.extras = []
+  h.deleted = []
+  h.adminUpdates = []
+  h.upserted = []
   h.claimed = null
   h.updated = []
   h.requestCode.mockReset().mockResolvedValue(undefined)
@@ -121,5 +157,41 @@ describe('POST /api/whatsapp/numbers/[id]', () => {
     const res = await call('333', { action: 'activate' })
     expect(res.status).toBeGreaterThanOrEqual(400)
     expect(h.updated).toHaveLength(0)
+  })
+
+  it('adds a number alongside the primary when the plan has room', async () => {
+    h.limit = 5
+    const res = await call('333', { action: 'activate', mode: 'add', label: '  Site   office ' })
+    expect(res.status).toBe(200)
+    expect(h.upserted[0]).toMatchObject({ phone_number_id: '333', waba_id: '222', label: 'Site office', status: 'active' })
+    expect(h.updated).toHaveLength(0) // primary untouched
+  })
+
+  it('refuses to add past the plan limit', async () => {
+    h.limit = 2
+    h.extras = [{ phone_number_id: '444', account_id: 'acc1' }]
+    const res = await call('333', { action: 'activate', mode: 'add' })
+    expect(res.status).toBe(402)
+    expect((await res.json()).code).toBe('number_limit')
+    expect(h.register).not.toHaveBeenCalled()
+  })
+
+  it('removes and relabels only extra numbers, never the primary', async () => {
+    expect((await call('111', { action: 'remove' })).status).toBe(404)
+    h.extras = [{ phone_number_id: '333', account_id: 'acc1', id: 'x1' }]
+    expect((await call('333', { action: 'label', label: 'Sales' })).status).toBe(200)
+    expect(h.adminUpdates.at(-1)).toMatchObject({ table: 'whatsapp_numbers', row: { label: 'Sales' } })
+    expect((await call('333', { action: 'remove' })).status).toBe(200)
+    expect(h.deleted).toContain('whatsapp_numbers')
+  })
+
+  it('make_primary swaps the primary and the extra number', async () => {
+    h.extras = [{ phone_number_id: '333', account_id: 'acc1', id: 'x1', two_step_pin: 'enc(999999)' }]
+    const res = await call('333', { action: 'make_primary' })
+    expect(res.status).toBe(200)
+    expect(h.adminUpdates).toEqual([
+      { table: 'whatsapp_numbers', row: expect.objectContaining({ phone_number_id: '111', two_step_pin: 'enc(000000)' }) },
+      { table: 'whatsapp_config', row: expect.objectContaining({ phone_number_id: '333', two_step_pin: 'enc(999999)' }) },
+    ])
   })
 })

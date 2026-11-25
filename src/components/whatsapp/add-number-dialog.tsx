@@ -44,11 +44,16 @@ async function post(url: string, body: unknown): Promise<{ ok: boolean; data: Re
 export function AddNumberDialog({
   start,
   hasNumberInUse,
+  canAddExtra,
+  numberLimit,
   onClose,
   onDone,
 }: {
   start: AddNumberStart | null;
   hasNumberInUse: boolean;
+  /** The plan has room for one more number alongside the primary. */
+  canAddExtra: boolean;
+  numberLimit: number;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -61,6 +66,7 @@ export function AddNumberDialog({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
+  const [label, setLabel] = useState("");
   const [codeSentBy, setCodeSentBy] = useState<"SMS" | "VOICE" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +78,7 @@ export function AddNumberDialog({
     setDisplay(start.display ?? "");
     setCode("");
     setPin("");
+    setLabel("");
     setCodeSentBy(null);
     setError(null);
   }, [start]);
@@ -113,7 +120,7 @@ export function AddNumberDialog({
 
   const activate = () =>
     run(async () => {
-      const { ok, data } = await post(`/api/whatsapp/numbers/${phoneId}`, { action: "activate", pin: pin || undefined });
+      const { ok, data } = await post(`/api/whatsapp/numbers/${phoneId}`, { action: "activate", mode: canAddExtra ? "add" : "replace", pin: pin || undefined, label: label || undefined });
       if (!ok) return setError(String(data.error ?? t("activateFailed")));
       toast.success(t("numberLive"));
       onDone();
@@ -199,7 +206,15 @@ export function AddNumberDialog({
 
         {step === "activate" && (
           <div className="grid gap-3">
-            <p className="text-sm text-foreground">{hasNumberInUse ? t("activateReplace") : t("activateIntro")}</p>
+            <p className="text-sm text-foreground">
+              {canAddExtra ? t("activateAdd") : hasNumberInUse ? t("activateReplace", { limit: numberLimit }) : t("activateIntro")}
+            </p>
+            {canAddExtra && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="wa-label">{t("fieldLabel")}</Label>
+                <Input id="wa-label" value={label} maxLength={40} onChange={(e) => setLabel(e.target.value)} placeholder={t("fieldLabelHint")} />
+              </div>
+            )}
             <div className="grid gap-1.5">
               <Label htmlFor="wa-pin">{t("fieldPin")}</Label>
               <Input id="wa-pin" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••••" />

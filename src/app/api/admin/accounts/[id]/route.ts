@@ -119,6 +119,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       patch.ai_platform_conversation_limit = n;
     }
 
+    if (body.max_whatsapp_numbers_override !== undefined) {
+      if (body.max_whatsapp_numbers_override === null || body.max_whatsapp_numbers_override === '') {
+        patch.max_whatsapp_numbers_override = null
+      } else {
+        const n = Number(body.max_whatsapp_numbers_override)
+        if (!Number.isInteger(n) || n < 1 || n > 100) {
+          return NextResponse.json({ error: 'max_whatsapp_numbers_override must be 1–100, or empty for the plan default' }, { status: 400 })
+        }
+        patch.max_whatsapp_numbers_override = n
+      }
+    }
+
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }

@@ -29,6 +29,8 @@ export interface Plan {
   max_members: number | null;
   max_contacts: number | null;
   max_broadcast_recipients_per_month: number | null;
+  /** WhatsApp numbers per workspace, primary included (migration 052). */
+  max_whatsapp_numbers?: number;
   ai_enabled: boolean;
   flows_enabled: boolean;
   api_enabled: boolean;

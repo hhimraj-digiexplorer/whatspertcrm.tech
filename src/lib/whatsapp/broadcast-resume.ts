@@ -16,6 +16,7 @@
 // wizard still owns that; this makes an abandoned one recoverable.
 // ============================================================
 
+import { resolveBroadcastNumber } from '@/lib/whatsapp/workspace-numbers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { BroadcastError, type BroadcastPlan } from '@/lib/whatsapp/broadcast-core';
@@ -146,7 +147,7 @@ export async function planBroadcastResume(
 ): Promise<ResumePlan> {
   const { data: broadcast, error: bcError } = await db
     .from('broadcasts')
-    .select('id, template_name, template_language')
+    .select('id, template_name, template_language, phone_number_id')
     .eq('id', broadcastId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -236,7 +237,12 @@ export async function planBroadcastResume(
     broadcastId,
     templateName: broadcast.template_name,
     templateLanguage: resolvedTemplate.language,
-    phoneNumberId: config.phone_number_id,
+    // The number the broadcast was created to send from (multi-number).
+    phoneNumberId: await resolveBroadcastNumber(db, {
+      accountId,
+      primaryPhoneNumberId: config.phone_number_id,
+      requested: (broadcast as { phone_number_id?: string | null }).phone_number_id,
+    }),
     accessToken: decrypt(config.access_token),
     templateRow: resolvedTemplate.row,
     planned: slice.map((row) => ({

@@ -25,6 +25,7 @@ interface Draft {
   max_members: string;
   max_contacts: string;
   max_broadcast_recipients_per_month: string;
+  max_whatsapp_numbers: string;
   ai_enabled: boolean;
   flows_enabled: boolean;
   api_enabled: boolean;
@@ -49,6 +50,7 @@ function toDraft(p: Plan): Draft {
     max_members: str(p.max_members),
     max_contacts: str(p.max_contacts),
     max_broadcast_recipients_per_month: str(p.max_broadcast_recipients_per_month),
+    max_whatsapp_numbers: str(p.max_whatsapp_numbers ?? 1),
     ai_enabled: p.ai_enabled,
     flows_enabled: p.flows_enabled,
     api_enabled: p.api_enabled,
@@ -71,6 +73,7 @@ const EMPTY: Draft = {
   max_members: "",
   max_contacts: "",
   max_broadcast_recipients_per_month: "",
+  max_whatsapp_numbers: "1",
   ai_enabled: true,
   flows_enabled: true,
   api_enabled: true,
@@ -212,7 +215,8 @@ function PlanEditor({
           {field("razorpay_plan_id_monthly", "Razorpay plan id — monthly", { placeholder: "plan_…" })}
           {field("razorpay_plan_id_yearly", "Razorpay plan id — yearly", { placeholder: "plan_…" })}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-4">
+          {field("max_whatsapp_numbers", "WhatsApp numbers", { type: "number", min: 1, max: 100 })}
           {field("max_members", "Team members", { type: "number", min: 1, placeholder: "Unlimited" })}
           {field("max_contacts", "Contacts", { type: "number", min: 0, placeholder: "Unlimited" })}
           {field("max_broadcast_recipients_per_month", "Broadcasts / month", { type: "number", min: 0, placeholder: "Unlimited" })}

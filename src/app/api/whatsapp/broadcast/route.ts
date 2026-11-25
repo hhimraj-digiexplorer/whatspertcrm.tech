@@ -1,3 +1,4 @@
+import { resolveBroadcastNumber } from '@/lib/whatsapp/workspace-numbers'
 import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
@@ -142,6 +143,12 @@ export async function POST(request: Request) {
     }
 
     const accessToken = decrypt(config.access_token)
+    // Send from the chosen workspace number (multi-number); default primary.
+    const fromNumber = await resolveBroadcastNumber(supabase, {
+      accountId,
+      primaryPhoneNumberId: config.phone_number_id,
+      requested: typeof body.phone_number_id === 'string' ? body.phone_number_id : null,
+    })
 
     // Load the template row once so sendTemplateMessage can build
     // header + button components on each iteration. Loading inside
@@ -191,7 +198,7 @@ export async function POST(request: Request) {
       for (const variant of variants) {
         try {
           const result = await sendTemplateMessage({
-            phoneNumberId: config.phone_number_id,
+            phoneNumberId: fromNumber,
             accessToken,
             to: variant,
             templateName: template_name,

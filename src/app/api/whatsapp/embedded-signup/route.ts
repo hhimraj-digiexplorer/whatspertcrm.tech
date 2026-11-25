@@ -1,3 +1,4 @@
+import { pruneExtraNumbers } from '@/lib/whatsapp/workspace-numbers'
 import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
@@ -193,6 +194,7 @@ export async function POST(request: Request) {
       .from('whatsapp_config')
       .upsert(row, { onConflict: 'account_id' })
     if (saveErr) throw saveErr
+    await pruneExtraNumbers(supabaseAdmin(), ctx.accountId, { wabaId, phoneNumberId })
 
     return NextResponse.json({
       success: !registrationError,

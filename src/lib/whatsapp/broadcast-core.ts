@@ -16,6 +16,7 @@
 // for API broadcasts exactly as it does for dashboard ones.
 // ============================================================
 
+import { resolveBroadcastNumber } from '@/lib/whatsapp/workspace-numbers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
@@ -53,6 +54,8 @@ export interface CreateBroadcastParams {
   templateName: string;
   templateLanguage?: string | null;
   recipients: BroadcastRecipientInput[];
+  /** Send from this workspace number (multi-number); default primary. */
+  phoneNumberId?: string | null;
 }
 
 interface PlannedRecipient {
@@ -233,11 +236,20 @@ export async function createBroadcast(
     }
   );
 
+  const fromNumber = await resolveBroadcastNumber(db, {
+    accountId,
+    primaryPhoneNumberId: config.phone_number_id,
+    requested: params.phoneNumberId,
+  });
+  if (fromNumber !== config.phone_number_id) {
+    await db.from('broadcasts').update({ phone_number_id: fromNumber }).eq('id', broadcastId);
+  }
+
   return {
     broadcastId,
     templateName,
     templateLanguage: resolvedTemplate.language,
-    phoneNumberId: config.phone_number_id,
+    phoneNumberId: fromNumber,
     accessToken,
     templateRow,
     planned,

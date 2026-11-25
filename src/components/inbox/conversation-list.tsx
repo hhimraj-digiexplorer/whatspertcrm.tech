@@ -55,6 +55,7 @@ export function ConversationList({
   resyncToken = 0,
 }: ConversationListProps) {
   const t = useTranslations("Inbox.conversationList");
+  const numberLabels = useNumberLabels();
   
   const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = useMemo(() => [
     { label: t("filterAll"), value: "all" },
@@ -415,6 +416,7 @@ export function ConversationList({
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
                 t={t}
+                numberLabel={numberLabels ? numberLabels.get(conv.phone_number_id ?? "") ?? numberLabels.get("") : undefined}
               />
             ))}
           </div>
@@ -429,6 +431,8 @@ interface ConversationItemProps {
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
   t: ReturnType<typeof useTranslations>;
+  /** Which workspace number this chat is on — only in multi-number workspaces. */
+  numberLabel?: string;
 }
 
 function ConversationItem({
@@ -436,6 +440,7 @@ function ConversationItem({
   isActive,
   onSelect,
   t,
+  numberLabel,
 }: ConversationItemProps) {
   const dateLocale = useDateLocale();
   const contact = conversation.contact;
@@ -480,7 +485,14 @@ function ConversationItem({
           <span className="truncate text-sm font-medium text-foreground">
             {displayName}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {numberLabel && (
+              <span className="max-w-[90px] truncate rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600" title={numberLabel}>
+                {numberLabel}
+              </span>
+            )}
+            <span className="text-[10px] text-muted-foreground">{timeAgo}</span>
+          </span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-muted-foreground">
@@ -504,4 +516,40 @@ function ConversationItem({
       </div>
     </button>
   );
+}
+
+/**
+ * phone_number_id → short label for multi-number workspaces ("" maps to
+ * the primary, used for chats that predate multi-number). Null when the
+ * workspace has a single number, so the badge stays hidden.
+ */
+function useNumberLabels(): Map<string, string> | null {
+  const [labels, setLabels] = useState<Map<string, string> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/whatsapp/numbers", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((b: {
+        phone_number_id?: string;
+        numbers?: { id: string; display_phone_number: string }[];
+        extra_numbers?: { phone_number_id: string; display_phone_number: string | null; label: string | null }[];
+      }) => {
+        if (!alive || !b.phone_number_id || !b.extra_numbers?.length) return;
+        const short = (id: string, display?: string | null) => {
+          const d = display ?? b.numbers?.find((n) => n.id === id)?.display_phone_number ?? "";
+          const digits = d.replace(/\D/g, "");
+          return digits ? `…${digits.slice(-4)}` : id.slice(-4);
+        };
+        const m = new Map<string, string>();
+        m.set(b.phone_number_id, short(b.phone_number_id));
+        m.set("", short(b.phone_number_id));
+        for (const e of b.extra_numbers) m.set(e.phone_number_id, e.label || short(e.phone_number_id, e.display_phone_number));
+        setLabels(m);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return labels;
 }

@@ -40,6 +40,7 @@ interface AccountRow {
   ai_key_source: "client" | "platform";
   ai_platform_fee_inr: number;
   ai_platform_conversation_limit: number;
+  max_whatsapp_numbers_override: number | null;
 }
 
 const STATUS_FILTERS = [
@@ -309,6 +310,8 @@ function ManageAccountDialog({
   const [aiKeySource, setAiKeySource] = useState(row.ai_key_source ?? "client");
   const [aiFee, setAiFee] = useState(String(row.ai_platform_fee_inr ?? 1000));
   const [aiLimit, setAiLimit] = useState(String(row.ai_platform_conversation_limit ?? 2500));
+  const [numbersOverride, setNumbersOverride] = useState(row.max_whatsapp_numbers_override == null ? "" : String(row.max_whatsapp_numbers_override));
+  const planNumbers = plans.find((p) => p.id === (row.plan_id ?? ""))?.max_whatsapp_numbers ?? 1;
   const planAi = plans.find((p) => p.id === (row.plan_id ?? ""))?.ai_enabled ?? false;
   const aiOn = aiAccess === "enabled" || (aiAccess === "plan" && planAi);
 
@@ -462,6 +465,39 @@ function ManageAccountDialog({
               {busy === "ai" && <Loader2 className="size-4 animate-spin" />}
               Save AI settings
             </Button>
+          </section>
+
+          <section className="space-y-2 border-t border-border pt-4">
+            <h3 className="text-sm font-semibold text-foreground">WhatsApp numbers</h3>
+            <p className="text-xs text-muted-foreground">
+              Plan allows {planNumbers}. Set a number to override it for this workspace, or leave empty to follow the plan.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={numbersOverride}
+                placeholder={String(planNumbers)}
+                onChange={(e) => setNumbersOverride(e.target.value)}
+                className="w-24"
+                aria-label="WhatsApp numbers allowed"
+              />
+              <Button
+                size="sm"
+                disabled={busy !== null}
+                onClick={() =>
+                  void patch(
+                    { max_whatsapp_numbers_override: numbersOverride.trim() === "" ? null : Math.round(Number(numbersOverride)) },
+                    "numbers",
+                    "WhatsApp number limit saved",
+                  )
+                }
+              >
+                {busy === "numbers" && <Loader2 className="size-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
           </section>
 
           <section className="space-y-2 border-t border-border pt-4">

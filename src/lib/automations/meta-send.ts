@@ -1,3 +1,4 @@
+import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers'
 import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
 import {
@@ -155,6 +156,12 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
   }
 
   const accessToken = decrypt(config.access_token)
+  // Reply from the number this conversation is on (multi-number).
+  const fromNumber = await pickSendingNumber(db, {
+    accountId: input.accountId,
+    primaryPhoneNumberId: config.phone_number_id,
+    conversationId: input.conversationId,
+  })
 
   // Local template row — used for the body we persist below AND, like
   // the manual send path, to build the header/button components. Without
@@ -170,7 +177,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'template') {
       const r = await sendTemplateMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: fromNumber,
         accessToken,
         to: phone,
         templateName: input.templateName,
@@ -181,7 +188,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
       return r.messageId
     }
     const r = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
+      phoneNumberId: fromNumber,
       accessToken,
       to: phone,
       text: input.text,

@@ -11,6 +11,7 @@ import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audien
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
 import { useBroadcastSending } from '@/hooks/use-broadcast-sending';
+import { FromNumberPicker } from '@/components/whatsapp/from-number-picker';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -45,6 +46,7 @@ export default function NewBroadcastPage() {
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
+  const [fromNumber, setFromNumber] = useState('');
 
   async function handleSend() {
     if (!template) return;
@@ -62,6 +64,7 @@ export default function NewBroadcastPage() {
         },
         variables,
         headerMediaUrl,
+        phoneNumberId: fromNumber,
       });
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
@@ -214,6 +217,11 @@ export default function NewBroadcastPage() {
               onNext={() => setCurrentStep(3)}
               onBack={() => setCurrentStep(1)}
             />
+          )}
+          {currentStep === 3 && template && (
+            <div className="mb-4">
+              <FromNumberPicker value={fromNumber} onChange={setFromNumber} />
+            </div>
           )}
           {currentStep === 3 && template && (
             <Step4ScheduleSend

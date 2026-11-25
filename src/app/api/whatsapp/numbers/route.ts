@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { getCurrentAccount, requireRole, toErrorResponse } from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { connectionErrorResponse, loadAccountConnection } from '@/lib/whatsapp/connection'
 import { addPhoneNumber } from '@/lib/whatsapp/meta-api'
 import { explainMetaError, metaErrorPayload } from '@/lib/whatsapp/meta-error-explain'
 import { parseNewNumber } from '@/lib/whatsapp/number-onboarding'
+import { listExtraNumbers, workspaceNumberLimit } from '@/lib/whatsapp/workspace-numbers'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
@@ -50,7 +52,13 @@ export async function GET() {
     if (error) throw error
     if (!cfg) return NextResponse.json({ connected: false })
 
+    const [limit, extras] = await Promise.all([
+      workspaceNumberLimit(supabaseAdmin(), ctx.accountId).catch(() => 1),
+      listExtraNumbers(ctx.supabase, ctx.accountId).catch(() => []),
+    ])
     const base = {
+      number_limit: limit,
+      extra_numbers: extras,
       connected: true,
       status: cfg.status as string,
       waba_id: cfg.waba_id as string | null,

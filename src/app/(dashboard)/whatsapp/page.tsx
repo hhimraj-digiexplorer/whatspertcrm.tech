@@ -41,8 +41,17 @@ interface NumberHealth {
   code_verification_status?: string | null;
 }
 
+interface ExtraNumber {
+  phone_number_id: string;
+  display_phone_number: string | null;
+  label: string | null;
+  status: "active" | "disabled";
+}
+
 interface NumbersResponse {
   connected: boolean;
+  number_limit?: number;
+  extra_numbers?: ExtraNumber[];
   status?: string;
   waba_id?: string | null;
   phone_number_id?: string;
@@ -128,6 +137,26 @@ export default function WhatsAppSetupPage() {
 
   const connected = data?.connected === true;
   const numbers = data?.numbers ?? [];
+  const extras = data?.extra_numbers ?? [];
+  const extraById = new Map(extras.map((e) => [e.phone_number_id, e]));
+  const numberLimit = data?.number_limit ?? 1;
+  const inWorkspace = connected ? 1 + extras.length : 0;
+  const roomForMore = inWorkspace < numberLimit;
+
+  async function numberAction(id: string, body: Record<string, unknown>, okMsg: string) {
+    const res = await fetch(`/api/whatsapp/numbers/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(out.error ?? t("actionFailed"));
+      return;
+    }
+    toast.success(okMsg);
+    reload();
+  }
   const needsAttention = numbers.filter(
     (n) => (n.status && n.status !== "CONNECTED") || n.quality_rating === "RED",
   ).length;
@@ -150,7 +179,7 @@ export default function WhatsAppSetupPage() {
       {/* Stats */}
       <div className="grid gap-4 rounded-2xl border border-border bg-card p-5 shadow-[0_1px_3px_rgb(16_24_40/0.05)] sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-border">
         <Stat icon={Building2} tone="bg-emerald-500/12 text-emerald-500" label={t("statAccounts")} value={data ? (data.waba_id ? 1 : connected ? 1 : 0) : null} />
-        <Stat icon={Phone} tone="bg-indigo-500/12 text-indigo-500" label={t("statNumbers")} value={data ? (connected ? Math.max(numbers.length, 1) : 0) : null} />
+        <Stat icon={Phone} tone="bg-indigo-500/12 text-indigo-500" label={t("statNumbers")} value={data ? (connected ? `${inWorkspace} / ${numberLimit}` : 0) : null} />
         <Stat icon={AlertTriangle} tone="bg-amber-500/14 text-amber-500" label={t("statAttention")} value={data ? needsAttention : null} />
         <Stat icon={CircleX} tone="bg-rose-500/12 text-rose-500" label={t("statDisconnected")} value={data ? (connected && data.status !== "connected" ? 1 : 0) : null} />
       </div>
@@ -382,7 +411,16 @@ export default function WhatsAppSetupPage() {
                           <td className="px-5 py-4">
                             {n.id === data.phone_number_id ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                                <ShieldCheck className="size-3.5" /> {t("inUse")}
+                                <ShieldCheck className="size-3.5" /> {t("primaryNumber")}
+                              </span>
+                            ) : extraById.has(n.id) ? (
+                              <span className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-500/12 px-2.5 py-1 text-xs font-semibold text-indigo-600">
+                                  <ShieldCheck className="size-3.5" /> {t("inWorkspace")}
+                                </span>
+                                {extraById.get(n.id)?.label && (
+                                  <span className="text-xs text-muted-foreground">{extraById.get(n.id)?.label}</span>
+                                )}
                               </span>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
@@ -390,25 +428,47 @@ export default function WhatsAppSetupPage() {
                           </td>
                           {canEditSettings && (
                             <td className="px-5 py-4 text-right">
-                              {n.id !== data.phone_number_id && data.waba_id && (
-                                n.code_verification_status && n.code_verification_status !== "VERIFIED" ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setAddStart({ step: "code", phoneNumberId: n.id, display: n.display_phone_number })}
-                                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
-                                  >
-                                    {t("verifyNumber")}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setAddStart({ step: "activate", phoneNumberId: n.id, display: n.display_phone_number })}
-                                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
-                                  >
-                                    {t("useNumber")}
-                                  </button>
-                                )
-                              )}
+                              <div className="flex flex-wrap justify-end gap-1.5">
+                                {n.id !== data.phone_number_id && data.waba_id && extraById.has(n.id) && (
+                                  <>
+                                    <button type="button" onClick={() => {
+                                      const label = window.prompt(t("labelPrompt"), extraById.get(n.id)?.label ?? "");
+                                      if (label !== null) void numberAction(n.id, { action: "label", label }, t("labelSaved"));
+                                    }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted">
+                                      {t("rename")}
+                                    </button>
+                                    <button type="button" onClick={() => {
+                                      if (window.confirm(t("makePrimaryConfirm", { number: n.display_phone_number }))) void numberAction(n.id, { action: "make_primary" }, t("madePrimary"));
+                                    }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5">
+                                      {t("makePrimary")}
+                                    </button>
+                                    <button type="button" onClick={() => {
+                                      if (window.confirm(t("removeConfirm", { number: n.display_phone_number }))) void numberAction(n.id, { action: "remove" }, t("removed"));
+                                    }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-rose-500 hover:bg-rose-500/10">
+                                      {t("removeNumber")}
+                                    </button>
+                                  </>
+                                )}
+                                {n.id !== data.phone_number_id && data.waba_id && !extraById.has(n.id) && (
+                                  n.code_verification_status && n.code_verification_status !== "VERIFIED" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setAddStart({ step: "code", phoneNumberId: n.id, display: n.display_phone_number })}
+                                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
+                                    >
+                                      {t("verifyNumber")}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setAddStart({ step: "activate", phoneNumberId: n.id, display: n.display_phone_number })}
+                                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
+                                    >
+                                      {roomForMore ? t("addToWorkspace") : t("useNumber")}
+                                    </button>
+                                  )
+                                )}
+                              </div>
                             </td>
                           )}
                         </tr>
@@ -434,6 +494,8 @@ export default function WhatsAppSetupPage() {
       <AddNumberDialog
         start={addStart}
         hasNumberInUse={connected}
+        canAddExtra={connected && roomForMore}
+        numberLimit={numberLimit}
         onClose={() => setAddStart(null)}
         onDone={reload}
       />
@@ -492,7 +554,7 @@ function Stat({
   icon: typeof Phone;
   tone: string;
   label: string;
-  value: number | null;
+  value: number | string | null;
 }) {
   return (
     <div className="flex items-center gap-4 lg:px-5 lg:first:pl-0">

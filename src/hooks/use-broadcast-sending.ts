@@ -51,6 +51,8 @@ interface BroadcastPayload {
    * falls back to the template's stored URL only when this is empty.
    */
   headerMediaUrl?: string;
+  /** Send from this workspace number (multi-number); empty = primary. */
+  phoneNumberId?: string;
 }
 
 interface UseBroadcastSendingReturn {
@@ -386,6 +388,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           template_name: payload.template.name,
           template_language: payload.template.language ?? 'en_US',
           template_variables: payload.variables,
+          phone_number_id: payload.phoneNumberId || null,
           audience_filter: {
             type: payload.audience.type,
             tagIds: payload.audience.tagIds,
@@ -518,6 +521,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
                 recipients: apiRecipients,
                 template_name: payload.template.name,
                 template_language: payload.template.language ?? 'en_US',
+                phone_number_id: payload.phoneNumberId || undefined,
               }),
             });
 

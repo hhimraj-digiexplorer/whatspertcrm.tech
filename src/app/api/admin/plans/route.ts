@@ -40,6 +40,7 @@ function toRow(body: Record<string, unknown>) {
     max_members: intOrNull(body.max_members, 'max_members', 1),
     max_contacts: intOrNull(body.max_contacts, 'max_contacts', 0),
     max_broadcast_recipients_per_month: intOrNull(body.max_broadcast_recipients_per_month, 'max_broadcast_recipients_per_month', 0),
+    max_whatsapp_numbers: Math.min(100, intOrNull(body.max_whatsapp_numbers, 'max_whatsapp_numbers', 1) ?? 1),
     ai_enabled: body.ai_enabled !== false,
     flows_enabled: body.flows_enabled !== false,
     api_enabled: body.api_enabled !== false,

@@ -179,6 +179,8 @@ export interface Conversation {
   unread_count: number;
   created_at: string;
   updated_at: string;
+  /** The workspace number the customer last wrote to (migration 052). */
+  phone_number_id?: string | null;
   contact?: Contact;
   /**
    * AI auto-reply state for this thread (migration 029 + 033):

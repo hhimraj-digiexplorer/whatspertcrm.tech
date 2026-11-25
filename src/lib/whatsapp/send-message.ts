@@ -19,6 +19,7 @@
 // without duplicating ~250 lines of Meta plumbing.
 // ============================================================
 
+import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
@@ -270,6 +271,12 @@ export async function sendMessageToConversation(
   }
 
   const accessToken = decrypt(config.access_token);
+  // Reply from the number this conversation is on (multi-number).
+  const fromNumber = await pickSendingNumber(db, {
+    accountId,
+    primaryPhoneNumberId: config.phone_number_id,
+    conversationId,
+  });
 
   // Self-heal legacy CBC ciphertexts. Fire-and-forget; idempotent.
   if (isLegacyFormat(config.access_token)) {
@@ -342,7 +349,7 @@ export async function sendMessageToConversation(
   const attempt = async (phone: string): Promise<string> => {
     if (messageType === 'template') {
       const result = await sendTemplateMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: fromNumber,
         accessToken,
         to: phone,
         templateName: templateName!,
@@ -356,7 +363,7 @@ export async function sendMessageToConversation(
     }
     if (isMediaKind) {
       const result = await sendMediaMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: fromNumber,
         accessToken,
         to: phone,
         kind: messageType as MediaKind,
@@ -371,7 +378,7 @@ export async function sendMessageToConversation(
       const p = interactivePayload!;
       if (p.kind === 'buttons') {
         const result = await sendInteractiveButtons({
-          phoneNumberId: config.phone_number_id,
+          phoneNumberId: fromNumber,
           accessToken,
           to: phone,
           bodyText: p.body,
@@ -383,7 +390,7 @@ export async function sendMessageToConversation(
         return result.messageId;
       }
       const result = await sendInteractiveList({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: fromNumber,
         accessToken,
         to: phone,
         bodyText: p.body,
@@ -396,7 +403,7 @@ export async function sendMessageToConversation(
       return result.messageId;
     }
     const result = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
+      phoneNumberId: fromNumber,
       accessToken,
       to: phone,
       text: contentText!,

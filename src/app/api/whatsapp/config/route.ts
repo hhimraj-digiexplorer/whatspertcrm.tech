@@ -1,3 +1,4 @@
+import { pruneExtraNumbers } from '@/lib/whatsapp/workspace-numbers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
@@ -541,6 +542,11 @@ export async function POST(request: Request) {
       }
     }
 
+    await pruneExtraNumbers(supabase, accountId, {
+      wabaId: (baseRow.waba_id as string | null | undefined) ?? null,
+      phoneNumberId: baseRow.phone_number_id as string,
+    })
+
     if (registrationError) {
       // Save succeeded but the number isn't actually live. Return
       // 200 with a structured error so the UI can show the specific
@@ -613,6 +619,7 @@ export async function DELETE() {
         { status: 500 }
       )
     }
+    await pruneExtraNumbers(supabase, accountId, { wabaId: null, phoneNumberId: null })
 
     return NextResponse.json({ success: true })
   } catch (error) {

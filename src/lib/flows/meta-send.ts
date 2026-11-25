@@ -1,3 +1,4 @@
+import { pickSendingNumber } from '@/lib/whatsapp/workspace-numbers'
 import {
   sendInteractiveButtons,
   sendInteractiveList,
@@ -40,6 +41,8 @@ import { supabaseAdmin } from './admin-client'
 export async function loadAccountMetaCredentials(
   db: ReturnType<typeof supabaseAdmin>,
   accountId: string,
+  /** Reply from the number this conversation is on (multi-number). */
+  conversationId?: string | null,
 ): Promise<{ phoneNumberId: string; accessToken: string }> {
   const { data: config, error: configErr } = await db
     .from('whatsapp_config')
@@ -50,7 +53,11 @@ export async function loadAccountMetaCredentials(
     throw new Error('WhatsApp not configured for this account')
   }
   return {
-    phoneNumberId: config.phone_number_id,
+    phoneNumberId: await pickSendingNumber(db, {
+      accountId,
+      primaryPhoneNumberId: config.phone_number_id,
+      conversationId,
+    }),
     accessToken: decrypt(config.access_token),
   }
 }
@@ -113,6 +120,7 @@ export async function engineSendText(
   const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
     db,
     args.accountId,
+    args.conversationId,
   )
 
   const attempt = async (phone: string): Promise<string> => {
@@ -222,6 +230,7 @@ export async function engineSendMedia(
   const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
     db,
     args.accountId,
+    args.conversationId,
   )
 
   const attempt = async (phone: string): Promise<string> => {
@@ -373,6 +382,7 @@ async function sendInteractiveViaMeta(
   const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
     db,
     input.accountId,
+    input.conversationId,
   )
 
   const attempt = async (phone: string): Promise<string> => {
