@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const h = vi.hoisted(() => ({
   claimed: null as Record<string, unknown> | null,
   saved: [] as Record<string, unknown>[],
-  numbers: [{ id: '111', display_phone_number: '+91 90000 00000', verified_name: 'Shop' }],
+  numbers: [{ id: '111', display_phone_number: '+91 90000 00000', verified_name: 'Shop' }] as { id: string; display_phone_number?: string; verified_name?: string }[],
   register: vi.fn(),
   subscribe: vi.fn(),
   exchange: vi.fn(),
