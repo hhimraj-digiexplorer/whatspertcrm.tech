@@ -177,3 +177,22 @@ describe('enquiry ids and project codes back to Real Expert', () => {
     expect(send.mock.calls[1][1]).toMatchObject({ enquiry_id: 'E-9' })
   })
 })
+
+describe("Real Expert's enquiry_id in its reply", () => {
+  it('is stored for the project the lead was created for, and for a repeat enquiry', async () => {
+    const saved: [string, string, string][] = []
+    const { deps, send, links } = makeDeps({ ...contact, project_tags: ['p-sky'] })
+    deps.saveEnquiry = async (c, t, e) => {
+      saved.push([c, t, e])
+    }
+    send.mockResolvedValueOnce({ id: 'L-1', enquiry_id: 'E-10' })
+    await processJob(enquiry({ contact_id: 'c1', tag_id: 't', tag_name: 'p-sky' }), deps)
+    links.set('c1', 'L-1')
+    send.mockResolvedValueOnce({ id: 'L-1', status: 're_enquiry', enquiry_id: 'E-11', duplicate: true })
+    await processJob(enquiry({ contact_id: 'c1', tag_id: 't', tag_name: 'p-sky' }), deps)
+    expect(saved).toEqual([
+      ['c1', 'p-sky', 'E-10'],
+      ['c1', 'p-sky', 'E-11'],
+    ])
+  })
+})

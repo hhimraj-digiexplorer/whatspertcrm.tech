@@ -92,6 +92,8 @@ export interface SyncDeps {
   getLink(contactId: string): Promise<string | null>
   /** Real Expert enquiry ids we were pushed for this contact, newest first. */
   loadEnquiries?(contactId: string): Promise<EnquiryRow[]>
+  /** Remember the enquiry id Real Expert returned for this contact + project. */
+  saveEnquiry?(contactId: string, projectTag: string, enquiryId: string): Promise<void>
   saveLink(contactId: string, externalId: string): Promise<void>
   send(path: string, body: unknown, idempotencyKey: string): Promise<unknown>
 }
@@ -229,7 +231,15 @@ async function ensureLead(contactId: string, deps: SyncDeps): Promise<string | n
     throw new RealExpertError('Real Expert created the lead but did not return its id.', null, false)
   }
   await deps.saveLink(contact.id, externalId)
+  await rememberEnquiry(res, contact.id, contact.project_tags?.[0] ?? '', deps)
   return externalId
+}
+
+/** Store `enquiry_id` from Real Expert's reply, when it sends one. Best-effort. */
+async function rememberEnquiry(res: unknown, contactId: string, projectTag: string, deps: SyncDeps): Promise<void> {
+  const enquiryId = extractExternalId(res, ['enquiry_id', 'enquiryId'])
+  if (!enquiryId || !deps.saveEnquiry) return
+  await deps.saveEnquiry(contactId, projectTag, enquiryId).catch(() => undefined)
 }
 
 /** Push one job. Throws `RealExpertError` (or anything) on failure. */
@@ -296,13 +306,15 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
           throw new RealExpertError('Real Expert created the lead but did not return its id.', null, false)
         }
         await deps.saveLink(contact.id, externalId)
+        await rememberEnquiry(res, contact.id, tag, deps)
         return 'done'
       }
-      await deps.send(
+      const repeatRes = await deps.send(
         deps.options.leads_path,
         { ...buildLeadPayload(contact, deps.options, tag), is_repeat_enquiry: true, lead_id: linked },
         `enquiry-${contact.id}-${typeof p.tag_id === 'string' ? p.tag_id : tag}`,
       )
+      await rememberEnquiry(repeatRes, contact.id, tag, deps)
       return 'done'
     }
     default:
@@ -405,7 +417,27 @@ export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: 
         .maybeSingle()
       return (data as { external_id: string } | null)?.external_id ?? null
     },
-    async loadEnquiries(contactId) {
+    async saveEnquiry(contactId, projectTag, enquiryId) {
+      const { data: rows } = await db
+        .from('crm_enquiries')
+        .select('id, project_tag')
+        .eq('integration_id', integration.id)
+        .eq('contact_id', contactId)
+      const hit = ((rows ?? []) as { id: string; project_tag: string }[]).find(
+        (r) => r.project_tag.toLowerCase() === projectTag.toLowerCase(),
+      )
+      const now = new Date().toISOString()
+      if (hit) await db.from('crm_enquiries').update({ enquiry_id: enquiryId, updated_at: now }).eq('id', hit.id)
+      else
+        await db.from('crm_enquiries').insert({
+          integration_id: integration.id,
+          account_id: accountId,
+          contact_id: contactId,
+          project_tag: projectTag,
+          enquiry_id: enquiryId,
+        })
+    },
+        async loadEnquiries(contactId) {
       const { data } = await db
         .from('crm_enquiries')
         .select('project_tag, enquiry_id, updated_at')
