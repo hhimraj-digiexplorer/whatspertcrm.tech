@@ -28,7 +28,7 @@ const FEATURES = [
   {
     icon: Inbox,
     title: "Shared team inbox",
-    body: "Every WhatsApp chat in one place. Assign conversations, add private notes and see who's replying — no more passing one phone around the office.",
+    body: "Every WhatsApp chat in one place — up to 5 numbers on the Scale plan, each reply going out from the number the customer wrote to. Assign chats, add private notes and see who's replying.",
   },
   {
     icon: Megaphone,
@@ -62,8 +62,8 @@ const FEATURES = [
   },
   {
     icon: PlugZap,
-    title: "API & webhooks",
-    body: "Connect your website forms, ad leads and other tools through a REST API and webhooks.",
+    title: "Works with Claude & your tools",
+    body: "Ask Claude “how many hot leads came in today?” or “send Rahul the site-visit reminder” — Whatspert connects to AI assistants (MCP), plus a REST API and webhooks for your forms and ad leads.",
   },
 ];
 
