@@ -17,6 +17,7 @@ import {
 } from '@/lib/integrations/real-expert/config'
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
+import { addContactTagIfAbsent } from '@/lib/contacts/tag-write'
 import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { withWorkspaceProjects } from '@/lib/integrations/real-expert/projects-bridge'
 import { resolveProject } from '@/lib/projects/match'
@@ -247,10 +248,12 @@ export async function POST(request: Request, { params }: Params) {
       .eq('id', resolved.contactId)
       .eq('account_id', accountId)
       .maybeSingle()
+    // Real Expert's "never message leads from this source": no greeting,
+    // and no automation started by this push (they could message too).
+    const noMessage = lead.welcome === 'none' || lead.send_welcome === false || lead.send_welcome === 'false'
     const welcome = chooseWelcome({
       optedOut: !!(optRow as { opted_out_at?: string | null } | null)?.opted_out_at,
-      // Real Expert's "never message leads from this source".
-      noMessage: lead.welcome === 'none' || lead.send_welcome === false || lead.send_welcome === 'false',
+      noMessage,
       options,
       payloadTemplate: payloadTemplateName ? { name: payloadTemplateName, language: str(tpl.language, 20) } : null,
       project,
@@ -298,7 +301,7 @@ export async function POST(request: Request, { params }: Params) {
     const context = { conversation_id: resolved.conversationId, source: 'real_expert' }
 
     // 2. New Contact Created, for a contact this lead just created.
-    if (resolved.contactCreated) {
+    if (resolved.contactCreated && !noMessage) {
       await runAutomationsForTrigger({
         accountId,
         triggerType: 'new_contact_created',
@@ -330,14 +333,12 @@ export async function POST(request: Request, { params }: Params) {
         for (const tagName of tagNames) {
           const tagId = tagIdByKey.get(tagName.toLowerCase())
           if (!tagId) continue
-          const r = await addContactTagAndDispatch({
-            db,
-            accountId,
-            contactId: resolved.contactId,
-            tagId,
-            context,
-          })
-          if (r.added) tagsAdded.push(tagName)
+          // A "never message" push still files the buyer under its
+          // project and source, but starts no Tag Added automation.
+          const added = noMessage
+            ? await addContactTagIfAbsent(db, { accountId, contactId: resolved.contactId, tagId })
+            : (await addContactTagAndDispatch({ db, accountId, contactId: resolved.contactId, tagId, context })).added
+          if (added) tagsAdded.push(tagName)
         }
       } catch (err) {
         console.error('[crm-inbound] could not tag the lead:', err)
@@ -349,6 +350,7 @@ export async function POST(request: Request, { params }: Params) {
       conversation_id: resolved.conversationId,
       contact_created: resolved.contactCreated,
       tags_added: tagsAdded,
+      automations_started: !noMessage,
       project: project ? project.setting.name : null,
       ...(!project && leadNamesProject(lead)
         ? {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
 
 const h = vi.hoisted(() => ({
+  tagIfAbsent: vi.fn(async () => true),
   integration: null as Record<string, unknown> | null,
   links: [] as Record<string, unknown>[],
   deletedJobs: 0,
@@ -21,6 +22,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@/lib/automations/engine', () => ({ runAutomationsForTrigger: h.trigger }))
 vi.mock('@/lib/contacts/tag-events', () => ({ addContactTagAndDispatch: h.tagAdd }))
+vi.mock('@/lib/contacts/tag-write', () => ({ addContactTagIfAbsent: h.tagIfAbsent }))
 vi.mock('@/lib/contacts/resolve-import-tags', () => ({ resolveImportTagIds: h.tagIds }))
 
 vi.mock('@/lib/whatsapp/encryption', () => ({ decrypt: (v: string) => v.replace(/^enc\(|\)$/g, '') }))
@@ -194,6 +196,15 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(h.tagAdd).not.toHaveBeenCalled()
   })
 
+  it('a never-message push still files the buyer under its project tag', async () => {
+    h.tagIfAbsent.mockClear()
+    const res = await call({ lead_id: 15, name: 'Asha', phone: '9876543210', source: 'website', welcome: 'none', project_tag: 'p-sky' })
+    const body = await res.json()
+    expect(body.tags_added).toContain('p-sky')
+    expect(h.tagIfAbsent).toHaveBeenCalled()
+    expect(h.tagAdd).not.toHaveBeenCalled()
+  })
+
   it('sends no welcome template when Real Expert does the greeting, but honours a template in the payload', async () => {
     h.integration!.options = { greeting_by: 'real_expert' }
     const res = await call({ phone: '+919876543210' })
@@ -249,7 +260,18 @@ describe('POST /api/integrations/real-expert/inbound/[id]', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.welcome).toEqual({ skipped: 'source_no_message' })
+    expect(body.automations_started).toBe(false)
     expect(h.send).not.toHaveBeenCalled()
+    // Nothing that could message the buyer starts: no New Contact
+    // Created, no Tag Added dispatch.
+    expect(h.trigger).not.toHaveBeenCalled()
+    expect(h.tagAdd).not.toHaveBeenCalled()
+  })
+
+  it('send_welcome: false is read the same way as welcome: "none"', async () => {
+    const res = await call({ lead_id: 14, name: 'Asha', phone: '9876543210', source: 'website', send_welcome: false })
+    expect((await res.json()).welcome).toEqual({ skipped: 'source_no_message' })
+    expect(h.tagAdd).not.toHaveBeenCalled()
   })
 
   it('warns, in plain words, about a project code Whatspert does not know', async () => {
