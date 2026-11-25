@@ -1860,7 +1860,19 @@
       "newKeyTitle": "Nova chave de API",
       "newKeyDesc": "Nomeie-a conforme a integração que vai usá-la e conceda apenas os escopos necessários.",
       "done": "Concluído",
-      "networkError": "Não foi possível conectar ao servidor"
+      "networkError": "Não foi possível conectar ao servidor",
+      "mcpTitle": "Usar com o Claude e outros assistentes de IA (MCP)",
+      "mcpDesc": "Conecte o Claude (Claude Code, Claude Desktop) ou qualquer assistente compatível com MCP a este espaço com uma chave de API e peça para ele cuidar das suas vendas no WhatsApp.",
+      "mcpExample1": "Quantos leads quentes chegaram esta semana?",
+      "mcpExample2": "Resuma minhas conversas não lidas e sugira respostas",
+      "mcpExample3": "Marque o Rahul como Hot lead e mova o negócio dele para Visita",
+      "mcpExample4": "Envie o modelo site_visit_reminder para +91 98765 43210",
+      "mcpUrl": "Endereço do servidor",
+      "mcpClaudeCode": "Claude Code",
+      "mcpClaudeDesktop": "Claude Desktop / Cursor (claude_desktop_config.json)",
+      "mcpCopy": "Copiar",
+      "mcpCopied": "Copiado",
+      "mcpScopesNote": "Troque YOUR_API_KEY por uma chave desta página. Os escopos da chave definem o que o assistente pode fazer — por exemplo, só leitura para relatórios. Enviar exige o escopo messages:send, e o assistente deve confirmar cada mensagem com você."
     },
     "deals": {
       "title": "Negócios e moeda",

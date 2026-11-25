@@ -1860,7 +1860,19 @@
       "newKeyTitle": "New API key",
       "newKeyDesc": "Name it after the integration that will use it, and grant only the scopes it needs.",
       "done": "Done",
-      "networkError": "Could not reach the server"
+      "networkError": "Could not reach the server",
+      "mcpTitle": "Use with Claude and other AI assistants (MCP)",
+      "mcpDesc": "Connect Claude (Claude Code, Claude Desktop) or any MCP-compatible assistant to this workspace with an API key, then ask it to work your WhatsApp sales for you.",
+      "mcpExample1": "How many hot leads came in this week?",
+      "mcpExample2": "Summarise my unread chats and suggest replies",
+      "mcpExample3": "Tag Rahul as Hot lead and move his deal to Site visit",
+      "mcpExample4": "Send the site_visit_reminder template to +91 98765 43210",
+      "mcpUrl": "Server address",
+      "mcpClaudeCode": "Claude Code",
+      "mcpClaudeDesktop": "Claude Desktop / Cursor (claude_desktop_config.json)",
+      "mcpCopy": "Copy",
+      "mcpCopied": "Copied",
+      "mcpScopesNote": "Replace YOUR_API_KEY with a key from this page. The key's scopes decide what the assistant can do — e.g. give only read scopes for a reporting-only assistant. Sending needs the messages:send scope, and the assistant should confirm each message with you first."
     },
     "deals": {
       "title": "Deals & currency",

@@ -34,6 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequireRole } from '@/components/auth/require-role';
+import { McpConnectCard } from '@/components/settings/mcp-connect-card';
 import { useAuth } from '@/hooks/use-auth';
 import {
   API_SCOPES,
@@ -153,6 +154,8 @@ export function ApiKeysSettings() {
           </RequireRole>
         }
       />
+
+      <McpConnectCard />
 
       {keys.length === 0 ? (
         <Card>

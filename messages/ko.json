@@ -1860,7 +1860,19 @@
       "newKeyTitle": "새 API 키",
       "newKeyDesc": "이 키를 사용할 연동 서비스의 이름을 붙이고, 필요한 권한 범위만 부여하세요.",
       "done": "완료",
-      "networkError": "서버에 연결할 수 없습니다"
+      "networkError": "서버에 연결할 수 없습니다",
+      "mcpTitle": "Claude 및 다른 AI 어시스턴트와 함께 사용(MCP)",
+      "mcpDesc": "API 키로 Claude(Claude Code, Claude Desktop) 또는 MCP 호환 어시스턴트를 이 워크스페이스에 연결하고 WhatsApp 영업 업무를 맡기세요.",
+      "mcpExample1": "이번 주에 핫 리드가 몇 명 들어왔어?",
+      "mcpExample2": "읽지 않은 대화를 요약하고 답장을 제안해 줘",
+      "mcpExample3": "Rahul에게 Hot lead 태그를 달고 거래를 현장 방문 단계로 옮겨 줘",
+      "mcpExample4": "+91 98765 43210에 site_visit_reminder 템플릿을 보내 줘",
+      "mcpUrl": "서버 주소",
+      "mcpClaudeCode": "Claude Code",
+      "mcpClaudeDesktop": "Claude Desktop / Cursor (claude_desktop_config.json)",
+      "mcpCopy": "복사",
+      "mcpCopied": "복사됨",
+      "mcpScopesNote": "YOUR_API_KEY를 이 페이지에서 만든 키로 바꾸세요. 키의 범위에 따라 어시스턴트가 할 수 있는 일이 정해집니다. 예를 들어 보고 전용이면 읽기 범위만 주세요. 메시지 발송에는 messages:send 범위가 필요하며, 어시스턴트는 매번 발송 전에 확인해야 합니다."
     },
     "deals": {
       "title": "딜 & 통화",
