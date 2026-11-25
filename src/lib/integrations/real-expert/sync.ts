@@ -15,7 +15,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { decrypt } from '@/lib/whatsapp/encryption'
-import { extractExternalId, fillPath, parseOptions, type RealExpertOptions } from './config'
+import { extractExternalId, fillPath, parseOptions, projectForTags, type RealExpertOptions } from './config'
+import { PROJECT_TAG_GROUP, sameGroup } from '@/lib/tags/groups'
 import { realExpertRequest, RealExpertError, type RealExpertTarget } from './client'
 
 /** Give up on a job after this many attempts. */
@@ -29,7 +30,7 @@ export function retryDelayMs(attempts: number): number {
   return BACKOFF_MINUTES[i] * 60_000
 }
 
-export type JobKind = 'lead' | 'deal' | 'message'
+export type JobKind = 'lead' | 'deal' | 'message' | 'enquiry'
 
 export interface SyncJob {
   id: number
@@ -38,6 +39,8 @@ export interface SyncJob {
   kind: JobKind
   entity_id: string
   attempts: number
+  /** enquiry jobs: { contact_id, tag_id, tag_name }. */
+  payload?: Record<string, unknown> | null
 }
 
 export interface ContactRow {
@@ -47,6 +50,8 @@ export interface ContactRow {
   email: string | null
   company: string | null
   created_at: string | null
+  /** The contact's tags in the "Project" group, oldest first. */
+  project_tags?: string[]
 }
 
 export interface DealRow {
@@ -60,6 +65,8 @@ export interface DealRow {
   updated_at: string | null
   stage: { id: string; name: string; position: number } | null
   pipeline: { id: string; name: string } | null
+  /** The deal contact's tags in the "Project" group. */
+  project_tags?: string[]
 }
 
 export interface MessageRow {
@@ -90,10 +97,26 @@ export type JobOutcome = 'done' | 'skipped'
 
 const looksLikeEmail = (v: string | null) => !!v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
-/** POST /v1/leads — creates the lead, or returns the existing one for that phone. */
-export function buildLeadPayload(contact: ContactRow, options: RealExpertOptions) {
+/** Project fields for Real Expert, from a project tag (configured or not). */
+export function projectFields(tag: string | null | undefined, options: RealExpertOptions) {
+  if (!tag) return {}
+  const match = projectForTags(options.projects, [tag])
+  return {
+    project: match?.setting.name ?? tag,
+    project_code: match?.setting.code ?? null,
+    project_tag: tag,
+  }
+}
+
+/**
+ * POST /v1/leads — creates the lead, or returns the existing one for that
+ * phone. Carries the contact's (first) project so a WhatsApp-first lead
+ * lands on the right project; `projectTag` overrides it for an enquiry.
+ */
+export function buildLeadPayload(contact: ContactRow, options: RealExpertOptions, projectTag?: string) {
   const phone = contact.phone.replace(/\D/g, '')
   const name = contact.name?.trim()
+  const tag = projectTag ?? contact.project_tags?.[0]
   return {
     name: name && name.replace(/\D/g, '') !== phone ? name : null,
     phone: `+${phone}`,
@@ -102,7 +125,32 @@ export function buildLeadPayload(contact: ContactRow, options: RealExpertOptions
     source: options.lead_source,
     whatspert_contact_id: contact.id,
     created_at: contact.created_at,
+    ...projectFields(tag, options),
+    // Every project the contact enquired about so far, so Real Expert can
+    // open an enquiry per project when a lead arrives with several.
+    ...(contact.project_tags && contact.project_tags.length > 0
+      ? { project_tags: contact.project_tags }
+      : {}),
   }
+}
+
+/**
+ * Which project a deal is about: the project whose name or code is the
+ * pipeline's name, else the contact's only project tag, else their first.
+ */
+export function dealProjectTag(deal: DealRow, options: RealExpertOptions): string | null {
+  const tags = deal.project_tags ?? []
+  if (tags.length === 0) return null
+  const pipeline = deal.pipeline?.name.trim().toLowerCase()
+  if (pipeline) {
+    for (const tag of tags) {
+      const p = projectForTags(options.projects, [tag])?.setting
+      if (p && (p.name.toLowerCase() === pipeline || p.code?.toLowerCase() === pipeline || tag.toLowerCase() === pipeline)) {
+        return tag
+      }
+    }
+  }
+  return tags[0]
 }
 
 const money = (v: DealRow['value']) => {
@@ -114,8 +162,9 @@ const money = (v: DealRow['value']) => {
  * POST /v1/leads/{lead_id}/stage — Real Expert matches the stage name
  * against its own stages; an unmatched name is recorded as a note.
  */
-export function buildStagePayload(deal: DealRow) {
+export function buildStagePayload(deal: DealRow, options?: RealExpertOptions) {
   return {
+    ...(options ? projectFields(dealProjectTag(deal, options), options) : {}),
     title: deal.title,
     value: money(deal.value),
     currency: deal.currency,
@@ -175,7 +224,7 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       if (!leadId) return 'skipped'
       await deps.send(
         fillPath(deps.options.stage_path, leadId),
-        buildStagePayload(deal),
+        buildStagePayload(deal, deps.options),
         `deal-${deal.id}-${deal.updated_at ?? ''}`,
       )
       return 'done'
@@ -186,6 +235,42 @@ export async function processJob(job: SyncJob, deps: SyncDeps): Promise<JobOutco
       const leadId = await ensureLead(message.contact_id, deps)
       if (!leadId) return 'skipped'
       await deps.send(fillPath(deps.options.activities_path, leadId), buildMessagePayload(message), `message-${message.id}`)
+      return 'done'
+    }
+    case 'enquiry': {
+      // A contact enquired about a project from WhatsApp (ad, flow,
+      // agent). Not yet in Real Expert → create the lead for that
+      // project. Already there → send the same lead push flagged as a
+      // repeat enquiry for that project.
+      const p = job.payload ?? {}
+      const contactId = typeof p.contact_id === 'string' ? p.contact_id : null
+      const tag = typeof p.tag_name === 'string' ? p.tag_name : null
+      if (!contactId || !tag) return 'skipped'
+      const contact = await deps.loadContact(contactId)
+      if (!contact) return 'skipped'
+      // The tag was taken off again before we got to it.
+      if (contact.project_tags && !contact.project_tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+        return 'skipped'
+      }
+      const linked = await deps.getLink(contactId)
+      if (!linked) {
+        const res = await deps.send(
+          deps.options.leads_path,
+          buildLeadPayload(contact, deps.options, tag),
+          `lead-${contact.id}`,
+        )
+        const externalId = extractExternalId(res, ['id', 'lead_id', 'leadId', 'uuid'])
+        if (!externalId) {
+          throw new RealExpertError('Real Expert created the lead but did not return its id.', null, false)
+        }
+        await deps.saveLink(contact.id, externalId)
+        return 'done'
+      }
+      await deps.send(
+        deps.options.leads_path,
+        { ...buildLeadPayload(contact, deps.options, tag), is_repeat_enquiry: true, lead_id: linked },
+        `enquiry-${contact.id}-${typeof p.tag_id === 'string' ? p.tag_id : tag}`,
+      )
       return 'done'
     }
     default:
@@ -211,6 +296,26 @@ function one<T>(v: T | T[] | null | undefined): T | null {
   return v ?? null
 }
 
+/** The contact's "Project" group tags, oldest first. Best-effort ([] on error). */
+async function projectTagsOf(db: SupabaseClient, accountId: string, contactId: string): Promise<string[]> {
+  try {
+    const { data } = await db
+      .from('contact_tags')
+      .select('created_at, tags!inner(name, group_name, account_id)')
+      .eq('contact_id', contactId)
+      .eq('tags.account_id', accountId)
+      .order('created_at', { ascending: true })
+    const out: string[] = []
+    for (const row of data ?? []) {
+      const tag = one((row as { tags?: unknown }).tags as { name: string; group_name: string | null } | null)
+      if (tag && sameGroup(tag.group_name, PROJECT_TAG_GROUP)) out.push(tag.name)
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: RealExpertTarget): SyncDeps {
   const accountId = integration.account_id
   const options = parseOptions(integration.options).options
@@ -223,7 +328,8 @@ export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: 
         .eq('id', id)
         .eq('account_id', accountId)
         .maybeSingle()
-      return (data as ContactRow | null) ?? null
+      if (!data) return null
+      return { ...(data as ContactRow), project_tags: await projectTagsOf(db, accountId, id) }
     },
     async loadDeal(id) {
       const { data } = await db
@@ -236,7 +342,12 @@ export function dbDeps(db: SupabaseClient, integration: IntegrationRow, target: 
         .maybeSingle()
       if (!data) return null
       const d = data as unknown as DealRow & { stage: unknown; pipeline: unknown }
-      return { ...d, stage: one(d.stage as DealRow['stage']), pipeline: one(d.pipeline as DealRow['pipeline']) }
+      return {
+        ...d,
+        stage: one(d.stage as DealRow['stage']),
+        pipeline: one(d.pipeline as DealRow['pipeline']),
+        project_tags: await projectTagsOf(db, accountId, d.contact_id),
+      }
     },
     async loadMessage(id) {
       const { data } = await db

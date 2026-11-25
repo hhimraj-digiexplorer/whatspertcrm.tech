@@ -62,9 +62,19 @@ export interface ProjectSetting {
   tag?: string
   /** Welcome for this project: an approved template, or 'none'. Unset = fallback. */
   welcome?: { template: string; language?: string } | 'none'
+  /** Real Expert's project code, sent back on leads, enquiries and stage syncs. */
+  code?: string
+  /**
+   * Click-to-WhatsApp ads for this project: a Meta ad id (digits) or a
+   * word that appears in the ad's headline, text or link. A contact who
+   * writes from a matching ad gets this project's tag before any flow runs.
+   */
+  ads?: string[]
 }
 
 export const MAX_PROJECTS = 50
+export const MAX_PROJECT_ADS = 20
+const PROJECT_CODE_RE = /^[\w.\-/ ]{1,60}$/
 
 export const DEFAULT_OPTIONS: RealExpertOptions = {
   auth_style: 'bearer',
@@ -211,6 +221,20 @@ function parseProjects(raw: unknown): { projects: Record<string, ProjectSetting>
         setting.welcome = language ? { template, language } : { template }
       } else bad = true
     } else if (r.welcome !== undefined && r.welcome !== null && r.welcome !== '') bad = true
+    if (r.code !== undefined && r.code !== null && r.code !== '') {
+      const code = String(r.code).trim()
+      if (PROJECT_CODE_RE.test(code)) setting.code = code
+      else bad = true
+    }
+    if (r.ads !== undefined && r.ads !== null) {
+      const list = Array.isArray(r.ads) ? r.ads : typeof r.ads === 'string' ? r.ads.split(',') : null
+      if (!list) bad = true
+      else {
+        const ads = [...new Set(list.map((a) => String(a ?? '').trim().slice(0, 120)).filter(Boolean))]
+        if (ads.length > MAX_PROJECT_ADS) bad = true
+        if (ads.length > 0) setting.ads = ads.slice(0, MAX_PROJECT_ADS)
+      }
+    }
     projects[key] = setting
   }
   return { projects, bad }
@@ -235,9 +259,71 @@ export function matchProject(
   for (const v of [lead.project_code, lead.project_tag, lead.project_id, lead.project]) {
     if ((typeof v !== 'string' || !v.trim()) && typeof v !== 'number') continue
     const key = sourceKey(String(v))
-    if (key && projects[key]) return { key, setting: projects[key] }
+    if (!key) continue
+    if (projects[key]) return { key, setting: projects[key] }
+    // A project keyed by its name still matches on its saved code or tag.
+    for (const [k, setting] of Object.entries(projects)) {
+      if ((setting.code && sourceKey(setting.code) === key) || (setting.tag && sourceKey(setting.tag) === key)) {
+        return { key: k, setting }
+      }
+    }
   }
   return null
+}
+
+/** What Meta sends with a message that came from a Click-to-WhatsApp ad. */
+export interface AdReferral {
+  source_id?: string
+  source_type?: string
+  source_url?: string
+  headline?: string
+  body?: string
+  ctwa_clid?: string
+}
+
+/**
+ * The project whose ad list matches this referral: an all-digit entry
+ * must equal the ad id; any other entry is a word looked for
+ * (case-insensitive) in the ad's headline, text and link.
+ */
+export function projectForReferral(
+  projects: Record<string, ProjectSetting>,
+  referral: AdReferral | null | undefined,
+): { key: string; setting: ProjectSetting } | null {
+  if (!referral) return null
+  const adId = (referral.source_id ?? '').trim()
+  const haystack = [referral.headline, referral.body, referral.source_url]
+    .filter((v): v is string => typeof v === 'string')
+    .join(' \n ')
+    .toLowerCase()
+  // Ad ids first (exact), then words — so an id match is never beaten
+  // by another project's broader keyword.
+  for (const [key, setting] of Object.entries(projects)) {
+    if (adId && (setting.ads ?? []).some((a) => /^\d+$/.test(a) && a === adId)) return { key, setting }
+  }
+  for (const [key, setting] of Object.entries(projects)) {
+    if ((setting.ads ?? []).some((a) => !/^\d+$/.test(a) && haystack.includes(a.toLowerCase()))) {
+      return { key, setting }
+    }
+  }
+  return null
+}
+
+/** The configured project whose tag is one of these (case-insensitive). */
+export function projectForTags(
+  projects: Record<string, ProjectSetting>,
+  tagNames: string[],
+): { key: string; setting: ProjectSetting } | null {
+  const wanted = new Set(tagNames.map((n) => n.trim().toLowerCase()))
+  for (const [key, setting] of Object.entries(projects)) {
+    if (setting.tag && wanted.has(setting.tag.toLowerCase())) return { key, setting }
+  }
+  return null
+}
+
+/** Every configured project tag. */
+export function projectTagNames(projects: Record<string, ProjectSetting>): string[] {
+  return [...new Set(Object.values(projects).map((p) => p.tag).filter((t): t is string => !!t))]
 }
 
 /** Does the lead name any project at all (configured or not)? */

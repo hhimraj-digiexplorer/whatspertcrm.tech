@@ -43,6 +43,13 @@ import { decideFallback, resolveFallbackPolicy } from "./fallback";
 import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
 import { dispatchConversationAssigned } from "@/lib/automations/assignment";
 import { removeContactTag } from "@/lib/contacts/tag-write";
+import { contactTagsWithGroups, passesGroupTest, sameGroup } from "@/lib/tags/groups";
+import {
+  inboundText,
+  parseEntryCondition,
+  passesEntryCondition,
+  type ContactTagFacts,
+} from "./entry-condition";
 import {
   type CollectInputNodeConfig,
   type ConditionNodeConfig,
@@ -336,6 +343,7 @@ async function isDuplicateInbound(
 async function findEntryFlow(
   db: AdminClient,
   accountId: string,
+  contactId: string,
   message: ParsedInbound,
   isFirstInbound: boolean,
 ): Promise<FlowRow | null> {
@@ -360,11 +368,35 @@ async function findEntryFlow(
     .order("created_at", { ascending: true });
   if (error || !flows) return null;
 
+  // Flows with an entry condition (e.g. "contact has tag p-galleria")
+  // are tried first, in creation order, then the unconditional ones —
+  // so a project's own menu beats the catch-all project picker. The
+  // contact's tags are loaded once, and only if some flow needs them.
   const typed = flows as FlowRow[];
-  for (const flow of typed) {
+  const conditionOf = (f: FlowRow) =>
+    parseEntryCondition((f.trigger_config as { entry_condition?: unknown } | null)?.entry_condition);
+  const ordered = [
+    ...typed.filter((f) => conditionOf(f)),
+    ...typed.filter((f) => !conditionOf(f)),
+  ];
+  let contactTags: ContactTagFacts[] | null = null;
+  const entryAllowed = async (flow: FlowRow): Promise<boolean> => {
+    const cond = conditionOf(flow);
+    if (!cond) return true;
+    if (!contactTags) {
+      try {
+        contactTags = await contactTagsWithGroups(db, accountId, contactId);
+      } catch (err) {
+        console.error("[flows] could not load contact tags for entry condition:", err);
+        return false;
+      }
+    }
+    return passesEntryCondition(cond, contactTags);
+  };
+  for (const flow of ordered) {
     if (flow.trigger_type === "keyword") {
       const cfg = flow.trigger_config as KeywordTriggerConfig;
-      if (candidates.some((text) => matchesKeywordTrigger(text, cfg))) {
+      if (candidates.some((text) => matchesKeywordTrigger(text, cfg)) && (await entryAllowed(flow))) {
         return flow;
       }
     } else if (flow.trigger_type === "first_inbound_message" && isFirstInbound) {
@@ -374,7 +406,7 @@ async function findEntryFlow(
       // treated a tap that way (the webhook pushes
       // `first_inbound_message` regardless of envelope) — flows were
       // the inconsistent half.
-      return flow;
+      if (await entryAllowed(flow)) return flow;
     }
     // 'manual' triggers do not auto-start from inbound messages.
   }
@@ -519,6 +551,13 @@ async function executeHandoff(
 }
 
 /**
+ * The inbound message being handled in this pass, per run object — read
+ * by `message` condition nodes. Kept off the row (never persisted), so a
+ * captured answer can't leak into flow_runs.vars.
+ */
+const runInboundText = new WeakMap<FlowRunRow, string>();
+
+/**
  * Resolve a condition node's subject value from DB / run state, then
  * call the pure `evaluateConditionPredicate`. Splits out so the
  * predicate itself stays unit-testable without a Supabase mock.
@@ -539,6 +578,20 @@ async function evaluateConditionNode(
   if (cfg.subject === "var") {
     const v = run.vars[cfg.subject_key];
     subjectValue = typeof v === "string" ? v : v === undefined ? undefined : String(v);
+  } else if (cfg.subject === "tag_group") {
+    const tags = await contactTagsWithGroups(db, run.account_id, run.contact_id!);
+    const count = tags.filter((t) => sameGroup(t.group_name, cfg.subject_key)).length;
+    // group_test replaces the operator for groups.
+    return passesGroupTest(count, cfg.group_test ?? "any");
+  } else if (cfg.subject === "message") {
+    // The customer's latest message (case-insensitive). Absent when the
+    // run reached this node without a fresh inbound in this pass.
+    const text = runInboundText.get(run);
+    return evaluateConditionPredicate({
+      operator: cfg.operator,
+      subjectValue: text === undefined ? undefined : text.trim().toLowerCase(),
+      configValue: (cfg.value ?? "").trim().toLowerCase(),
+    });
   } else if (cfg.subject === "tag") {
     const { count } = await db
       .from("contact_tags")
@@ -974,6 +1027,7 @@ export async function dispatchInboundToFlows(
     const flow = await findEntryFlow(
       db,
       input.accountId,
+      input.contactId,
       input.message,
       input.isFirstInboundMessage,
     );
@@ -1004,6 +1058,7 @@ async function handleReplyForActiveRun(
   // table. Length is enough for "did they actually reply?" debugging;
   // for the captured value itself, the `node_entered` event already
   // records `captured_key` + `captured_length` after the var is stored.
+  runInboundText.set(run, inboundText(message));
   await logEvent(db, run.id, "reply_received", run.current_node_key, {
     meta_message_id: message.meta_message_id,
     reply_kind: message.kind,
@@ -1200,6 +1255,7 @@ async function startNewRun(
     return { consumed: false, outcome: "no_match" };
   }
   const run = inserted as FlowRunRow;
+  runInboundText.set(run, inboundText(input.message));
   await logEvent(db, run.id, "started", flow.entry_node_id, {
     flow_id: flow.id,
     trigger_type: flow.trigger_type,

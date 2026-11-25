@@ -286,8 +286,13 @@ function TriggerPanel({
               setState((s) => ({
                 ...s,
                 trigger_type: v as BuilderState['trigger_type'],
-                trigger_config:
-                  v === 'keyword' ? { keywords: [] } : v === 'manual' ? {} : {},
+                // Keep the "only for contacts who…" rule across trigger changes.
+                trigger_config: {
+                  ...(v === 'keyword' ? { keywords: [] } : {}),
+                  ...(v !== 'manual' && s.trigger_config.entry_condition
+                    ? { entry_condition: s.trigger_config.entry_condition }
+                    : {}),
+                },
               }))
             }
           >
@@ -329,6 +334,20 @@ function TriggerPanel({
           </div>
         )}
       </div>
+      {state.trigger_type !== 'manual' && (
+        <EntryConditionEditor
+          value={state.trigger_config.entry_condition as EntryConditionDraft | undefined}
+          onChange={(entry_condition) =>
+            setState((s) => {
+              const next = { ...s.trigger_config };
+              if (entry_condition) next.entry_condition = entry_condition;
+              else delete next.entry_condition;
+              return { ...s, trigger_config: next };
+            })
+          }
+          t={t}
+        />
+      )}
       {triggerIssues.length > 0 && (
         <div className="mt-3 flex flex-col gap-1">
           {triggerIssues.map((i, ix) => (
@@ -337,6 +356,144 @@ function TriggerPanel({
         </div>
       )}
     </section>
+  );
+}
+
+// ============================================================
+// Entry condition — "only for contacts who…"
+// ============================================================
+
+type EntryConditionDraft =
+  | { kind: 'tag'; tag_id: string; negate?: boolean }
+  | { kind: 'tag_group'; group: string; test: 'none' | 'any' | 'one' | 'more_than_one' };
+
+type EntryMode = 'anyone' | 'has_tag' | 'lacks_tag' | 'group_none' | 'group_any' | 'group_one' | 'group_many';
+
+function entryMode(v: EntryConditionDraft | undefined): EntryMode {
+  if (!v) return 'anyone';
+  if (v.kind === 'tag') return v.negate ? 'lacks_tag' : 'has_tag';
+  return v.test === 'none'
+    ? 'group_none'
+    : v.test === 'one'
+      ? 'group_one'
+      : v.test === 'more_than_one'
+        ? 'group_many'
+        : 'group_any';
+}
+
+interface PickerTag {
+  id: string;
+  name: string;
+  group_name?: string | null;
+}
+
+function useAccountTags(): PickerTag[] {
+  const [tags, setTags] = useState<PickerTag[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/tags').catch(() => null);
+      if (!res || !res.ok) return;
+      const json = (await res.json().catch(() => ({}))) as { tags?: PickerTag[] };
+      if (!cancelled) setTags(json.tags ?? []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return tags;
+}
+
+function EntryConditionEditor({
+  value,
+  onChange,
+  t,
+}: {
+  value: EntryConditionDraft | undefined;
+  onChange: (v: EntryConditionDraft | undefined) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const tags = useAccountTags();
+  const mode = entryMode(value);
+  const groups = Array.from(
+    new Set(['Project', ...tags.map((tg) => (tg.group_name ?? '').trim()).filter(Boolean)]),
+  );
+  const setMode = (m: EntryMode) => {
+    if (m === 'anyone') return onChange(undefined);
+    if (m === 'has_tag' || m === 'lacks_tag') {
+      const tagId = value?.kind === 'tag' ? value.tag_id : '';
+      return onChange({ kind: 'tag', tag_id: tagId, ...(m === 'lacks_tag' ? { negate: true } : {}) });
+    }
+    const group = value?.kind === 'tag_group' ? value.group : 'Project';
+    const test = m === 'group_none' ? 'none' : m === 'group_one' ? 'one' : m === 'group_many' ? 'more_than_one' : 'any';
+    onChange({ kind: 'tag_group', group, test });
+  };
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div>
+        <label className="text-muted-foreground mb-1 block text-xs">{t('entryConditionLabel')}</label>
+        <Select value={mode} onValueChange={(v) => setMode(v as EntryMode)}>
+          <SelectTrigger className="bg-muted">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="anyone">{t('entryAnyone')}</SelectItem>
+            <SelectItem value="has_tag">{t('entryHasTag')}</SelectItem>
+            <SelectItem value="lacks_tag">{t('entryLacksTag')}</SelectItem>
+            <SelectItem value="group_none">{t('entryGroupNone')}</SelectItem>
+            <SelectItem value="group_any">{t('entryGroupAny')}</SelectItem>
+            <SelectItem value="group_one">{t('entryGroupOne')}</SelectItem>
+            <SelectItem value="group_many">{t('entryGroupMany')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-muted-foreground mt-1 text-[11px]">{t('entryConditionHint')}</p>
+      </div>
+      {value?.kind === 'tag' && (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs">{t('entryTagLabel')}</label>
+          {tags.length > 0 ? (
+            <Select
+              value={value.tag_id || undefined}
+              onValueChange={(tag_id) => onChange({ ...value, tag_id: tag_id ?? '' })}
+            >
+              <SelectTrigger className="bg-muted">
+                <SelectValue placeholder={t('entryPickTag')} />
+              </SelectTrigger>
+              <SelectContent>
+                {tags.map((tg) => (
+                  <SelectItem key={tg.id} value={tg.id}>
+                    {tg.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={value.tag_id}
+              onChange={(e) => onChange({ ...value, tag_id: e.target.value })}
+              placeholder={t('entryPickTag')}
+              className="bg-muted"
+            />
+          )}
+        </div>
+      )}
+      {value?.kind === 'tag_group' && (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs">{t('entryGroupLabel')}</label>
+          <Input
+            list="flow-entry-groups"
+            value={value.group}
+            onChange={(e) => onChange({ ...value, group: e.target.value })}
+            className="bg-muted"
+          />
+          <datalist id="flow-entry-groups">
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        </div>
+      )}
+    </div>
   );
 }
 

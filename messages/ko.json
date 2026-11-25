@@ -225,7 +225,9 @@
       "sendTemplateFailed": "템플릿 전송 실패: {reason}",
       "waitForSending": "메시지 전송이 끝날 때까지 기다려 주세요",
       "reactionFailed": "반응 추가 실패: {reason}",
-      "assignmentUpdateFailed": "담당자 변경에 실패했습니다"
+      "assignmentUpdateFailed": "담당자 변경에 실패했습니다",
+      "projectsTitle": "프로젝트: {projects}",
+      "projectsMore": "+{count}"
     },
     "sessionTimer": {
       "expired": "만료됨",
@@ -1097,7 +1099,8 @@
           "tag_presence": "태그 존재 여부",
           "contact_field": "연락처 필드",
           "message_content": "메시지 내용",
-          "time_of_day": "시간대"
+          "time_of_day": "시간대",
+          "tag_group": "태그 그룹"
         },
         "operandLabel": "피연산자",
         "placeholderTime": "HH:mm-HH:mm",
@@ -1123,7 +1126,16 @@
         "headerValue": "값",
         "headerAdd": "헤더 추가",
         "headerRemove": "헤더 삭제",
-        "headersHint": "모든 호출에 함께 전송됩니다. 값은 자동화와 함께 저장되며 편집자가 볼 수 있습니다."
+        "headersHint": "모든 호출에 함께 전송됩니다. 값은 자동화와 함께 저장되며 편집자가 볼 수 있습니다.",
+        "groupLabel": "그룹",
+        "groupPlaceholder": "Project",
+        "groupTestLabel": "연락처에 있는 태그",
+        "groupTests": {
+          "any": "그룹의 태그 1개 이상",
+          "none": "그룹의 태그 없음",
+          "one": "그룹의 태그 정확히 1개",
+          "more_than_one": "그룹의 태그 2개 이상"
+        }
       }
     }
   },
@@ -1274,7 +1286,15 @@
         "fileUploaded": "파일이 업로드되었습니다.",
         "uploadFailed": "업로드에 실패했습니다.",
         "fileTooLarge": "파일이 {size}MB입니다 — 제한은 16MB입니다.",
-        "defaultOptionTitle": "옵션"
+        "defaultOptionTitle": "옵션",
+        "contactTagGroup": "연락처 태그 그룹",
+        "incomingMessage": "받은 메시지",
+        "groupLabel": "그룹",
+        "groupTestLabel": "연락처에 있는 태그",
+        "groupTestAny": "그룹의 태그 1개 이상",
+        "groupTestNone": "그룹의 태그 없음",
+        "groupTestOne": "그룹의 태그 정확히 1개",
+        "groupTestMany": "그룹의 태그 2개 이상"
       },
       "categories": {
         "messaging": "메시징",
@@ -1322,7 +1342,19 @@
           "label": "종료",
           "blurb": "플로우를 종료합니다"
         }
-      }
+      },
+      "entryConditionLabel": "다음 연락처에만…",
+      "entryConditionHint": "규칙이 있는 플로우를 먼저 확인하므로, 각 프로젝트 메뉴가 일반 프로젝트 선택보다 먼저 실행됩니다.",
+      "entryAnyone": "누구나",
+      "entryHasTag": "태그가 있는 경우",
+      "entryLacksTag": "태그가 없는 경우",
+      "entryGroupNone": "그룹 태그가 없는 경우",
+      "entryGroupAny": "그룹 태그가 있는 경우",
+      "entryGroupOne": "그룹 태그가 정확히 1개",
+      "entryGroupMany": "그룹 태그가 2개 이상",
+      "entryTagLabel": "태그",
+      "entryPickTag": "태그 선택",
+      "entryGroupLabel": "그룹"
     },
     "validation": {
       "noIssues": "문제가 없습니다. 활성화할 준비가 되었습니다.",
@@ -1492,7 +1524,16 @@
         "blue": "파랑",
         "violet": "보라",
         "pink": "분홍"
-      }
+      },
+      "groupHeading": "그룹: {group}",
+      "noGroup": "그룹 없음",
+      "groupAria": "{name} 그룹 설정",
+      "groupTitle": "“{name}” 그룹",
+      "groupDesc": "같은 그룹의 태그는 자동화와 플로우에서 함께 확인할 수 있습니다. 예: 모든 프로젝트 태그를 “Project”에 넣으세요. 그룹이 없으면 비워 두세요.",
+      "groupPlaceholder": "예: Project",
+      "groupSave": "그룹 저장",
+      "groupSaved": "그룹을 저장했습니다",
+      "groupSaveFailed": "그룹을 저장하지 못했습니다"
     },
     "templates": {
       "title": "메시지 템플릿",
@@ -1987,7 +2028,11 @@
       "platformKeyActive": "AI 키는 Whatspert가 제공하므로 키가 필요 없습니다. 아래에서 어시스턴트의 지침과 동작을 설정하세요.",
       "platformKeyModel": "{provider} · {model} 사용 중",
       "platformKeyNotReady": "Whatspert AI 키가 아직 서버에 설정되지 않았습니다. 지원팀에 문의하세요.",
-      "descriptionPlatform": "AI 키는 Whatspert가 제공합니다. 아래에서 어시스턴트의 지침과 동작을 설정하세요. 받은편지함의 AI 초안, 자동 응답 봇, 플레이그라운드가 이 설정으로 작동합니다."
+      "descriptionPlatform": "AI 키는 Whatspert가 제공합니다. 아래에서 어시스턴트의 지침과 동작을 설정하세요. 받은편지함의 AI 초안, 자동 응답 봇, 플레이그라운드가 이 설정으로 작동합니다.",
+      "projectScope": "프로젝트별 응답",
+      "projectScopeDesc": "에이전트는 연락처에 태그된 프로젝트(“Project” 그룹 태그)에 대해서만 답하고, 공용 문서와 해당 프로젝트 문서만 읽습니다. 다른 프로젝트를 물으면 영업 담당자를 연결해 드린다고 안내합니다.",
+      "projectHandoff": "프로젝트가 불분명하면 상담원에게 넘기기",
+      "projectHandoffDesc": "프로젝트 태그가 없거나 2개 이상인 연락처는 AI 대신 바로 상담원에게 갑니다."
     },
     "aiKnowledge": {
       "loadFailed": "지식베이스를 불러오지 못했습니다",
@@ -2016,7 +2061,10 @@
       "reindexTooltip": "모든 문서를 다시 임베딩합니다 (예: 임베딩 키 추가 후)",
       "editDoc": "수정",
       "deleteDoc": "삭제",
-      "loading": "불러오는 중…"
+      "loading": "불러오는 중…",
+      "editDocProject": "프로젝트 (선택)",
+      "editDocProjectPlaceholder": "프로젝트 태그, 예: p-galleria — 비우면 전체",
+      "editDocProjectHint": "“프로젝트별 응답”이 켜져 있으면 AI는 이 프로젝트 태그가 있는 연락처에만 이 문서를 사용합니다."
     }
   },
   "SignupPage": {
@@ -2438,7 +2486,10 @@
       "projectsWelcomeNone": "환영 메시지 없음(자동화가 발송)",
       "projectsAdd": "프로젝트 추가",
       "fallbackWelcome": "리드의 프로젝트에 자체 환영 메시지가 없으면 기본 환영 메시지 보내기",
-      "fallbackWelcomeHint": "여러 프로젝트를 판매한다면 끄세요. 구매자가 다른 프로젝트의 환영 메시지를 받지 않습니다."
+      "fallbackWelcomeHint": "여러 프로젝트를 판매한다면 끄세요. 구매자가 다른 프로젝트의 환영 메시지를 받지 않습니다.",
+      "projectsCode": "Real Expert 프로젝트 코드",
+      "projectsAds": "광고: 광고 ID 또는 단어, 쉼표로 구분",
+      "projectsAdsHint": "Click-to-WhatsApp 광고에서 메시지를 보낸 구매자는 광고 ID가 일치하거나 광고 제목·본문·링크에 단어가 있으면 프로젝트 태그를 자동으로 받습니다."
     },
     "statusLocked": "잠김",
     "statusAddon": "추가 기능",

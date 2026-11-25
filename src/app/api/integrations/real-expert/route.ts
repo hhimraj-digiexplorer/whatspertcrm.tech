@@ -7,7 +7,9 @@ import {
   REAL_EXPERT_PROVIDER,
   normalizeBaseUrl,
   parseOptions,
+  projectTagNames,
 } from '@/lib/integrations/real-expert/config'
+import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { loadEntitlement } from '@/lib/partner/real-expert'
 import {
   generateInboundToken,
@@ -225,6 +227,11 @@ export async function PUT(request: Request) {
       .select(SELECT)
       .single()
     if (saveErr) throw saveErr
+
+    // Project tags join the "Project" group (only ungrouped tags).
+    await assignTagsToGroup(supabaseAdmin(), ctx.accountId, projectTagNames(options.projects), PROJECT_TAG_GROUP).catch(
+      (err) => console.error('[real-expert settings] could not group project tags:', err),
+    )
 
     // Jobs that failed for a bad address/key get another go.
     if (prev && (newKey || baseUrl !== prev.base_url)) {

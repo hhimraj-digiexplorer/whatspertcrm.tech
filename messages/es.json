@@ -225,7 +225,9 @@
       "sendTemplateFailed": "Error al enviar la plantilla: {reason}",
       "waitForSending": "Espera a que el mensaje termine de enviarse",
       "reactionFailed": "Error en la reacción: {reason}",
-      "assignmentUpdateFailed": "Error al actualizar la asignación"
+      "assignmentUpdateFailed": "Error al actualizar la asignación",
+      "projectsTitle": "Proyectos: {projects}",
+      "projectsMore": "+{count}"
     },
     "sessionTimer": {
       "expired": "Expirada",
@@ -1097,7 +1099,8 @@
           "tag_presence": "Presencia de etiqueta",
           "contact_field": "Campo del contacto",
           "message_content": "Contenido del mensaje",
-          "time_of_day": "Hora del día"
+          "time_of_day": "Hora del día",
+          "tag_group": "Grupo de etiquetas"
         },
         "operandLabel": "Operando",
         "placeholderTime": "HH:mm-HH:mm",
@@ -1123,7 +1126,16 @@
         "headerValue": "Valor",
         "headerAdd": "Añadir encabezado",
         "headerRemove": "Quitar encabezado",
-        "headersHint": "Se envían en cada llamada. Los valores se guardan con la automatización y los ven quienes la editan."
+        "headersHint": "Se envían en cada llamada. Los valores se guardan con la automatización y los ven quienes la editan.",
+        "groupLabel": "Grupo",
+        "groupPlaceholder": "Project",
+        "groupTestLabel": "El contacto tiene",
+        "groupTests": {
+          "any": "Alguna etiqueta del grupo",
+          "none": "Ninguna etiqueta del grupo",
+          "one": "Exactamente una etiqueta del grupo",
+          "more_than_one": "Más de una etiqueta del grupo"
+        }
       }
     }
   },
@@ -1274,7 +1286,15 @@
         "fileUploaded": "Archivo subido.",
         "uploadFailed": "Error al subir.",
         "fileTooLarge": "El archivo pesa {size} MB; el límite es 16 MB.",
-        "defaultOptionTitle": "Opción"
+        "defaultOptionTitle": "Opción",
+        "contactTagGroup": "Grupo de etiquetas del contacto",
+        "incomingMessage": "Mensaje recibido",
+        "groupLabel": "Grupo",
+        "groupTestLabel": "El contacto tiene",
+        "groupTestAny": "Alguna etiqueta del grupo",
+        "groupTestNone": "Ninguna etiqueta del grupo",
+        "groupTestOne": "Exactamente una etiqueta del grupo",
+        "groupTestMany": "Más de una etiqueta del grupo"
       },
       "categories": {
         "messaging": "Mensajería",
@@ -1322,7 +1342,19 @@
           "label": "Fin",
           "blurb": "Termina el flujo"
         }
-      }
+      },
+      "entryConditionLabel": "Solo para contactos que…",
+      "entryConditionHint": "Los flujos con una regla se revisan primero, así el menú de cada proyecto corre antes que el selector general de proyectos.",
+      "entryAnyone": "Cualquiera",
+      "entryHasTag": "Tienen una etiqueta",
+      "entryLacksTag": "No tienen una etiqueta",
+      "entryGroupNone": "No tienen etiqueta de un grupo",
+      "entryGroupAny": "Tienen alguna etiqueta de un grupo",
+      "entryGroupOne": "Tienen exactamente una etiqueta de un grupo",
+      "entryGroupMany": "Tienen más de una etiqueta de un grupo",
+      "entryTagLabel": "Etiqueta",
+      "entryPickTag": "Elige una etiqueta",
+      "entryGroupLabel": "Grupo"
     },
     "validation": {
       "noIssues": "Sin problemas. Listo para activar.",
@@ -1492,7 +1524,16 @@
         "blue": "Azul",
         "violet": "Violeta",
         "pink": "Rosa"
-      }
+      },
+      "groupHeading": "Grupo: {group}",
+      "noGroup": "Sin grupo",
+      "groupAria": "Elegir grupo de {name}",
+      "groupTitle": "Grupo de “{name}”",
+      "groupDesc": "Las etiquetas del mismo grupo se pueden evaluar juntas en automatizaciones y flujos — p. ej., pon cada etiqueta de proyecto en “Project”. Déjalo vacío para no usar grupo.",
+      "groupPlaceholder": "p. ej. Project",
+      "groupSave": "Guardar grupo",
+      "groupSaved": "Grupo guardado",
+      "groupSaveFailed": "No se pudo guardar el grupo"
     },
     "templates": {
       "title": "Plantillas de mensaje",
@@ -1987,7 +2028,11 @@
       "platformKeyActive": "Tu clave de IA la proporciona Whatspert; no necesitas una. Configura abajo las instrucciones y el comportamiento del asistente.",
       "platformKeyModel": "Usando {provider} · {model}",
       "platformKeyNotReady": "La clave de IA de Whatspert aún no está configurada en el servidor. Contacta con soporte.",
-      "descriptionPlatform": "Tu clave de IA la proporciona Whatspert. Configura abajo las instrucciones y el comportamiento del asistente. Esto impulsa las respuestas redactadas con IA en la bandeja, el bot de respuesta automática y el Playground."
+      "descriptionPlatform": "Tu clave de IA la proporciona Whatspert. Configura abajo las instrucciones y el comportamiento del asistente. Esto impulsa las respuestas redactadas con IA en la bandeja, el bot de respuesta automática y el Playground.",
+      "projectScope": "Responder por proyecto",
+      "projectScopeDesc": "El agente habla solo del proyecto o proyectos con los que está etiquetado el contacto (etiquetas del grupo “Project”) y lee solo documentos compartidos y de ese proyecto. Si le preguntan por otro proyecto, ofrece un vendedor.",
+      "projectHandoff": "Pasar a una persona si el proyecto no está claro",
+      "projectHandoffDesc": "Los contactos sin etiqueta de proyecto o con más de una pasan directamente a una persona en lugar de la IA."
     },
     "aiKnowledge": {
       "loadFailed": "Error al cargar la base de conocimiento",
@@ -2016,7 +2061,10 @@
       "reindexTooltip": "Volver a generar los embeddings de todos los documentos (p. ej. después de agregar una clave de embeddings)",
       "editDoc": "Editar",
       "deleteDoc": "Eliminar",
-      "loading": "Cargando…"
+      "loading": "Cargando…",
+      "editDocProject": "Proyecto (opcional)",
+      "editDocProjectPlaceholder": "Etiqueta del proyecto, p. ej. p-galleria — vacío = todos",
+      "editDocProjectHint": "Con “Responder por proyecto” activado, la IA usa este documento solo para contactos con esta etiqueta de proyecto."
     }
   },
   "SignupPage": {
@@ -2438,7 +2486,10 @@
       "projectsWelcomeNone": "Sin bienvenida (la envía una automatización)",
       "projectsAdd": "Añadir proyecto",
       "fallbackWelcome": "Enviar la bienvenida por defecto cuando el proyecto del lead no tenga una propia",
-      "fallbackWelcomeHint": "Desactívalo si vendes varios proyectos, para que un comprador nunca reciba la bienvenida de otro proyecto."
+      "fallbackWelcomeHint": "Desactívalo si vendes varios proyectos, para que un comprador nunca reciba la bienvenida de otro proyecto.",
+      "projectsCode": "Código del proyecto en Real Expert",
+      "projectsAds": "Anuncios: ids o palabras, separados por comas",
+      "projectsAdsHint": "Quien escribe desde un anuncio Click-to-WhatsApp recibe la etiqueta del proyecto automáticamente si el id coincide o una palabra aparece en el título, texto o enlace del anuncio."
     },
     "statusLocked": "Bloqueado",
     "statusAddon": "Complemento",

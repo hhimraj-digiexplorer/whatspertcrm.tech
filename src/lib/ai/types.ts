@@ -29,6 +29,10 @@ export interface AiConfig {
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
   embeddingsApiKey: string | null
+  /** Answer only about the contact's project tag(s) — tags in the "Project" group. */
+  projectScope?: boolean
+  /** With projectScope: hand off when the contact has no project tag or more than one. */
+  projectHandoff?: boolean
   /** Anthropic workspace ID for keys not scoped to a workspace
    *  (Whatspert key only, from PLATFORM_AI_ANTHROPIC_WORKSPACE_ID). */
   anthropicWorkspaceId?: string | null

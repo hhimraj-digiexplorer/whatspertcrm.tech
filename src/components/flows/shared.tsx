@@ -372,17 +372,26 @@ export function summarizeNode(
     case 'condition': {
       const subjectKey =
         typeof cfg.subject_key === 'string' ? cfg.subject_key : '';
+      if (cfg.subject === 'tag_group') {
+        const test = typeof cfg.group_test === 'string' ? cfg.group_test : 'any';
+        const label = test === 'none' ? '0' : test === 'one' ? '1' : test === 'more_than_one' ? '2+' : '1+';
+        return `${truncate(subjectKey || 'Project', 24)}: ${label}`;
+      }
       if (!subjectKey) return null;
       const subject =
         cfg.subject === 'tag'
           ? 'tag'
           : cfg.subject === 'contact_field'
             ? 'field'
-            : 'var';
+            : cfg.subject === 'message'
+              ? 'message'
+              : 'var';
       const subjectStr =
         subject === 'tag'
           ? t ? t('hasTag', { tag: truncate(subjectKey, 24) }) : `has tag ${truncate(subjectKey, 24)}`
-          : `${subject}.${subjectKey}`;
+          : subject === 'message'
+            ? 'message'
+            : `${subject}.${subjectKey}`;
       const op =
         cfg.operator === 'equals'
           ? '=='

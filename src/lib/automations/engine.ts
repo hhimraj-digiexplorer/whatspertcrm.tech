@@ -28,6 +28,7 @@ import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 import { DEFAULT_CURRENCY } from '@/lib/currency'
 import { findOrCreateConversationForContact } from '@/lib/whatsapp/resolve-conversation'
 import { dispatchConversationAssigned } from './assignment'
+import { contactTagsInGroup, isTagGroupTest, passesGroupTest } from '@/lib/tags/groups'
 
 // ------------------------------------------------------------
 // Public API
@@ -54,6 +55,12 @@ export interface AutomationContext {
   flow_consumed?: boolean
   /** This inbound is the contact's first-ever customer message. */
   first_inbound?: boolean
+  /**
+   * What caused the event when it came from outside the inbox:
+   * 'real_expert' (a lead push — never echoed back as an enquiry),
+   * 'ad_referral' (a Click-to-WhatsApp ad).
+   */
+  source?: string
 }
 
 export interface DispatchInput {
@@ -148,9 +155,12 @@ export async function resumePendingExecution(pending: {
   parent_step_id: string | null
   branch: 'yes' | 'no' | null
   next_step_position: number
+  /** The Wait step this run is parked on (rows written after migration 054). */
+  wait_step_id?: string | null
   context: AutomationContext
 }): Promise<void> {
   const db = supabaseAdmin()
+  const resumeAt = await resumePoint(db, pending)
   const { data: automation, error } = await db
     .from('automations')
     .select('*')
@@ -168,9 +178,9 @@ export async function resumePendingExecution(pending: {
       automation: automation as Automation,
       contactId: pending.contact_id,
       context: pending.context ?? {},
-      parentStepId: pending.parent_step_id,
-      branch: pending.branch,
-      startPosition: pending.next_step_position,
+      parentStepId: resumeAt.parentStepId,
+      branch: resumeAt.branch,
+      startPosition: resumeAt.startPosition,
       logId: pending.log_id,
       triggerEvent: 'resumed_wait',
     })
@@ -179,6 +189,39 @@ export async function resumePendingExecution(pending: {
     console.error('[automations] resume failed:', err)
     await markPending(pending.id, 'failed')
   }
+}
+
+/**
+ * Where a parked run continues. A run that knows its Wait step continues
+ * right after that step's CURRENT place (so reordering or moving steps
+ * in the builder can't send it to the wrong one); older rows, and rows
+ * whose Wait step is gone, use the stored position exactly as before.
+ */
+export async function resumePoint(
+  db: ReturnType<typeof supabaseAdmin>,
+  pending: {
+    automation_id: string
+    parent_step_id: string | null
+    branch: 'yes' | 'no' | null
+    next_step_position: number
+    wait_step_id?: string | null
+  },
+): Promise<{ parentStepId: string | null; branch: 'yes' | 'no' | null; startPosition: number }> {
+  const fallback = {
+    parentStepId: pending.parent_step_id,
+    branch: pending.branch,
+    startPosition: pending.next_step_position,
+  }
+  if (!pending.wait_step_id) return fallback
+  const { data } = await db
+    .from('automation_steps')
+    .select('id, automation_id, parent_step_id, branch, position')
+    .eq('id', pending.wait_step_id)
+    .eq('automation_id', pending.automation_id)
+    .maybeSingle()
+  const step = data as { parent_step_id: string | null; branch: 'yes' | 'no' | null; position: number } | null
+  if (!step) return fallback
+  return { parentStepId: step.parent_step_id, branch: step.branch, startPosition: step.position + 1 }
 }
 
 // ------------------------------------------------------------
@@ -301,6 +344,9 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
         parent_step_id: args.parentStepId,
         branch: args.branch,
         next_step_position: step.position + 1,
+        // The Wait step itself (migration 054): resume continues right
+        // after it even if the automation is edited meanwhile.
+        wait_step_id: step.id,
         context: args.context,
         run_at: new Date(Date.now() + ms).toISOString(),
         status: 'pending',
@@ -876,6 +922,12 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
     case 'message_content': {
       const text = (args.context.message_text ?? '').toString()
       return text.toLowerCase().includes((cfg.value ?? '').toLowerCase())
+    }
+    case 'tag_group': {
+      if (!args.contactId || !cfg.operand) return false
+      const test = isTagGroupTest(cfg.value) ? cfg.value : 'any'
+      const inGroup = await contactTagsInGroup(db, args.automation.account_id, args.contactId, cfg.operand)
+      return passesGroupTest(inGroup.length, test)
     }
     case 'time_of_day': {
       // operand form "HH:mm-HH:mm" — true if now is within that window

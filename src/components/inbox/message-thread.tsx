@@ -51,6 +51,7 @@ import {
 import { deleteAccountMedia } from "@/lib/storage/upload-media";
 import { TemplatePicker } from "./template-picker";
 import { AiThreadBanner } from "./ai-thread-banner";
+import { ProjectBadges } from "./project-badges";
 import { buildReplyPreview } from "./reply-quote";
 import { renderTemplateBody } from "@/lib/whatsapp/template-body";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
@@ -948,6 +949,7 @@ export function MessageThread({
             <Clock className="h-3 w-3" />
             {sessionInfo.remaining}
           </Badge>
+          <ProjectBadges contactId={contact.id} />
         </div>
 
         <div className="flex items-center gap-2">

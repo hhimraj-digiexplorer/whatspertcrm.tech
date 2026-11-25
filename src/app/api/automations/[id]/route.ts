@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 import {
   loadStepsTree,
   replaceSteps,
+  WaitingRunsError,
   type BuilderStepInput,
 } from '@/lib/automations/steps-tree'
 import {
@@ -124,8 +125,18 @@ export async function PATCH(
   }
 
   if (Array.isArray(body.steps)) {
-    const err = await replaceSteps(id, body.steps as BuilderStepInput[])
-    if (err) return NextResponse.json({ error: err }, { status: 500 })
+    try {
+      const err = await replaceSteps(id, body.steps as BuilderStepInput[])
+      if (err) return NextResponse.json({ error: err }, { status: 500 })
+    } catch (e) {
+      if (e instanceof WaitingRunsError) {
+        return NextResponse.json(
+          { error: e.message, code: e.code, waiting: e.waiting },
+          { status: 409 },
+        )
+      }
+      throw e
+    }
   }
 
   return NextResponse.json({ ok: true })

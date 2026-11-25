@@ -19,6 +19,8 @@ import { useTranslations } from 'next-intl';
 interface DocSummary {
   id: string;
   title: string;
+  /** The project this document is about (a "Project" tag); null = shared. */
+  project_tag?: string | null;
   updated_at: string;
 }
 
@@ -39,6 +41,7 @@ export function AiKnowledgeCard({
   const [editing, setEditing] = useState<EditTarget>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [projectTag, setProjectTag] = useState('');
   const [saving, setSaving] = useState(false);
   const [reindexing, setReindexing] = useState(false);
   const loadedAccountIdRef = useRef<string | null>(null);
@@ -68,6 +71,7 @@ export function AiKnowledgeCard({
     setEditing('new');
     setTitle('');
     setContent('');
+    setProjectTag('');
   };
 
   const openEdit = async (id: string) => {
@@ -81,6 +85,7 @@ export function AiKnowledgeCard({
       setEditing(id);
       setTitle(data.title ?? '');
       setContent(data.content ?? '');
+      setProjectTag(data.project_tag ?? '');
     } catch {
       toast.error(t('openFailed'));
     }
@@ -105,7 +110,11 @@ export function AiKnowledgeCard({
         {
           method: isNew ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title.trim(), content: content.trim() }),
+          body: JSON.stringify({
+            title: title.trim(),
+            content: content.trim(),
+            project_tag: projectTag.trim() || null,
+          }),
         },
       );
       const data = await res.json();
@@ -191,6 +200,11 @@ export function AiKnowledgeCard({
                   >
                     <span className="min-w-0 truncate text-sm text-foreground">
                       {doc.title}
+                      {doc.project_tag ? (
+                        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {doc.project_tag}
+                        </span>
+                      ) : null}
                     </span>
                     {canEdit && (
                       <span className="flex shrink-0 gap-1">
@@ -230,6 +244,18 @@ export function AiKnowledgeCard({
                     placeholder={t('editDocTitlePlaceholder')}
                     disabled={saving}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kb-project">{t('editDocProject')}</Label>
+                  <Input
+                    id="kb-project"
+                    value={projectTag}
+                    onChange={(e) => setProjectTag(e.target.value)}
+                    placeholder={t('editDocProjectPlaceholder')}
+                    maxLength={50}
+                    disabled={saving}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('editDocProjectHint')}</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="kb-content">{t('editDocContent')}</Label>

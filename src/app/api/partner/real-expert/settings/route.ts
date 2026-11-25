@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
-import { parseOptions, sourceKey } from '@/lib/integrations/real-expert/config'
+import { parseOptions, projectTagNames, sourceKey } from '@/lib/integrations/real-expert/config'
+import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server'
 
 /**
@@ -10,7 +11,7 @@ import { findPartnerIntegration, readPartnerRequest } from '@/lib/partner/server
  *         welcome_template?: { name, language? } | null,
  *         source_tags?: { [source]: tag | "" },     // "" removes one
  *         replace_source_tags?: boolean,            // default: merge
- *         projects?: { [name|code]: { name?, tag?, welcome?: { template, language? } | 'none' } | null },
+ *         projects?: { [name|code]: { name?, tag?, code?, ads?: string[], welcome?: { template, language? } | 'none' } | null },
  *         replace_projects?: boolean,               // default: merge; null removes one
  *         fallback_welcome?: boolean }              // default welcome for unmatched projects
  *
@@ -113,6 +114,9 @@ export async function POST(request: Request) {
       })
       .eq('id', integration.id)
     if (upErr) return NextResponse.json({ error: 'Could not save the settings.' }, { status: 500 })
+    await assignTagsToGroup(db, integration.account_id, projectTagNames(options.projects), PROJECT_TAG_GROUP).catch(
+      (err) => console.error('[partner settings] could not group project tags:', err),
+    )
   }
 
   return NextResponse.json({

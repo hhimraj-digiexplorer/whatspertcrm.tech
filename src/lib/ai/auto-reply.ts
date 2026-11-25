@@ -18,6 +18,7 @@ import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { assertFeature, BillingBlockedError } from '@/lib/billing/server'
 import { triggerMatches } from '@/lib/automations/engine'
+import { loadProjectScope } from './project-scope'
 import type { Automation } from '@/types'
 
 interface DispatchArgs {
@@ -191,18 +192,39 @@ export async function dispatchInboundToAiReply(
       await showTypingIndicator(db, accountId, inboundMessageId, conversationId)
     }
 
-    // Ground the reply in the account's knowledge base (best-effort).
+    // Per-project mode (channel partners): the contact's project tags
+    // decide what the agent may talk about, and — when the account asks
+    // for it — a contact with no project or several is handed to a person
+    // before any reply is generated.
+    const scope = config.projectScope ? await loadProjectScope(db, accountId, contactId) : null
+    if (scope && config.projectHandoff && scope.tagNames.length !== 1) {
+      await handOffConversation(db, {
+        accountId,
+        conversationId,
+        conv,
+        handoffAgentId: config.handoffAgentId,
+        summary: buildHandoffSummary({ messages, replyCount: conv.ai_reply_count ?? 0 }),
+      })
+      return
+    }
+
+    // Ground the reply in the account's knowledge base (best-effort);
+    // with project scope, only shared documents and the contact's own
+    // project's documents.
     const knowledge = await retrieveKnowledge(
       db,
       accountId,
       config,
       latestUserMessage(messages),
+      5,
+      scope ? { projects: scope.tagNames } : {},
     )
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
+      ...(scope ? { projectScope: { projects: scope.displayNames } } : {}),
     })
 
     const { text, handoff, usage } = await generateReply({
@@ -233,27 +255,16 @@ export async function dispatchInboundToAiReply(
       // and (c) leave a short internal note so whoever picks it up has
       // context. Assigning fires the `on_conversation_assigned` trigger,
       // which notifies the agent.
-      const summary = buildHandoffSummary({
-        messages,
-        replyCount: conv.ai_reply_count ?? 0,
+      await handOffConversation(db, {
+        accountId,
+        conversationId,
+        conv,
+        handoffAgentId: config.handoffAgentId,
+        summary: buildHandoffSummary({
+          messages,
+          replyCount: conv.ai_reply_count ?? 0,
+        }),
       })
-      const update: Record<string, unknown> = {
-        ai_autoreply_disabled: true,
-        ai_handoff_summary: summary,
-      }
-      // Only set the assignee when a target is configured AND the thread
-      // isn't already owned — never stomp an existing human assignment.
-      if (config.handoffAgentId && !conv.assigned_agent_id) {
-        update.assigned_agent_id = config.handoffAgentId
-      }
-      await db.from('conversations').update(update).eq('id', conversationId)
-      if (update.assigned_agent_id) {
-        await dispatchConversationAssigned({
-          accountId,
-          conversationId,
-          agentId: update.assigned_agent_id as string,
-        })
-      }
       return
     }
 
@@ -316,5 +327,42 @@ async function showTypingIndicator(
     })
   } catch (err) {
     console.warn('[ai auto-reply] typing indicator failed (continuing):', err)
+  }
+}
+
+/**
+ * Stop auto-replying on this thread and hand it to a human: (a) pause
+ * the bot here (sticky until re-enabled), (b) route the conversation to
+ * the configured handoff agent — null leaves it in the shared queue — and
+ * (c) leave a short summary so whoever picks it up has context.
+ * Assigning fires the `on_conversation_assigned` trigger, which notifies
+ * the agent.
+ */
+async function handOffConversation(
+  db: ReturnType<typeof supabaseAdmin>,
+  args: {
+    accountId: string
+    conversationId: string
+    conv: { assigned_agent_id: string | null }
+    handoffAgentId: string | null
+    summary: string
+  },
+): Promise<void> {
+  const update: Record<string, unknown> = {
+    ai_autoreply_disabled: true,
+    ai_handoff_summary: args.summary,
+  }
+  // Only set the assignee when a target is configured AND the thread
+  // isn't already owned — never stomp an existing human assignment.
+  if (args.handoffAgentId && !args.conv.assigned_agent_id) {
+    update.assigned_agent_id = args.handoffAgentId
+  }
+  await db.from('conversations').update(update).eq('id', args.conversationId)
+  if (update.assigned_agent_id) {
+    await dispatchConversationAssigned({
+      accountId: args.accountId,
+      conversationId: args.conversationId,
+      agentId: update.assigned_agent_id as string,
+    })
   }
 }

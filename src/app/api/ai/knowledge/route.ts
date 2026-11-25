@@ -19,7 +19,7 @@ export async function GET() {
     const { supabase, accountId } = await getCurrentAccount()
     const { data, error } = await supabase
       .from('ai_knowledge_documents')
-      .select('id, title, updated_at')
+      .select('id, title, project_tag, updated_at')
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
     if (error) {
@@ -50,6 +50,11 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null)
     const title = typeof body?.title === 'string' ? body.title.trim() : ''
     const content = typeof body?.content === 'string' ? body.content.trim() : ''
+    // Optional project (a tag in the "Project" group); blank = shared.
+    const projectTag =
+      typeof body?.project_tag === 'string' && body.project_tag.trim()
+        ? body.project_tag.trim().slice(0, 50)
+        : null
     if (!title || !content) {
       return NextResponse.json(
         { error: 'title and content are required' },
@@ -59,7 +64,7 @@ export async function POST(request: Request) {
 
     const { data: doc, error } = await supabase
       .from('ai_knowledge_documents')
-      .insert({ account_id: accountId, created_by: userId, title, content })
+      .insert({ account_id: accountId, created_by: userId, title, content, project_tag: projectTag })
       .select('id')
       .single()
     if (error || !doc) {

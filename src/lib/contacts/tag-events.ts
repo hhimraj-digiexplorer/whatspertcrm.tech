@@ -5,6 +5,7 @@ import {
   type AutomationContext,
 } from '@/lib/automations/engine';
 import { addContactTagIfAbsent } from './tag-write';
+import { enqueueProjectEnquiry } from '@/lib/integrations/real-expert/enquiry';
 import { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from './tag-chain';
 
 export { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from './tag-chain';
@@ -37,6 +38,19 @@ export async function addContactTagAndDispatch(
   });
 
   if (!added) return { added: false, dispatched: false, reason: 'duplicate' };
+
+  // A new project tag from WhatsApp is a project enquiry for Real Expert.
+  // Best-effort: the sync must never block the tag or its automations.
+  try {
+    await enqueueProjectEnquiry(input.db, {
+      accountId: input.accountId,
+      contactId: input.contactId,
+      tagId: input.tagId,
+      source: input.context?.source,
+    });
+  } catch (err) {
+    console.error('[crm] could not queue the project enquiry:', err);
+  }
 
   const depth = getTagChainDepth(input.context);
   if (depth >= MAX_TAG_CHAIN_DEPTH) {

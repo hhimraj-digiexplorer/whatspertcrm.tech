@@ -131,6 +131,8 @@ export interface Tag {
   user_id: string;
   name: string;
   color: string;
+  /** Optional group, e.g. "Project" (migration 054). */
+  group_name?: string | null;
   created_at: string;
 }
 
@@ -621,13 +623,17 @@ export type ConditionSubject =
   | 'contact_field'
   | 'tag_presence'
   | 'message_content'
-  | 'time_of_day';
+  | 'time_of_day'
+  | 'tag_group';
 
 export interface ConditionStepConfig {
   subject: ConditionSubject;
-  /** e.g. field name, tag id, substring, or "HH:mm-HH:mm" depending on subject */
+  /** e.g. field name, tag id, substring, "HH:mm-HH:mm", or a tag group name depending on subject */
   operand?: string;
-  /** For contact_field equals / message_content contains — comparison value */
+  /**
+   * For contact_field equals / message_content contains — comparison value.
+   * For tag_group — 'none' | 'any' | 'one' | 'more_than_one'.
+   */
   value?: string;
 }
 

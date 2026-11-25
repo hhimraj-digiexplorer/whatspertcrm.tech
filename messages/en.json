@@ -225,7 +225,9 @@
       "sendTemplateFailed": "Failed to send template: {reason}",
       "waitForSending": "Wait for the message to finish sending",
       "reactionFailed": "Reaction failed: {reason}",
-      "assignmentUpdateFailed": "Failed to update assignment"
+      "assignmentUpdateFailed": "Failed to update assignment",
+      "projectsTitle": "Projects: {projects}",
+      "projectsMore": "+{count}"
     },
     "sessionTimer": {
       "expired": "Expired",
@@ -1097,7 +1099,8 @@
           "tag_presence": "Tag presence",
           "contact_field": "Contact field",
           "message_content": "Message content",
-          "time_of_day": "Time of day"
+          "time_of_day": "Time of day",
+          "tag_group": "Tag group"
         },
         "operandLabel": "Operand",
         "placeholderTime": "HH:mm-HH:mm",
@@ -1123,7 +1126,16 @@
         "headerValue": "Value",
         "headerAdd": "Add header",
         "headerRemove": "Remove header",
-        "headersHint": "Sent with every call. Values are stored with the automation and visible to its editors."
+        "headersHint": "Sent with every call. Values are stored with the automation and visible to its editors.",
+        "groupLabel": "Group",
+        "groupPlaceholder": "Project",
+        "groupTestLabel": "Contact has",
+        "groupTests": {
+          "any": "Any tag in the group",
+          "none": "No tag in the group",
+          "one": "Exactly one tag in the group",
+          "more_than_one": "More than one tag in the group"
+        }
       }
     }
   },
@@ -1274,7 +1286,15 @@
         "fileUploaded": "File uploaded.",
         "uploadFailed": "Upload failed.",
         "fileTooLarge": "File is {size} MB — limit is 16 MB.",
-        "defaultOptionTitle": "Option"
+        "defaultOptionTitle": "Option",
+        "contactTagGroup": "Contact's tag group",
+        "incomingMessage": "Incoming message",
+        "groupLabel": "Group",
+        "groupTestLabel": "Contact has",
+        "groupTestAny": "Any tag in the group",
+        "groupTestNone": "No tag in the group",
+        "groupTestOne": "Exactly one tag in the group",
+        "groupTestMany": "More than one tag in the group"
       },
       "categories": {
         "messaging": "Messaging",
@@ -1322,7 +1342,19 @@
           "label": "End",
           "blurb": "Ends the flow"
         }
-      }
+      },
+      "entryConditionLabel": "Only for contacts who…",
+      "entryConditionHint": "Flows with a rule are checked first, so each project's menu can run before the general project picker.",
+      "entryAnyone": "Anyone",
+      "entryHasTag": "Have a tag",
+      "entryLacksTag": "Don't have a tag",
+      "entryGroupNone": "Have no tag in a group",
+      "entryGroupAny": "Have any tag in a group",
+      "entryGroupOne": "Have exactly one tag in a group",
+      "entryGroupMany": "Have more than one tag in a group",
+      "entryTagLabel": "Tag",
+      "entryPickTag": "Pick a tag",
+      "entryGroupLabel": "Group"
     },
     "validation": {
       "noIssues": "No issues. Ready to activate.",
@@ -1492,7 +1524,16 @@
         "blue": "Blue",
         "violet": "Violet",
         "pink": "Pink"
-      }
+      },
+      "groupHeading": "Group: {group}",
+      "noGroup": "No group",
+      "groupAria": "Set group for {name}",
+      "groupTitle": "Group for “{name}”",
+      "groupDesc": "Tags in the same group can be tested together in automations and flows — e.g. put every project tag in “Project”. Leave blank for no group.",
+      "groupPlaceholder": "e.g. Project",
+      "groupSave": "Save group",
+      "groupSaved": "Group saved",
+      "groupSaveFailed": "Could not save the group"
     },
     "templates": {
       "title": "Message templates",
@@ -1987,7 +2028,11 @@
       "platformKeyActive": "Your AI key is provided by Whatspert — no key needed. Set the assistant's instructions and behaviour below.",
       "platformKeyModel": "Using {provider} · {model}",
       "platformKeyNotReady": "The Whatspert AI key isn't set up on the server yet. Contact support.",
-      "descriptionPlatform": "Your AI key is provided by Whatspert. Set the assistant's instructions and behaviour below. This powers AI-drafted replies in the inbox, the auto-reply bot, and the Playground."
+      "descriptionPlatform": "Your AI key is provided by Whatspert. Set the assistant's instructions and behaviour below. This powers AI-drafted replies in the inbox, the auto-reply bot, and the Playground.",
+      "projectScope": "Answer per project",
+      "projectScopeDesc": "The agent talks only about the project(s) the contact is tagged with (tags in the “Project” group) and reads only shared and that project's knowledge documents. Asked about another project, it offers a salesperson.",
+      "projectHandoff": "Hand off when the project is unclear",
+      "projectHandoffDesc": "Contacts with no project tag or more than one go straight to a person instead of the AI."
     },
     "aiKnowledge": {
       "loadFailed": "Failed to load knowledge base",
@@ -2016,7 +2061,10 @@
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
       "editDoc": "Edit",
       "deleteDoc": "Delete",
-      "loading": "Loading…"
+      "loading": "Loading…",
+      "editDocProject": "Project (optional)",
+      "editDocProjectPlaceholder": "Project tag, e.g. p-galleria — blank = all projects",
+      "editDocProjectHint": "With “Answer per project” on, the AI uses this document only for contacts tagged with this project."
     }
   },
   "SignupPage": {
@@ -2438,7 +2486,10 @@
       "projectsWelcomeNone": "No welcome (automation greets)",
       "projectsAdd": "Add project",
       "fallbackWelcome": "Send the default welcome when a lead's project has no welcome of its own",
-      "fallbackWelcomeHint": "Turn off when you sell several projects, so a buyer never gets another project's welcome."
+      "fallbackWelcomeHint": "Turn off when you sell several projects, so a buyer never gets another project's welcome.",
+      "projectsCode": "Real Expert project code",
+      "projectsAds": "Ads: ad ids or words, comma-separated",
+      "projectsAdsHint": "A buyer who writes from a Click-to-WhatsApp ad gets the project's tag automatically when the ad id matches, or a word appears in the ad's headline, text or link."
     },
     "statusLocked": "Locked",
     "statusAddon": "Add-on",

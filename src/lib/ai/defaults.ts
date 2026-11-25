@@ -54,8 +54,14 @@ export function buildSystemPrompt(args: {
   mode: 'draft' | 'auto_reply'
   /** Knowledge-base excerpts retrieved for the current question. */
   knowledge?: string[]
+  /**
+   * Per-project mode: the projects this contact enquired about (their
+   * tags in the "Project" group, as display names). Set only when the
+   * account turned project scope on.
+   */
+  projectScope?: { projects: string[] }
 }): string {
-  const { userPrompt, mode, knowledge } = args
+  const { userPrompt, mode, knowledge, projectScope } = args
   const parts: string[] = [
     'You are a customer-messaging assistant for a business that uses a WhatsApp CRM. ' +
       'You are shown the recent WhatsApp conversation between the business (assistant) and a customer (user). ' +
@@ -76,6 +82,10 @@ export function buildSystemPrompt(args: {
     parts.push(`Business context and instructions:\n${userPrompt.trim()}`)
   }
 
+  if (projectScope) {
+    parts.push(projectScopeInstruction(projectScope.projects, mode))
+  }
+
   if (knowledge && knowledge.length > 0) {
     const fallback =
       mode === 'auto_reply'
@@ -91,4 +101,29 @@ export function buildSystemPrompt(args: {
   }
 
   return parts.join('\n\n')
+}
+
+/**
+ * The business sells several projects; this customer may only be told
+ * about their own. Never a list of other projects' details.
+ */
+export function projectScopeInstruction(projects: string[], mode: 'draft' | 'auto_reply'): string {
+  const offer =
+    mode === 'auto_reply'
+      ? `If they ask about any other project, do not share any details of it (no prices, sizes, locations, offers or availability); say a salesperson will help with that and offer to connect them — if they want that, reply with exactly ${HANDOFF_SENTINEL}.`
+      : 'If they ask about any other project, do not share any details of it; offer to connect them with a salesperson.'
+  const names = projects.map((p) => `"${p.replace(/"/g, "'")}"`)
+  if (names.length === 0) {
+    return (
+      'Projects: this business sells several projects and this customer has not chosen one yet. ' +
+      'Do not share details (prices, sizes, locations, offers, availability) of any specific project. ' +
+      'Ask which project they are interested in, or offer to connect them with a salesperson.'
+    )
+  }
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  return (
+    `Projects: this business sells several projects. This customer enquired about ${list} only. ` +
+    `Answer only about ${names.length === 1 ? 'that project' : 'those projects'}, using only knowledge-base excerpts and instructions that are about ${names.length === 1 ? 'it' : 'them'} or about the business in general. ` +
+    offer
+  )
 }

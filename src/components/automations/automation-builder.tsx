@@ -322,6 +322,38 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
 const SELECT_CLASS =
   "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
 
+/** Tag group name with the account's existing groups as suggestions. */
+function TagGroupInput({
+  value,
+  onChange,
+  t,
+}: {
+  value: string
+  onChange: (v: string) => void
+  t: ReturnType<typeof useTranslations>
+}) {
+  const { tags } = useResources()
+  const groups = Array.from(
+    new Set(["Project", ...tags.map((tg) => (tg.group_name ?? "").trim()).filter(Boolean)]),
+  )
+  return (
+    <>
+      <Input
+        list="automation-tag-groups"
+        placeholder={t("config.groupPlaceholder")}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-muted text-foreground"
+      />
+      <datalist id="automation-tag-groups">
+        {groups.map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
+    </>
+  )
+}
+
 /** Tag dropdown by name + color, storing the tag's id. Falls back to a
  *  raw id input when no tags exist yet. */
 function TagSelect({
@@ -1507,8 +1539,40 @@ function StepEditor({
               <option value="contact_field">{t("config.subjects.contact_field")}</option>
               <option value="message_content">{t("config.subjects.message_content")}</option>
               <option value="time_of_day">{t("config.subjects.time_of_day")}</option>
+              <option value="tag_group">{t("config.subjects.tag_group")}</option>
             </select>
           </FieldBlock>
+          {cfg.subject === "tag_group" ? (
+            <>
+              <FieldBlock label={t("config.groupLabel")}>
+                <TagGroupInput
+                  value={(cfg.operand as string) ?? ""}
+                  onChange={(v) => set({ operand: v })}
+                  t={t}
+                />
+              </FieldBlock>
+              <FieldBlock label={t("config.groupTestLabel")}>
+                <select
+                  value={(cfg.value as string) || "any"}
+                  onChange={(e) => set({ value: e.target.value })}
+                  className={SELECT_CLASS}
+                >
+                  <option value="any">{t("config.groupTests.any")}</option>
+                  <option value="none">{t("config.groupTests.none")}</option>
+                  <option value="one">{t("config.groupTests.one")}</option>
+                  <option value="more_than_one">{t("config.groupTests.more_than_one")}</option>
+                </select>
+              </FieldBlock>
+            </>
+          ) : cfg.subject === "tag_presence" || !cfg.subject ? (
+            <FieldBlock label={t("config.tagLabel")}>
+              <TagSelect
+                value={(cfg.operand as string) ?? ""}
+                onChange={(v) => set({ operand: v })}
+                t={t}
+              />
+            </FieldBlock>
+          ) : (
           <FieldBlock label={t("config.operandLabel")}>
             <Input
               placeholder={
@@ -1516,8 +1580,6 @@ function StepEditor({
                   ? t("config.placeholderTime")
                   : cfg.subject === "contact_field"
                   ? t("config.placeholderContact")
-                  : cfg.subject === "tag_presence"
-                  ? t("config.placeholderTag")
                   : ""
               }
               value={(cfg.operand as string) ?? ""}
@@ -1525,6 +1587,7 @@ function StepEditor({
               className="bg-muted text-foreground"
             />
           </FieldBlock>
+          )}
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
             <FieldBlock label={t("config.valueLabel")}>
               <Input
@@ -1673,6 +1736,10 @@ function previewFor(step: BuilderStep): string {
 // ------------------------------------------------------------
 
 interface ApiStep {
+  /** Stable step id (the cid without its "c_" prefix), so a save updates
+   *  rows in place instead of re-creating them — waiting contacts keep
+   *  their place (see replaceSteps). */
+  id?: string
   step_type: string
   step_config: Record<string, unknown>
   branches?: { yes?: ApiStep[]; no?: ApiStep[] }
@@ -1680,6 +1747,7 @@ interface ApiStep {
 
 export function toApiSteps(steps: BuilderStep[]): ApiStep[] {
   return steps.map((s) => ({
+    ...(s.cid.startsWith("c_") ? { id: s.cid.slice(2) } : {}),
     step_type: s.step_type,
     step_config: s.step_config,
     branches: s.branches
@@ -1701,7 +1769,8 @@ export interface ServerStepNode {
 
 export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
   return nodes.map((n) => ({
-    cid: cid(),
+    // Keep the server id as the client id so the next save updates it.
+    cid: n.id ? `c_${n.id}` : cid(),
     step_type: n.step_type as AutomationStepType,
     step_config: n.step_config ?? {},
     branches:

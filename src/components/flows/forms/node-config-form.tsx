@@ -590,8 +590,9 @@ function SendListForm({
 // ============================================================
 
 interface ConditionCfg {
-  subject?: "var" | "tag" | "contact_field";
+  subject?: "var" | "tag" | "contact_field" | "tag_group" | "message";
   subject_key?: string;
+  group_test?: "none" | "any" | "one" | "more_than_one";
   operator?: "equals" | "contains" | "present" | "absent";
   value?: string;
   true_next?: string;
@@ -602,6 +603,7 @@ interface UserTag {
   id: string;
   name: string;
   color?: string;
+  group_name?: string | null;
 }
 
 function ConditionForm({
@@ -621,7 +623,11 @@ function ConditionForm({
 
   const subject = cfg.subject ?? "var";
   const operator = cfg.operator ?? "equals";
-  const showValue = operator === "equals" || operator === "contains";
+  const isGroup = subject === "tag_group";
+  const showValue = !isGroup && (operator === "equals" || operator === "contains");
+  const groups = Array.from(
+    new Set(["Project", ...tags.map((tg) => (tg.group_name ?? "").trim()).filter(Boolean)]),
+  );
 
   return (
     <>
@@ -631,7 +637,13 @@ function ConditionForm({
           <Select
             value={subject}
             onValueChange={(v) =>
-              onUpdateConfig({ subject: v as ConditionCfg["subject"] })
+              onUpdateConfig(
+                v === "message"
+                  ? { subject: v, subject_key: "text", operator: "contains" }
+                  : v === "tag_group"
+                    ? { subject: v, subject_key: "Project", group_test: "any" }
+                    : { subject: v as ConditionCfg["subject"] },
+              )
             }
           >
             <SelectTrigger className="bg-muted">
@@ -641,18 +653,37 @@ function ConditionForm({
               <SelectItem value="var">{t("capturedVariable")}</SelectItem>
               <SelectItem value="tag">{t("contactHasTag")}</SelectItem>
               <SelectItem value="contact_field">{t("contactField")}</SelectItem>
+              <SelectItem value="tag_group">{t("contactTagGroup")}</SelectItem>
+              <SelectItem value="message">{t("incomingMessage")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
+        {subject !== "message" && (
         <div className="md:col-span-2">
           <label className="mb-1 block text-xs text-muted-foreground">
             {subject === "var"
               ? t("varName")
               : subject === "tag"
                 ? t("tagLabel")
-                : t("fieldLabel")}
+                : subject === "tag_group"
+                  ? t("groupLabel")
+                  : t("fieldLabel")}
           </label>
-          {subject === "tag" && tags.length > 0 ? (
+          {isGroup ? (
+            <>
+              <Input
+                list="flow-tag-groups"
+                value={cfg.subject_key ?? ""}
+                onChange={(e) => onUpdateConfig({ subject_key: e.target.value })}
+                className="bg-muted"
+              />
+              <datalist id="flow-tag-groups">
+                {groups.map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+            </>
+          ) : subject === "tag" && tags.length > 0 ? (
             <Select
               value={cfg.subject_key ?? ""}
               onValueChange={(v) => onUpdateConfig({ subject_key: v })}
@@ -694,6 +725,7 @@ function ConditionForm({
             />
           )}
         </div>
+        )}
       </div>
 
       <div
@@ -702,6 +734,25 @@ function ConditionForm({
           showValue ? "md:grid-cols-2" : "",
         )}
       >
+        {isGroup ? (
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">{t("groupTestLabel")}</label>
+          <Select
+            value={cfg.group_test ?? "any"}
+            onValueChange={(v) => onUpdateConfig({ group_test: v as ConditionCfg["group_test"] })}
+          >
+            <SelectTrigger className="bg-muted">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">{t("groupTestAny")}</SelectItem>
+              <SelectItem value="none">{t("groupTestNone")}</SelectItem>
+              <SelectItem value="one">{t("groupTestOne")}</SelectItem>
+              <SelectItem value="more_than_one">{t("groupTestMany")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        ) : (
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">{t("operatorLabel")}</label>
           <Select
@@ -721,6 +772,7 @@ function ConditionForm({
             </SelectContent>
           </Select>
         </div>
+        )}
         {showValue && (
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">{t("valueLabel")}</label>

@@ -225,7 +225,9 @@
       "sendTemplateFailed": "Falha ao enviar o modelo: {reason}",
       "waitForSending": "Aguarde a mensagem terminar de ser enviada",
       "reactionFailed": "Falha na reação: {reason}",
-      "assignmentUpdateFailed": "Falha ao atualizar a atribuição"
+      "assignmentUpdateFailed": "Falha ao atualizar a atribuição",
+      "projectsTitle": "Projetos: {projects}",
+      "projectsMore": "+{count}"
     },
     "sessionTimer": {
       "expired": "Expirada",
@@ -1097,7 +1099,8 @@
           "tag_presence": "Presença de tag",
           "contact_field": "Campo do contato",
           "message_content": "Conteúdo da mensagem",
-          "time_of_day": "Hora do dia"
+          "time_of_day": "Hora do dia",
+          "tag_group": "Grupo de tags"
         },
         "operandLabel": "Operando",
         "placeholderTime": "HH:mm-HH:mm",
@@ -1123,7 +1126,16 @@
         "headerValue": "Valor",
         "headerAdd": "Adicionar cabeçalho",
         "headerRemove": "Remover cabeçalho",
-        "headersHint": "Enviados em toda chamada. Os valores ficam salvos com a automação e visíveis para quem a edita."
+        "headersHint": "Enviados em toda chamada. Os valores ficam salvos com a automação e visíveis para quem a edita.",
+        "groupLabel": "Grupo",
+        "groupPlaceholder": "Project",
+        "groupTestLabel": "O contato tem",
+        "groupTests": {
+          "any": "Alguma tag do grupo",
+          "none": "Nenhuma tag do grupo",
+          "one": "Exatamente uma tag do grupo",
+          "more_than_one": "Mais de uma tag do grupo"
+        }
       }
     }
   },
@@ -1274,7 +1286,15 @@
         "fileUploaded": "Arquivo enviado.",
         "uploadFailed": "Falha no upload.",
         "fileTooLarge": "O arquivo tem {size} MB — o limite é 16 MB.",
-        "defaultOptionTitle": "Opção"
+        "defaultOptionTitle": "Opção",
+        "contactTagGroup": "Grupo de tags do contato",
+        "incomingMessage": "Mensagem recebida",
+        "groupLabel": "Grupo",
+        "groupTestLabel": "O contato tem",
+        "groupTestAny": "Alguma tag do grupo",
+        "groupTestNone": "Nenhuma tag do grupo",
+        "groupTestOne": "Exatamente uma tag do grupo",
+        "groupTestMany": "Mais de uma tag do grupo"
       },
       "categories": {
         "messaging": "Mensagens",
@@ -1322,7 +1342,19 @@
           "label": "Fim",
           "blurb": "Encerra o fluxo"
         }
-      }
+      },
+      "entryConditionLabel": "Só para contatos que…",
+      "entryConditionHint": "Fluxos com regra são verificados primeiro, então o menu de cada projeto roda antes do seletor geral de projetos.",
+      "entryAnyone": "Qualquer pessoa",
+      "entryHasTag": "Têm uma tag",
+      "entryLacksTag": "Não têm uma tag",
+      "entryGroupNone": "Não têm tag de um grupo",
+      "entryGroupAny": "Têm alguma tag de um grupo",
+      "entryGroupOne": "Têm exatamente uma tag de um grupo",
+      "entryGroupMany": "Têm mais de uma tag de um grupo",
+      "entryTagLabel": "Tag",
+      "entryPickTag": "Escolha uma tag",
+      "entryGroupLabel": "Grupo"
     },
     "validation": {
       "noIssues": "Nenhum problema. Pronto para ativar.",
@@ -1492,7 +1524,16 @@
         "blue": "Azul",
         "violet": "Violeta",
         "pink": "Rosa"
-      }
+      },
+      "groupHeading": "Grupo: {group}",
+      "noGroup": "Sem grupo",
+      "groupAria": "Definir grupo de {name}",
+      "groupTitle": "Grupo de “{name}”",
+      "groupDesc": "Tags do mesmo grupo podem ser testadas juntas em automações e fluxos — por exemplo, coloque cada tag de projeto em “Project”. Deixe vazio para nenhum grupo.",
+      "groupPlaceholder": "ex.: Project",
+      "groupSave": "Salvar grupo",
+      "groupSaved": "Grupo salvo",
+      "groupSaveFailed": "Não foi possível salvar o grupo"
     },
     "templates": {
       "title": "Modelos de mensagem",
@@ -1987,7 +2028,11 @@
       "platformKeyActive": "Sua chave de IA é fornecida pelo Whatspert — não precisa de chave. Defina abaixo as instruções e o comportamento do assistente.",
       "platformKeyModel": "Usando {provider} · {model}",
       "platformKeyNotReady": "A chave de IA do Whatspert ainda não está configurada no servidor. Fale com o suporte.",
-      "descriptionPlatform": "Sua chave de IA é fornecida pelo Whatspert. Defina abaixo as instruções e o comportamento do assistente. Isso alimenta as respostas redigidas por IA na caixa de entrada, o bot de resposta automática e o Playground."
+      "descriptionPlatform": "Sua chave de IA é fornecida pelo Whatspert. Defina abaixo as instruções e o comportamento do assistente. Isso alimenta as respostas redigidas por IA na caixa de entrada, o bot de resposta automática e o Playground.",
+      "projectScope": "Responder por projeto",
+      "projectScopeDesc": "O agente fala só do(s) projeto(s) com que o contato está marcado (tags do grupo “Project”) e lê só documentos compartilhados e desse projeto. Se perguntarem sobre outro projeto, oferece um vendedor.",
+      "projectHandoff": "Passar para uma pessoa se o projeto não estiver claro",
+      "projectHandoffDesc": "Contatos sem tag de projeto ou com mais de uma vão direto para uma pessoa em vez da IA."
     },
     "aiKnowledge": {
       "loadFailed": "Falha ao carregar a base de conhecimento",
@@ -2016,7 +2061,10 @@
       "reindexTooltip": "Gerar novamente os embeddings de todos os documentos (ex.: após adicionar uma chave de embeddings)",
       "editDoc": "Editar",
       "deleteDoc": "Excluir",
-      "loading": "Carregando…"
+      "loading": "Carregando…",
+      "editDocProject": "Projeto (opcional)",
+      "editDocProjectPlaceholder": "Tag do projeto, ex.: p-galleria — vazio = todos",
+      "editDocProjectHint": "Com “Responder por projeto” ligado, a IA usa este documento só para contatos com esta tag de projeto."
     }
   },
   "SignupPage": {
@@ -2438,7 +2486,10 @@
       "projectsWelcomeNone": "Sem boas-vindas (a automação envia)",
       "projectsAdd": "Adicionar projeto",
       "fallbackWelcome": "Enviar as boas-vindas padrão quando o projeto do lead não tiver as suas",
-      "fallbackWelcomeHint": "Desative se vende vários projetos, para que o comprador nunca receba as boas-vindas de outro projeto."
+      "fallbackWelcomeHint": "Desative se vende vários projetos, para que o comprador nunca receba as boas-vindas de outro projeto.",
+      "projectsCode": "Código do projeto no Real Expert",
+      "projectsAds": "Anúncios: ids ou palavras, separados por vírgula",
+      "projectsAdsHint": "Quem escreve de um anúncio Click-to-WhatsApp recebe a tag do projeto automaticamente quando o id bate ou uma palavra aparece no título, texto ou link do anúncio."
     },
     "statusLocked": "Bloqueado",
     "statusAddon": "Complemento",

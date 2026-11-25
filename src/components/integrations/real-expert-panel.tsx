@@ -92,6 +92,8 @@ function toDraft(i: RealExpertIntegration | null): Draft {
       name: p.name,
       tag: p.tag ?? "",
       welcome: p.welcome === "none" ? "none" : p.welcome ? `${p.welcome.template}|${p.welcome.language ?? ""}` : "",
+      code: p.code ?? "",
+      ads: (p.ads ?? []).join(", "),
     })),
   };
 }
@@ -187,6 +189,11 @@ export function RealExpertPanel({
                       name: r.name.trim(),
                       tag: r.tag.trim() || undefined,
                       welcome: r.welcome === "none" ? "none" : tplName ? { template: tplName, language: tplLang || undefined } : undefined,
+                      code: r.code.trim() || undefined,
+                      ads: r.ads
+                        .split(",")
+                        .map((a) => a.trim())
+                        .filter(Boolean),
                     },
                   ] as const;
                 }),
@@ -619,7 +626,14 @@ function SourceTagsEditor({ rows, onChange }: { rows: SourceTagRow[]; onChange: 
   );
 }
 
-type ProjectRow = { name: string; tag: string; welcome: string /* "" | "none" | "name|lang" */ };
+type ProjectRow = {
+  name: string;
+  tag: string;
+  welcome: string /* "" | "none" | "name|lang" */;
+  code: string;
+  /** Comma-separated ad ids or words. */
+  ads: string;
+};
 
 /**
  * Projects (channel partners): a lead's project — matched on its code,
@@ -646,7 +660,8 @@ function ProjectsEditor({
         <p className="text-xs text-muted-foreground">{t("projectsHint")}</p>
       </div>
       {rows.map((r, i) => (
-        <div key={i} className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-[1fr_1fr_1.3fr_auto] sm:items-center sm:border-0 sm:p-0">
+        <div key={i} className="space-y-2 rounded-xl border border-border p-3">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1.3fr_auto] sm:items-center">
           <input
             className={inputCls}
             value={r.name}
@@ -689,11 +704,33 @@ function ProjectsEditor({
             <Trash2 className="size-4" />
           </button>
         </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_2.3fr_auto] sm:items-center">
+          <input
+            className={inputCls}
+            value={r.code}
+            onChange={(e) => update(i, { code: e.target.value })}
+            placeholder={t("projectsCode")}
+            aria-label={t("projectsCode")}
+            maxLength={60}
+          />
+          <input
+            className={inputCls}
+            value={r.ads}
+            onChange={(e) => update(i, { ads: e.target.value })}
+            placeholder={t("projectsAds")}
+            aria-label={t("projectsAds")}
+            title={t("projectsAdsHint")}
+            maxLength={1200}
+          />
+          <span className="hidden w-8 sm:block" />
+        </div>
+        </div>
       ))}
+      {rows.length > 0 && <p className="text-xs text-muted-foreground">{t("projectsAdsHint")}</p>}
       {rows.length < 50 && (
         <button
           type="button"
-          onClick={() => onChange([...rows, { name: "", tag: "", welcome: "" }])}
+          onClick={() => onChange([...rows, { name: "", tag: "", welcome: "", code: "", ads: "" }])}
           className="text-sm font-medium text-primary hover:underline"
         >
           + {t("projectsAdd")}

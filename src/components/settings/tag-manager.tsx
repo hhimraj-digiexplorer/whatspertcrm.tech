@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
+import { FolderTree, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -62,17 +62,67 @@ export function TagManager() {
       setLoading(false);
       return;
     }
-    fetchTags(user.id);
+    fetchTags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.id]);
+  }, [authLoading, user?.id, accountId]);
 
-  async function fetchTags(userId: string) {
+  // Group editing (migration 054): one tag at a time.
+  const [groupTag, setGroupTag] = useState<Tag | null>(null);
+  const [groupDraft, setGroupDraft] = useState('');
+  const [savingGroup, setSavingGroup] = useState(false);
+  const groupNames = Array.from(
+    new Set(['Project', ...tags.map((tg) => (tg.group_name ?? '').trim()).filter(Boolean)]),
+  );
+  const grouped = new Map<string, Tag[]>();
+  for (const tag of tags) {
+    const g = (tag.group_name ?? '').trim();
+    grouped.set(g, [...(grouped.get(g) ?? []), tag]);
+  }
+  const sections = [...grouped.entries()].sort(([a], [b]) =>
+    a === '' ? 1 : b === '' ? -1 : a.localeCompare(b),
+  );
+
+  function openGroup(tag: Tag) {
+    setGroupTag(tag);
+    setGroupDraft(tag.group_name ?? '');
+  }
+
+  async function saveGroup() {
+    if (!groupTag) return;
+    const group = groupDraft.trim().replace(/\s+/g, ' ').slice(0, 40) || null;
+    try {
+      setSavingGroup(true);
+      const { error } = await supabase
+        .from('tags')
+        .update({ group_name: group })
+        .eq('id', groupTag.id);
+      if (error) throw error;
+      setTags((prev) =>
+        prev.map((tg) => (tg.id === groupTag.id ? { ...tg, group_name: group } : tg)),
+      );
+      setGroupTag(null);
+      toast.success(t('groupSaved'));
+    } catch (err) {
+      console.error('Group save error:', err);
+      toast.error(t('groupSaveFailed'));
+    } finally {
+      setSavingGroup(false);
+    }
+  }
+
+  async function fetchTags() {
+    if (!accountId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
+      // Every tag in the workspace — including ones created by
+      // integrations or teammates — not just this user's.
       const { data, error } = await supabase
         .from('tags')
         .select('*')
-        .eq('user_id', userId)
+        .eq('account_id', accountId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -112,7 +162,7 @@ export function TagManager() {
       toast.success(t('tagCreated'));
       setNewTagName('');
       setSelectedColor(PRESET_COLORS[3].value);
-      await fetchTags(user.id);
+      await fetchTags();
     } catch (err) {
       console.error('Create error:', err);
       toast.error(t('failedToCreateTag'));
@@ -169,8 +219,16 @@ export function TagManager() {
         ) : (
           <>
             {tags.length > 0 ? (
+              <div className="space-y-3">
+              {sections.map(([group, groupTags]) => (
+              <div key={group || '_none'} className="space-y-1.5">
+                {sections.length > 1 || group ? (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {group ? t('groupHeading', { group }) : t('noGroup')}
+                  </p>
+                ) : null}
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
+                {groupTags.map((tag) => (
                   <span
                     key={tag.id}
                     className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
@@ -187,14 +245,26 @@ export function TagManager() {
                     {tag.name}
                     <button
                       type="button"
+                      onClick={() => openGroup(tag)}
+                      aria-label={t('groupAria', { name: tag.name })}
+                      title={t('groupAria', { name: tag.name })}
+                      className="ml-0.5 rounded-full p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+                    >
+                      <FolderTree className="size-3" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => confirmDelete(tag)}
                       aria-label={t('deleteAria', { name: tag.name })}
-                      className="ml-0.5 rounded-full p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+                      className="rounded-full p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
                     >
                       <X className="size-3" />
                     </button>
                   </span>
                 ))}
+              </div>
+              </div>
+              ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -250,6 +320,40 @@ export function TagManager() {
           </>
         )}
       </CardContent>
+
+      {/* Group editor */}
+      <Dialog open={!!groupTag} onOpenChange={(o) => !o && setGroupTag(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('groupTitle', { name: groupTag?.name ?? '' })}</DialogTitle>
+            <DialogDescription>{t('groupDesc')}</DialogDescription>
+          </DialogHeader>
+          <Input
+            list="tag-group-names"
+            value={groupDraft}
+            onChange={(e) => setGroupDraft(e.target.value)}
+            placeholder={t('groupPlaceholder')}
+            maxLength={40}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveGroup();
+            }}
+          />
+          <datalist id="tag-group-names">
+            {groupNames.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGroupTag(null)} disabled={savingGroup}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={saveGroup} disabled={savingGroup}>
+              {savingGroup ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t('groupSave')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

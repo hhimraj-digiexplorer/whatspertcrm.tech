@@ -65,6 +65,7 @@ export async function GET(request: Request) {
       parent_step_id: (row.parent_step_id as string | null) ?? null,
       branch: (row.branch as 'yes' | 'no' | null) ?? null,
       next_step_position: row.next_step_position as number,
+      wait_step_id: (row.wait_step_id as string | null) ?? null,
       context: (row.context as AutomationContext) ?? {},
     })
     processed++

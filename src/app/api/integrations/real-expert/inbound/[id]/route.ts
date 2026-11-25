@@ -16,6 +16,7 @@ import {
 } from '@/lib/integrations/real-expert/config'
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
+import { assignTagsToGroup, PROJECT_TAG_GROUP } from '@/lib/tags/groups'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { countPlaceholders, signatureMatches, tokensMatch } from '@/lib/integrations/real-expert/settings'
 
@@ -251,7 +252,7 @@ export async function POST(request: Request, { params }: Params) {
       }
     }
 
-    const context = { conversation_id: resolved.conversationId }
+    const context = { conversation_id: resolved.conversationId, source: 'real_expert' }
 
     // 2. New Contact Created, for a contact this lead just created.
     if (resolved.contactCreated) {
@@ -276,6 +277,13 @@ export async function POST(request: Request, { params }: Params) {
           tagNames,
           canCreateTags: true,
         })
+        // Project tags sit in the "Project" group, before Tag Added
+        // fires, so a group condition in that automation already sees it.
+        if (projectTagNames.length > 0) {
+          await assignTagsToGroup(db, accountId, projectTagNames as string[], PROJECT_TAG_GROUP).catch((err) =>
+            console.error('[crm-inbound] could not group project tags:', err),
+          )
+        }
         for (const tagName of tagNames) {
           const tagId = tagIdByKey.get(tagName.toLowerCase())
           if (!tagId) continue

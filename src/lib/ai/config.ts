@@ -13,10 +13,12 @@ interface AiConfigRow {
   auto_reply_max_per_conversation: number
   handoff_agent_id: string | null
   embeddings_api_key: string | null
+  project_scope?: boolean | null
+  project_handoff?: boolean | null
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
+  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key, project_scope, project_handoff'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -67,6 +69,8 @@ export async function loadAiConfig(
       autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
       handoffAgentId: row.handoff_agent_id,
       embeddingsApiKey: p.embeddingsApiKey,
+      projectScope: row.project_scope === true,
+      projectHandoff: row.project_handoff === true,
       anthropicWorkspaceId: p.anthropicWorkspaceId,
       onPlatformKey: true,
     }
@@ -103,6 +107,8 @@ export async function loadAiConfig(
     autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
     handoffAgentId: row.handoff_agent_id,
     embeddingsApiKey,
+    projectScope: row.project_scope === true,
+    projectHandoff: row.project_handoff === true,
   }
 }
 

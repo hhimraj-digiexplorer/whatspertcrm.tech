@@ -142,7 +142,21 @@ export type ConditionOperator =
   | "present"
   | "absent";
 
-export type ConditionSubject = "var" | "tag" | "contact_field";
+export type ConditionSubject = "var" | "tag" | "contact_field" | "tag_group" | "message";
+
+/** Count tests for `tag_group` conditions and entry conditions. */
+export type FlowTagGroupTest = "none" | "any" | "one" | "more_than_one";
+
+/**
+ * Optional gate on a flow's trigger, stored as `trigger_config.entry_condition`.
+ * The flow only starts when the contact passes it, so several
+ * first-message flows can live side by side (one per project, plus a
+ * project picker for contacts with no project tag). Flows with an entry
+ * condition are checked before flows without one.
+ */
+export type FlowEntryCondition =
+  | { kind: "tag"; tag_id: string; negate?: boolean }
+  | { kind: "tag_group"; group: string; test: FlowTagGroupTest };
 
 /**
  * Routes the run based on a predicate over the contact's tags,
@@ -155,9 +169,13 @@ export interface ConditionNodeConfig {
    * For `var`: the key in flow_runs.vars.
    * For `tag`: the tag UUID (matched against contact_tags).
    * For `contact_field`: one of 'name' | 'email' | 'phone' | 'company'.
+   * For `tag_group`: the group name (e.g. "Project").
+   * For `message`: unused ("text") — the customer's latest message.
    */
   subject_key: string;
   operator: ConditionOperator;
+  /** `tag_group` only — replaces `operator`. */
+  group_test?: FlowTagGroupTest;
   /** Compared against `subject` for `equals`/`contains`. Ignored for `present`/`absent`. */
   value?: string;
   /** Node to advance to when the predicate evaluates true. */
@@ -207,12 +225,13 @@ export interface KeywordTriggerConfig {
   keywords: string[];
   match_type?: "exact" | "contains";
   case_sensitive?: boolean;
+  entry_condition?: FlowEntryCondition;
 }
 
 // No knobs in v1 — the trigger has a single semantic. Kept as a type
 // alias (not an empty interface) for forward compat without tripping
 // the no-empty-object-type lint rule.
-export type FirstInboundTriggerConfig = Record<string, never>;
+export type FirstInboundTriggerConfig = { entry_condition?: FlowEntryCondition };
 
 export type FlowTriggerConfig =
   | { trigger_type: "keyword"; config: KeywordTriggerConfig }

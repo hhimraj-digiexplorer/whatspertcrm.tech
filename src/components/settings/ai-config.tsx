@@ -78,6 +78,8 @@ export function AiConfig() {
   const [maxPerConversation, setMaxPerConversation] = useState(3);
   // Empty string = leave unassigned (shared queue).
   const [handoffAgentId, setHandoffAgentId] = useState('');
+  const [projectScope, setProjectScope] = useState(false);
+  const [projectHandoff, setProjectHandoff] = useState(false);
   const [members, setMembers] = useState<AccountMember[]>([]);
 
   // Guard keyed on the account (not a bare boolean) so an in-place
@@ -107,6 +109,8 @@ export function AiConfig() {
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setHandoffAgentId(data.handoff_agent_id ?? '');
+        setProjectScope(data.project_scope === true);
+        setProjectHandoff(data.project_handoff === true);
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -158,6 +162,8 @@ export function AiConfig() {
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     handoff_agent_id: handoffAgentId || null,
+    project_scope: projectScope,
+    project_handoff: projectScope && projectHandoff,
   });
 
   const handleTest = async () => {
@@ -512,6 +518,39 @@ export function AiConfig() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-border p-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t('projectScope')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('projectScopeDesc')}
+                  </p>
+                </div>
+                <Switch
+                  checked={projectScope}
+                  onCheckedChange={setProjectScope}
+                  disabled={disabled}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t('projectHandoff')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('projectHandoffDesc')}
+                  </p>
+                </div>
+                <Switch
+                  checked={projectScope && projectHandoff}
+                  onCheckedChange={setProjectHandoff}
+                  disabled={disabled || !projectScope}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

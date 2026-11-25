@@ -24,6 +24,7 @@
  */
 
 import { INTERACTIVE_LIMITS } from "@/lib/whatsapp/meta-api";
+import { parseEntryCondition } from "./entry-condition";
 
 export interface ValidationIssue {
   severity: "error" | "warning";
@@ -173,7 +174,16 @@ function validateTrigger(
       }
     }
   }
-  // first_inbound_message / manual have no config; nothing to validate.
+  const rawEntry = (trigger_config as { entry_condition?: unknown }).entry_condition;
+  if (rawEntry !== undefined && rawEntry !== null && !parseEntryCondition(rawEntry)) {
+    issues.push({
+      severity: "warning",
+      scope: "trigger",
+      field: "trigger_config.entry_condition",
+      message: "The \"only for contacts who…\" rule is incomplete, so it is ignored — pick a tag or a group.",
+    });
+  }
+  // first_inbound_message / manual have no other config.
 
   return issues;
 }
@@ -586,23 +596,40 @@ function validateNode(
 
     case "condition": {
       const cfg = node.config as {
-        subject?: "var" | "tag" | "contact_field";
+        subject?: "var" | "tag" | "contact_field" | "tag_group" | "message";
         subject_key?: string;
+        group_test?: string;
         operator?: "equals" | "contains" | "present" | "absent";
         value?: string;
         true_next?: string;
         false_next?: string;
       };
-      if (!cfg.subject || !["var", "tag", "contact_field"].includes(cfg.subject)) {
+      if (
+        !cfg.subject ||
+        !["var", "tag", "contact_field", "tag_group", "message"].includes(cfg.subject)
+      ) {
         issues.push({
           severity: "error",
           scope: "node",
           node_key: node.node_key,
           field: "subject",
-          message: "Condition needs a subject (var / tag / contact_field).",
+          message: "Condition needs a subject (var / tag / contact_field / tag_group / message).",
         });
       }
-      if (!cfg.subject_key?.trim()) {
+      if (
+        cfg.subject === "tag_group" &&
+        cfg.group_test !== undefined &&
+        !["none", "any", "one", "more_than_one"].includes(cfg.group_test)
+      ) {
+        issues.push({
+          severity: "error",
+          scope: "node",
+          node_key: node.node_key,
+          field: "group_test",
+          message: "Tag-group condition needs a test (none / any / one / more than one).",
+        });
+      }
+      if (cfg.subject !== "message" && !cfg.subject_key?.trim()) {
         issues.push({
           severity: "error",
           scope: "node",
@@ -611,7 +638,9 @@ function validateNode(
           message: "Condition needs a subject_key (var name, tag id, or field name).",
         });
       }
-      if (
+      if (cfg.subject === "tag_group") {
+        // group_test replaces the operator; nothing more to check.
+      } else if (
         !cfg.operator ||
         !["equals", "contains", "present", "absent"].includes(cfg.operator)
       ) {

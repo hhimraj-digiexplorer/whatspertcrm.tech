@@ -19,6 +19,7 @@ import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { OPT_OUT_TAG, optOutIntent, setContactOptOut } from '@/lib/contacts/opt-out'
+import { applyAdReferral, parseReferral } from '@/lib/integrations/real-expert/ad-referral'
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags'
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
@@ -72,6 +73,8 @@ interface WhatsAppMessage {
   sticker?: { id: string; mime_type: string }
   location?: { latitude: number; longitude: number; name?: string; address?: string }
   reaction?: { message_id: string; emoji: string }
+  /** Present when the chat was opened from a Click-to-WhatsApp ad. */
+  referral?: Record<string, unknown>
   /**
    * Set when the customer taps a button or list row on an interactive
    * message we sent. `button_reply.id` / `list_reply.id` is whatever id
@@ -929,6 +932,24 @@ async function processMessage(
   // and the message is NOT handed to the flow. From now on automatic
   // senders skip this contact (see lib/contacts/opt-out).
   // ============================================================
+  // Click-to-WhatsApp ad (channel partners): save the referral and tag
+  // the contact with the ad's project BEFORE the flow runner, so that
+  // project's own first-message flow opens instead of the picker.
+  const referral = parseReferral(message.referral)
+  if (referral) {
+    try {
+      await applyAdReferral(supabaseAdmin(), {
+        accountId,
+        contactId: contactRecord.id,
+        conversationId: conversation.id,
+        userId: configOwnerUserId,
+        referral,
+      })
+    } catch (err) {
+      console.error('[ad-referral] could not apply the referral:', err)
+    }
+  }
+
   const optIntent = interactiveReplyId ? null : optOutIntent(contentText ?? message.text?.body ?? '')
   if (optIntent) {
     try {

@@ -87,8 +87,17 @@ export async function retrieveKnowledge(
   config: Pick<AiConfig, 'embeddingsApiKey'>,
   queryText: string,
   k = 5,
+  opts: {
+    /**
+     * Project scope (migration 054): shared documents plus those tagged
+     * with one of these projects. Undefined/null = every document.
+     */
+    projects?: string[] | null
+  } = {},
 ): Promise<string[]> {
   const query = queryText.trim()
+  const scoped = Array.isArray(opts.projects)
+  const scopeArg = scoped ? { p_projects: opts.projects } : {}
   if (!query || k <= 0) return []
 
   // Skip everything when the account has no knowledge base — otherwise
@@ -112,11 +121,15 @@ export async function retrieveKnowledge(
     try {
       const [queryEmbedding] = await embedTexts(config.embeddingsApiKey, [query])
       if (queryEmbedding) {
-        const { data, error } = await db.rpc('match_ai_knowledge_semantic', {
-          p_account_id: accountId,
-          p_query_embedding: toVectorLiteral(queryEmbedding),
-          p_match_count: k,
-        })
+        const { data, error } = await db.rpc(
+          scoped ? 'match_ai_knowledge_semantic_scoped' : 'match_ai_knowledge_semantic',
+          {
+            p_account_id: accountId,
+            p_query_embedding: toVectorLiteral(queryEmbedding),
+            p_match_count: k,
+            ...scopeArg,
+          },
+        )
         if (!error && Array.isArray(data)) {
           for (const row of data as MatchRow[]) picked.set(row.id, row.content)
         }
@@ -129,11 +142,15 @@ export async function retrieveKnowledge(
   // Lexical top-up (also the sole path when there's no embeddings key).
   if (picked.size < k) {
     try {
-      const { data, error } = await db.rpc('match_ai_knowledge_fts', {
-        p_account_id: accountId,
-        p_query: query,
-        p_match_count: k,
-      })
+      const { data, error } = await db.rpc(
+        scoped ? 'match_ai_knowledge_fts_scoped' : 'match_ai_knowledge_fts',
+        {
+          p_account_id: accountId,
+          p_query: query,
+          p_match_count: k,
+          ...scopeArg,
+        },
+      )
       if (!error && Array.isArray(data)) {
         for (const row of data as MatchRow[]) {
           if (picked.size >= k) break

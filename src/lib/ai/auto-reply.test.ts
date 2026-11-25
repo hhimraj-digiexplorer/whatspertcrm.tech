@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   loadAccountMetaCredentials: vi.fn(),
   sendTypingIndicator: vi.fn(),
   assertFeature: vi.fn(),
+  loadProjectScope: vi.fn(),
   state: {
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as Record<string, unknown>[],
@@ -22,6 +23,7 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
+vi.mock('./project-scope', () => ({ loadProjectScope: h.loadProjectScope }))
 vi.mock('@/lib/contacts/opt-out', () => ({
   assertCanAutoMessage: async () => undefined,
   ContactOptedOutError: class ContactOptedOutError extends Error {},
@@ -339,5 +341,48 @@ describe('dispatchInboundToAiReply — handoff', () => {
       ai_autoreply_disabled: true,
       assigned_agent_id: 'agent-7',
     })
+  })
+})
+
+describe('dispatchInboundToAiReply — per project (channel partners)', () => {
+  it('acceptance test 5: a contact with two project tags goes to a person, no AI reply', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ projectScope: true, projectHandoff: true }))
+    h.loadProjectScope.mockResolvedValue({ tagNames: ['p-a', 'p-b'], displayNames: ['A', 'B'] })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+  })
+
+  it('a contact with no project tag also goes to a person when handoff is on', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ projectScope: true, projectHandoff: true }))
+    h.loadProjectScope.mockResolvedValue({ tagNames: [], displayNames: [] })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+  })
+
+  it("acceptance tests 5 & 7: a single-project contact gets only that project's knowledge and instructions", async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ projectScope: true, projectHandoff: true }))
+    h.loadProjectScope.mockResolvedValue({ tagNames: ['p-a'], displayNames: ['AIS Galleria'] })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.retrieveKnowledge).toHaveBeenCalledWith(
+      expect.anything(),
+      'acct-1',
+      expect.anything(),
+      expect.any(String),
+      5,
+      { projects: ['p-a'] },
+    )
+    const prompt = h.generateReply.mock.calls.at(-1)?.[0]?.systemPrompt as string
+    expect(prompt).toContain('"AIS Galleria" only')
+    expect(h.engineSendText).toHaveBeenCalled()
+  })
+
+  it('project scope off: no scoping, no project lookup', async () => {
+    h.loadProjectScope.mockClear()
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.loadProjectScope).not.toHaveBeenCalled()
+    expect(h.retrieveKnowledge.mock.calls.at(-1)?.[5]).toEqual({})
   })
 })

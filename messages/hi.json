@@ -225,7 +225,9 @@
       "sendTemplateFailed": "टेम्पलेट नहीं भेजा जा सका: {reason}",
       "waitForSending": "संदेश भेजे जाने तक प्रतीक्षा करें",
       "reactionFailed": "रिएक्शन नहीं हो सका: {reason}",
-      "assignmentUpdateFailed": "असाइनमेंट अपडेट नहीं हो सका"
+      "assignmentUpdateFailed": "असाइनमेंट अपडेट नहीं हो सका",
+      "projectsTitle": "प्रोजेक्ट: {projects}",
+      "projectsMore": "+{count}"
     },
     "sessionTimer": {
       "expired": "समाप्त",
@@ -1097,7 +1099,8 @@
           "tag_presence": "टैग मौजूद है",
           "contact_field": "संपर्क फ़ील्ड",
           "message_content": "संदेश की सामग्री",
-          "time_of_day": "दिन का समय"
+          "time_of_day": "दिन का समय",
+          "tag_group": "टैग ग्रुप"
         },
         "operandLabel": "मान",
         "placeholderTime": "HH:mm-HH:mm",
@@ -1123,7 +1126,16 @@
         "headerValue": "मान",
         "headerAdd": "हेडर जोड़ें",
         "headerRemove": "हेडर हटाएँ",
-        "headersHint": "हर कॉल के साथ भेजे जाते हैं। मान ऑटोमेशन के साथ सेव होते हैं और उसे एडिट करने वाले देख सकते हैं।"
+        "headersHint": "हर कॉल के साथ भेजे जाते हैं। मान ऑटोमेशन के साथ सेव होते हैं और उसे एडिट करने वाले देख सकते हैं।",
+        "groupLabel": "ग्रुप",
+        "groupPlaceholder": "Project",
+        "groupTestLabel": "कॉन्टैक्ट के पास",
+        "groupTests": {
+          "any": "ग्रुप का कोई भी टैग",
+          "none": "ग्रुप का कोई टैग नहीं",
+          "one": "ग्रुप का ठीक एक टैग",
+          "more_than_one": "ग्रुप के एक से ज़्यादा टैग"
+        }
       }
     }
   },
@@ -1274,7 +1286,15 @@
         "fileUploaded": "फ़ाइल अपलोड हो गई।",
         "uploadFailed": "अपलोड विफल रहा।",
         "fileTooLarge": "फ़ाइल {size} MB की है — सीमा 16 MB है।",
-        "defaultOptionTitle": "विकल्प"
+        "defaultOptionTitle": "विकल्प",
+        "contactTagGroup": "कॉन्टैक्ट का टैग ग्रुप",
+        "incomingMessage": "आया हुआ मैसेज",
+        "groupLabel": "ग्रुप",
+        "groupTestLabel": "कॉन्टैक्ट के पास",
+        "groupTestAny": "ग्रुप का कोई भी टैग",
+        "groupTestNone": "ग्रुप का कोई टैग नहीं",
+        "groupTestOne": "ग्रुप का ठीक एक टैग",
+        "groupTestMany": "ग्रुप के एक से ज़्यादा टैग"
       },
       "categories": {
         "messaging": "मैसेजिंग",
@@ -1322,7 +1342,19 @@
           "label": "समाप्त",
           "blurb": "फ़्लो खत्म करता है"
         }
-      }
+      },
+      "entryConditionLabel": "सिर्फ़ उन कॉन्टैक्ट के लिए जो…",
+      "entryConditionHint": "नियम वाले फ़्लो पहले जाँचे जाते हैं, ताकि हर प्रोजेक्ट का मेन्यू आम प्रोजेक्ट-पिकर से पहले चले।",
+      "entryAnyone": "कोई भी",
+      "entryHasTag": "किसी टैग वाले",
+      "entryLacksTag": "किसी टैग के बिना",
+      "entryGroupNone": "ग्रुप का कोई टैग नहीं",
+      "entryGroupAny": "ग्रुप का कोई भी टैग",
+      "entryGroupOne": "ग्रुप का ठीक एक टैग",
+      "entryGroupMany": "ग्रुप के एक से ज़्यादा टैग",
+      "entryTagLabel": "टैग",
+      "entryPickTag": "टैग चुनें",
+      "entryGroupLabel": "ग्रुप"
     },
     "validation": {
       "noIssues": "कोई समस्या नहीं। चालू करने के लिए तैयार।",
@@ -1492,7 +1524,16 @@
         "blue": "नीला",
         "violet": "बैंगनी",
         "pink": "गुलाबी"
-      }
+      },
+      "groupHeading": "ग्रुप: {group}",
+      "noGroup": "बिना ग्रुप",
+      "groupAria": "{name} का ग्रुप चुनें",
+      "groupTitle": "“{name}” का ग्रुप",
+      "groupDesc": "एक ग्रुप के टैग ऑटोमेशन और फ़्लो में एक साथ जाँचे जा सकते हैं — जैसे हर प्रोजेक्ट टैग को “Project” में रखें। ग्रुप न चाहिए तो खाली छोड़ें।",
+      "groupPlaceholder": "जैसे Project",
+      "groupSave": "ग्रुप सेव करें",
+      "groupSaved": "ग्रुप सेव हो गया",
+      "groupSaveFailed": "ग्रुप सेव नहीं हो सका"
     },
     "templates": {
       "title": "संदेश टेम्पलेट",
@@ -1987,7 +2028,11 @@
       "platformKeyActive": "आपकी AI key Whatspert देता है — आपको key की ज़रूरत नहीं। नीचे असिस्टेंट के निर्देश और व्यवहार सेट करें।",
       "platformKeyModel": "{provider} · {model} इस्तेमाल हो रहा है",
       "platformKeyNotReady": "Whatspert की AI key अभी सर्वर पर सेट नहीं है। सपोर्ट से संपर्क करें।",
-      "descriptionPlatform": "आपकी AI key Whatspert देता है। नीचे असिस्टेंट के निर्देश और व्यवहार सेट करें। इससे इनबॉक्स में AI ड्राफ़्ट जवाब, ऑटो-रिप्लाई बॉट और प्लेग्राउंड चलते हैं।"
+      "descriptionPlatform": "आपकी AI key Whatspert देता है। नीचे असिस्टेंट के निर्देश और व्यवहार सेट करें। इससे इनबॉक्स में AI ड्राफ़्ट जवाब, ऑटो-रिप्लाई बॉट और प्लेग्राउंड चलते हैं।",
+      "projectScope": "हर प्रोजेक्ट के हिसाब से जवाब",
+      "projectScopeDesc": "एजेंट सिर्फ़ उस प्रोजेक्ट की बात करेगा जिसका टैग कॉन्टैक्ट पर है (“Project” ग्रुप के टैग), और सिर्फ़ साझा व उसी प्रोजेक्ट के नॉलेज डॉक्यूमेंट पढ़ेगा। दूसरे प्रोजेक्ट के बारे में पूछने पर सेल्सपर्सन से जोड़ने की पेशकश करेगा।",
+      "projectHandoff": "प्रोजेक्ट साफ़ न हो तो इंसान को सौंपें",
+      "projectHandoffDesc": "जिन कॉन्टैक्ट पर कोई प्रोजेक्ट टैग नहीं या एक से ज़्यादा हैं, वे AI की जगह सीधे इंसान को जाएँगे।"
     },
     "aiKnowledge": {
       "loadFailed": "नॉलेज बेस लोड नहीं हो सका",
@@ -2016,7 +2061,10 @@
       "reindexTooltip": "सभी दस्तावेज़ फिर से एम्बेड करें (जैसे एम्बेडिंग की जोड़ने के बाद)",
       "editDoc": "बदलें",
       "deleteDoc": "हटाएँ",
-      "loading": "लोड हो रहा है…"
+      "loading": "लोड हो रहा है…",
+      "editDocProject": "प्रोजेक्ट (वैकल्पिक)",
+      "editDocProjectPlaceholder": "प्रोजेक्ट टैग, जैसे p-galleria — खाली = सभी प्रोजेक्ट",
+      "editDocProjectHint": "“हर प्रोजेक्ट के हिसाब से जवाब” चालू होने पर AI यह डॉक्यूमेंट सिर्फ़ इस प्रोजेक्ट टैग वाले कॉन्टैक्ट के लिए इस्तेमाल करेगा।"
     }
   },
   "SignupPage": {
@@ -2438,7 +2486,10 @@
       "projectsWelcomeNone": "कोई वेलकम नहीं (ऑटोमेशन भेजेगी)",
       "projectsAdd": "प्रोजेक्ट जोड़ें",
       "fallbackWelcome": "जब लीड के प्रोजेक्ट का अपना वेलकम न हो, तो डिफ़ॉल्ट वेलकम भेजें",
-      "fallbackWelcomeHint": "कई प्रोजेक्ट बेचते हों तो बंद रखें, ताकि ख़रीदार को कभी दूसरे प्रोजेक्ट का वेलकम न जाए।"
+      "fallbackWelcomeHint": "कई प्रोजेक्ट बेचते हों तो बंद रखें, ताकि ख़रीदार को कभी दूसरे प्रोजेक्ट का वेलकम न जाए।",
+      "projectsCode": "Real Expert प्रोजेक्ट कोड",
+      "projectsAds": "विज्ञापन: ऐड id या शब्द, कॉमा से अलग",
+      "projectsAdsHint": "Click-to-WhatsApp ऐड से मैसेज करने वाले खरीदार को प्रोजेक्ट का टैग अपने-आप मिलेगा, जब ऐड id मिले या कोई शब्द ऐड की हेडलाइन, टेक्स्ट या लिंक में हो।"
     },
     "statusLocked": "लॉक",
     "statusAddon": "ऐड-ऑन",

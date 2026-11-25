@@ -11,6 +11,7 @@ import { latestUserMessage } from '@/lib/ai/query'
 import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
+import { loadProjectScope } from '@/lib/ai/project-scope'
 import { assertFeature, billingErrorResponse } from '@/lib/billing/server'
 
 /**
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     // row means "not yours / not found" either way.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
-      .select('id')
+      .select('id, contact_id')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr) {
@@ -107,17 +108,26 @@ export async function POST(request: Request) {
 
     // Ground the draft in the account's knowledge base (best-effort —
     // returns [] when there's no KB or retrieval fails).
+    // Per-project mode: draft only about the contact's project(s).
+    const contactId = (conversation as { contact_id?: string | null }).contact_id
+    const scope =
+      config.projectScope && contactId
+        ? await loadProjectScope(supabaseAdmin(), accountId, contactId).catch(() => null)
+        : null
     const knowledge = await retrieveKnowledge(
       supabase,
       accountId,
       config,
       latestUserMessage(messages),
+      5,
+      scope ? { projects: scope.tagNames } : {},
     )
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'draft',
       knowledge,
+      ...(scope ? { projectScope: { projects: scope.displayNames } } : {}),
     })
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })
