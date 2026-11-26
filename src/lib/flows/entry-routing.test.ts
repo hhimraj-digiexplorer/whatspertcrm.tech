@@ -179,4 +179,32 @@ describe("several first-message flows, routed by project", () => {
     await first("hi");
     expect(h.state.sentTexts).toEqual(["Two projects"]);
   });
+
+  it("a keyword menu flow with 'also on first message' serves a tagged contact's first chat and its button tap", async () => {
+    h.state.flows = [
+      flow("picker", "2026-11-01", { entry_condition: { kind: "tag_group", group: "Project", test: "none" } }),
+      {
+        ...flow("galleria-menu", "2026-11-03", {
+          keywords: ["galleria menu"],
+          also_first_message: true,
+          entry_condition: { kind: "tag", tag_id: "p-galleria" },
+        }),
+        trigger_type: "keyword",
+      },
+    ];
+    h.state.nodes = [...nodesFor("picker", "Which project?"), ...nodesFor("galleria-menu", "Galleria menu")];
+    h.state.contactTags = [projectTag("p-galleria")];
+    await first("hello");
+    expect(h.state.startedFlowIds).toEqual(["galleria-menu"]);
+    h.state.startedFlowIds = [];
+    await dispatchInboundToFlows({
+      accountId: "acct-1",
+      userId: "u-1",
+      contactId: "ct-1",
+      conversationId: "cv-1",
+      message: { kind: "interactive_reply", reply_id: "b1", reply_title: "Galleria menu", meta_message_id: "m-tap" },
+      isFirstInboundMessage: false,
+    });
+    expect(h.state.startedFlowIds).toEqual(["galleria-menu"]);
+  });
 });

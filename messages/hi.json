@@ -1365,7 +1365,8 @@
       "entryGroupMany": "ग्रुप के एक से ज़्यादा टैग",
       "entryTagLabel": "टैग",
       "entryPickTag": "टैग चुनें",
-      "entryGroupLabel": "ग्रुप"
+      "entryGroupLabel": "ग्रुप",
+      "alsoFirstMessage": "कॉन्टैक्ट के पहले मैसेज पर भी शुरू करें"
     },
     "validation": {
       "noIssues": "कोई समस्या नहीं। चालू करने के लिए तैयार।",

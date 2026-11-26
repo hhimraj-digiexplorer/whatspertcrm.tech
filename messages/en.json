@@ -1365,7 +1365,8 @@
       "entryGroupMany": "Have more than one tag in a group",
       "entryTagLabel": "Tag",
       "entryPickTag": "Pick a tag",
-      "entryGroupLabel": "Group"
+      "entryGroupLabel": "Group",
+      "alsoFirstMessage": "Also start on a contact's first message"
     },
     "validation": {
       "noIssues": "No issues. Ready to activate.",

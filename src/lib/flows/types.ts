@@ -225,6 +225,11 @@ export interface KeywordTriggerConfig {
   keywords: string[];
   match_type?: "exact" | "contains";
   case_sensitive?: boolean;
+  /**
+   * Also start on a contact's first-ever message (any text), so one flow
+   * serves both a project's first chat and its menu keyword / button.
+   */
+  also_first_message?: boolean;
   entry_condition?: FlowEntryCondition;
 }
 

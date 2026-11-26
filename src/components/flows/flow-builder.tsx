@@ -331,6 +331,21 @@ function TriggerPanel({
               }
               t={t}
             />
+            <label className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={state.trigger_config.also_first_message === true}
+                onChange={(e) =>
+                  setState((s) => {
+                    const next = { ...s.trigger_config };
+                    if (e.target.checked) next.also_first_message = true;
+                    else delete next.also_first_message;
+                    return { ...s, trigger_config: next };
+                  })
+                }
+              />
+              {t('alsoFirstMessage')}
+            </label>
           </div>
         )}
       </div>

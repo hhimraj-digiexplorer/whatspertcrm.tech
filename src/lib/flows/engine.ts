@@ -396,7 +396,9 @@ async function findEntryFlow(
   for (const flow of ordered) {
     if (flow.trigger_type === "keyword") {
       const cfg = flow.trigger_config as KeywordTriggerConfig;
-      if (candidates.some((text) => matchesKeywordTrigger(text, cfg)) && (await entryAllowed(flow))) {
+      const matched =
+        candidates.some((text) => matchesKeywordTrigger(text, cfg)) || (isFirstInbound && cfg.also_first_message === true);
+      if (matched && (await entryAllowed(flow))) {
         return flow;
       }
     } else if (flow.trigger_type === "first_inbound_message" && isFirstInbound) {

@@ -1365,7 +1365,8 @@
       "entryGroupMany": "Tienen más de una etiqueta de un grupo",
       "entryTagLabel": "Etiqueta",
       "entryPickTag": "Elige una etiqueta",
-      "entryGroupLabel": "Grupo"
+      "entryGroupLabel": "Grupo",
+      "alsoFirstMessage": "Iniciar también con el primer mensaje del contacto"
     },
     "validation": {
       "noIssues": "Sin problemas. Listo para activar.",

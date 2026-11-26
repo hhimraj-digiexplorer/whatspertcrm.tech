@@ -1365,7 +1365,8 @@
       "entryGroupMany": "그룹 태그가 2개 이상",
       "entryTagLabel": "태그",
       "entryPickTag": "태그 선택",
-      "entryGroupLabel": "그룹"
+      "entryGroupLabel": "그룹",
+      "alsoFirstMessage": "연락처의 첫 메시지에서도 시작"
     },
     "validation": {
       "noIssues": "문제가 없습니다. 활성화할 준비가 되었습니다.",
